@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "warmachine_terminal_predecessor_algebra_v2_verification",
+  "verifiedAt": "2026-08-11",
+  "upstreamReceiptHash": "5d8bf918db6bfd3f7b9131df3639b8f1d0bf5907cfba6be0601aea82a946983f",
+  "graphHash": "aed878dadeb2f3125daf1738403c1568508633f1671579ab3359f9d81bb756ed",
+  "strictWitnesses": {
+    "assassination": true,
+    "scenarioScore": true,
+    "finalVpCannotOverrideAssassination": true
+  },
+  "negativeWitnesses": {
+    "leadingPlayerOwnTurnDoesNotWin": true,
+    "oneOfMultipleEnemyLeadersRemovedDoesNotWin": true,
+    "assassinationTerminalDoesNotCertifyScore": true,
+    "wrongRequestedWinnerIsContradicted": true
+  },
+  "fixedRosterPieceCount": 106,
+  "temporalLayerCountsByMode": {
+    "victory_event": 1,
+    "activation": 2,
+    "current_turn": 3,
+    "previous_turn": 4,
+    "long_horizon": 5
+  },
+  "longHorizonAlgebraCounts": {
+    "nodeCount": 150,
+    "edgeCount": 149,
+    "temporalLayerCount": 5,
+    "orNodeCount": 12,
+    "andNodeCount": 13,
+    "adversarialNodeCount": 2,
+    "chanceNodeCount": 1,
+    "triggerNodeCount": 1,
+    "providerRouteCount": 109,
+    "unresolvedNodeCount": 32,
+    "unresolvedRecordCount": 22,
+    "danglingEdgeCount": 0
+  },
+  "safeProbabilityIntervals": {
+    "noEvidence": [0, 1],
+    "syntheticExactClosure": [1, 1],
+    "halfChanceMassEnumerated": [0.5, 1],
+    "opponentResponseCursorOpen": [0, 1]
+  },
+  "externalDag": {
+    "stateRecords": 1,
+    "routeLabelRecords": 1,
+    "allUnresolvedRecordsPersisted": true
+  },
+  "exactInverseRulesStateGenerated": false,
+  "hardPruningEnabled": false,
+  "globalOptimalityProven": false
+}

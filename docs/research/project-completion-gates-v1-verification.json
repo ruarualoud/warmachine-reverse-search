@@ -1,0 +1,747 @@
+{
+  "claimBoundary": "Passing this gate means the current version is usable for bounded, recoverable, auditable Warmachine reverse-search research under the current rules-v1 Host. It does not exhaust the continuous game state space, prove undiscovered routes unreachable, rank strategy, estimate natural win rates, or establish global roster, faction, or race optimality.",
+  "dispositionSemantics": {
+    "budget_deferred": "The task was not executed in the declared budget and remains unresolved.",
+    "inverse_unresolved": "No complete inverse operator was materialized; this is not unreachable evidence.",
+    "proposal_filtered": "The Host accepted execution but the authored proposal predicate was not met.",
+    "proven_unreachable": "Reserved for a closed declared finite domain with exact proof.",
+    "rules_drift": "A dependency receipt changed and prior evidence cannot be reused.",
+    "rules_unknown": "The current rules contract cannot decide the branch and must fail closed.",
+    "strict_materialized": "One exact current-Host route or state is certified within its declared scope.",
+    "strict_rejected": "Only the exact authored state/action rejected by the current Host is ruled out."
+  },
+  "gateCount": 8,
+  "gateRows": [
+    {
+      "description": "Current rules-v1 authority, ruleset snapshot, and dependency drift invalidation",
+      "durationMs": 15496.889,
+      "gateKey": "host_rules_and_update_invalidation",
+      "passed": true,
+      "passedVerifierCount": 4,
+      "results": [
+        {
+          "durationMs": 1936.693,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "host_rules_and_update_invalidation",
+          "passed": true,
+          "verifierName": "verify-upstream-warmachine-contract.mjs"
+        },
+        {
+          "durationMs": 3502.813,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "host_rules_and_update_invalidation",
+          "passed": true,
+          "verifierName": "verify-ruleset-snapshot-v1.mjs"
+        },
+        {
+          "durationMs": 6961.633,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "host_rules_and_update_invalidation",
+          "passed": true,
+          "verifierName": "verify-ruleset-change-impact-v1.mjs"
+        },
+        {
+          "durationMs": 3095.75,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "host_rules_and_update_invalidation",
+          "passed": true,
+          "verifierName": "verify-terminal-state-host-rule-authority-v1.mjs"
+        }
+      ],
+      "verifierCount": 4
+    },
+    {
+      "description": "Finite micro cases, chance mass, adversarial choices, and exact strict policy steps",
+      "durationMs": 53312.215,
+      "gateKey": "exact_micro_probability_and_adversary",
+      "passed": true,
+      "passedVerifierCount": 14,
+      "results": [
+        {
+          "durationMs": 763.827,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "exact_micro_probability_and_adversary",
+          "passed": true,
+          "verifierName": "verify-spatial-quotient-parity.mjs"
+        },
+        {
+          "durationMs": 1305.849,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "exact_micro_probability_and_adversary",
+          "passed": true,
+          "verifierName": "verify-primitive-contracts-parity.mjs"
+        },
+        {
+          "durationMs": 2649.056,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "exact_micro_probability_and_adversary",
+          "passed": true,
+          "verifierName": "verify-rule-regression-parity.mjs"
+        },
+        {
+          "durationMs": 20.342,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "exact_micro_probability_and_adversary",
+          "passed": true,
+          "verifierName": "verify-reverse-reachability-contract-v2.mjs"
+        },
+        {
+          "durationMs": 8227.8,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "exact_micro_probability_and_adversary",
+          "passed": true,
+          "verifierName": "verify-goal-conditioned-parity.mjs"
+        },
+        {
+          "durationMs": 604.263,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "exact_micro_probability_and_adversary",
+          "passed": true,
+          "verifierName": "verify-chance-outcomes-parity.mjs"
+        },
+        {
+          "durationMs": 443.344,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "exact_micro_probability_and_adversary",
+          "passed": true,
+          "verifierName": "verify-trample-reposition-interaction-v1.mjs"
+        },
+        {
+          "durationMs": 5.537,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "exact_micro_probability_and_adversary",
+          "passed": true,
+          "verifierName": "verify-adversarial-chance-equivalence-v1.mjs"
+        },
+        {
+          "durationMs": 11.096,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "exact_micro_probability_and_adversary",
+          "passed": true,
+          "verifierName": "verify-adversarial-frontier-ledger-v1.mjs"
+        },
+        {
+          "durationMs": 6.847,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "exact_micro_probability_and_adversary",
+          "passed": true,
+          "verifierName": "verify-probability-dag-v1.mjs"
+        },
+        {
+          "durationMs": 842.629,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "exact_micro_probability_and_adversary",
+          "passed": true,
+          "verifierName": "verify-strict-action-probability-and-min-v2.mjs"
+        },
+        {
+          "durationMs": 1200.986,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "exact_micro_probability_and_adversary",
+          "passed": true,
+          "verifierName": "verify-strict-policy-probability-v1.mjs"
+        },
+        {
+          "durationMs": 779.198,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "exact_micro_probability_and_adversary",
+          "passed": true,
+          "verifierName": "verify-strict-policy-step-v1.mjs"
+        },
+        {
+          "durationMs": 36451.441,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "exact_micro_probability_and_adversary",
+          "passed": true,
+          "verifierName": "verify-matchup-search-parity.mjs"
+        }
+      ],
+      "verifierCount": 14
+    },
+    {
+      "description": "Typed interaction closure, predecessor algebra, conservative pruning, and direction choice",
+      "durationMs": 60590.047999999995,
+      "gateKey": "interaction_inverse_and_search_contracts",
+      "passed": true,
+      "passedVerifierCount": 14,
+      "results": [
+        {
+          "durationMs": 2152.142,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "interaction_inverse_and_search_contracts",
+          "passed": true,
+          "verifierName": "verify-symbolic-worklist-parity.mjs"
+        },
+        {
+          "durationMs": 1340.333,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "interaction_inverse_and_search_contracts",
+          "passed": true,
+          "verifierName": "verify-action-dependency-parity.mjs"
+        },
+        {
+          "durationMs": 429.515,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "interaction_inverse_and_search_contracts",
+          "passed": true,
+          "verifierName": "verify-terminal-obligation-parity.mjs"
+        },
+        {
+          "durationMs": 446.212,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "interaction_inverse_and_search_contracts",
+          "passed": true,
+          "verifierName": "verify-cegar-parity.mjs"
+        },
+        {
+          "durationMs": 1432.848,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "interaction_inverse_and_search_contracts",
+          "passed": true,
+          "verifierName": "verify-terminal-relevance-parity.mjs"
+        },
+        {
+          "durationMs": 14292.071,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "interaction_inverse_and_search_contracts",
+          "passed": true,
+          "verifierName": "verify-rejection-replay-parity.mjs"
+        },
+        {
+          "durationMs": 12697.559,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "interaction_inverse_and_search_contracts",
+          "passed": true,
+          "verifierName": "verify-typed-interaction-graph-v2.mjs"
+        },
+        {
+          "durationMs": 16217.854,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "interaction_inverse_and_search_contracts",
+          "passed": true,
+          "verifierName": "verify-terminal-predecessor-algebra-v2.mjs"
+        },
+        {
+          "durationMs": 21.598,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "interaction_inverse_and_search_contracts",
+          "passed": true,
+          "verifierName": "verify-efficiency-policy-v2.mjs"
+        },
+        {
+          "durationMs": 11237.042,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "interaction_inverse_and_search_contracts",
+          "passed": true,
+          "verifierName": "verify-forward-completion-experiment-v2.mjs"
+        },
+        {
+          "durationMs": 3.055,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "interaction_inverse_and_search_contracts",
+          "passed": true,
+          "verifierName": "verify-search-direction-feasibility-v1.mjs"
+        },
+        {
+          "durationMs": 315.331,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "interaction_inverse_and_search_contracts",
+          "passed": true,
+          "verifierName": "verify-piece-lifecycle-v1.mjs"
+        },
+        {
+          "durationMs": 2.273,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "interaction_inverse_and_search_contracts",
+          "passed": true,
+          "verifierName": "verify-reverse-route-history-v1.mjs"
+        },
+        {
+          "durationMs": 2.215,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "interaction_inverse_and_search_contracts",
+          "passed": true,
+          "verifierName": "verify-reverse-disposition-v1.mjs"
+        }
+      ],
+      "verifierCount": 14
+    },
+    {
+      "description": "Latest Steamroller terminal classes, parameterized corpus, representative evidence, and rule interactions",
+      "durationMs": 880716.9489999998,
+      "gateKey": "steamroller_terminal_corpus_and_interactions",
+      "passed": true,
+      "passedVerifierCount": 18,
+      "results": [
+        {
+          "durationMs": 9.304,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-terminal-hypothesis-v1.mjs"
+        },
+        {
+          "durationMs": 6013.55,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-terminal-scenario-corpus-v1.mjs"
+        },
+        {
+          "durationMs": 8129.195,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-terminal-representative-selector-v1.mjs"
+        },
+        {
+          "durationMs": 352060.845,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-terminal-representative-materialization-ledger-v1.mjs"
+        },
+        {
+          "durationMs": 29127.059,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-score-terminal-materialization-batch-v1.mjs"
+        },
+        {
+          "durationMs": 63027.57,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-assassination-terminal-anchor-evidence-v1.mjs"
+        },
+        {
+          "durationMs": 33287.212,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-assassination-terminal-representative-reject-evidence-v1.mjs"
+        },
+        {
+          "durationMs": 30761.109,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-simultaneous-leader-terminal-anchor-evidence-v1.mjs"
+        },
+        {
+          "durationMs": 25249.429,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-strygon-spray-simultaneous-leader-terminal-evidence-v1.mjs"
+        },
+        {
+          "durationMs": 36250.881,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-fixed-round-terminal-anchor-evidence-v1.mjs"
+        },
+        {
+          "durationMs": 92659.387,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-terminal-mutable-state-evidence-v1.mjs"
+        },
+        {
+          "durationMs": 43329.172,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-terminal-los-relation-evidence-v1.mjs"
+        },
+        {
+          "durationMs": 19128.037,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-fixed-round-reverse-reachability-v1.mjs"
+        },
+        {
+          "durationMs": 15729.563,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-score-terminal-representative-evidence-v1.mjs"
+        },
+        {
+          "durationMs": 3361.514,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-scenario-terrain-selection-evidence-v1.mjs"
+        },
+        {
+          "durationMs": 6802.83,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-scenario-control-relation-evidence-v1.mjs"
+        },
+        {
+          "durationMs": 100018.472,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-channeled-excarnate-terminal-evidence-v1.mjs"
+        },
+        {
+          "durationMs": 15771.82,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "steamroller_terminal_corpus_and_interactions",
+          "passed": true,
+          "verifierName": "verify-steamroller-score-terminal-representative-reject-evidence-v1.mjs"
+        }
+      ],
+      "verifierCount": 18
+    },
+    {
+      "description": "Exact positions, activation order, whole turns, recursive history, and deployment endpoints",
+      "durationMs": 981796.5380000002,
+      "gateKey": "spatial_multi_turn_and_deployment_reachability",
+      "passed": true,
+      "passedVerifierCount": 15,
+      "results": [
+        {
+          "durationMs": 8.362,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "spatial_multi_turn_and_deployment_reachability",
+          "passed": true,
+          "verifierName": "verify-extended-terminal-proof-v2.mjs"
+        },
+        {
+          "durationMs": 15359.477,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "spatial_multi_turn_and_deployment_reachability",
+          "passed": true,
+          "verifierName": "verify-terminal-position-domain-v1.mjs"
+        },
+        {
+          "durationMs": 32802.004,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "spatial_multi_turn_and_deployment_reachability",
+          "passed": true,
+          "verifierName": "verify-fixed-terminal-position-domain-v1.mjs"
+        },
+        {
+          "durationMs": 62314.199,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "spatial_multi_turn_and_deployment_reachability",
+          "passed": true,
+          "verifierName": "verify-fixed-terminal-score-position-domain-v1.mjs"
+        },
+        {
+          "durationMs": 51337.787,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "spatial_multi_turn_and_deployment_reachability",
+          "passed": true,
+          "verifierName": "verify-fixed-terminal-reverse-frontier-v1.mjs"
+        },
+        {
+          "durationMs": 153398.595,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "spatial_multi_turn_and_deployment_reachability",
+          "passed": true,
+          "verifierName": "verify-fixed-terminal-prior-turn-frontier-v1.mjs"
+        },
+        {
+          "durationMs": 284673.455,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "spatial_multi_turn_and_deployment_reachability",
+          "passed": true,
+          "verifierName": "verify-fixed-terminal-score-prior-turn-frontier-v1.mjs"
+        },
+        {
+          "durationMs": 9047.872,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "spatial_multi_turn_and_deployment_reachability",
+          "passed": true,
+          "verifierName": "verify-terminal-position-batch-v1.mjs"
+        },
+        {
+          "durationMs": 7901.805,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "spatial_multi_turn_and_deployment_reachability",
+          "passed": true,
+          "verifierName": "verify-terminal-spatial-materializer-v1.mjs"
+        },
+        {
+          "durationMs": 353228.041,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "spatial_multi_turn_and_deployment_reachability",
+          "passed": true,
+          "verifierName": "verify-terminal-event-predecessor-v1.mjs"
+        },
+        {
+          "durationMs": 718.309,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "spatial_multi_turn_and_deployment_reachability",
+          "passed": true,
+          "verifierName": "verify-movement-activation-order-v2.mjs"
+        },
+        {
+          "durationMs": 4416.153,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "spatial_multi_turn_and_deployment_reachability",
+          "passed": true,
+          "verifierName": "verify-movement-activation-predecessor-v1.mjs"
+        },
+        {
+          "durationMs": 1586.674,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "spatial_multi_turn_and_deployment_reachability",
+          "passed": true,
+          "verifierName": "verify-control-phase-predecessor-v1.mjs"
+        },
+        {
+          "durationMs": 47.263,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "spatial_multi_turn_and_deployment_reachability",
+          "passed": true,
+          "verifierName": "verify-previous-turn-end-predecessor-v1.mjs"
+        },
+        {
+          "durationMs": 4956.542,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "spatial_multi_turn_and_deployment_reachability",
+          "passed": true,
+          "verifierName": "verify-lazy-action-cursor-parity.mjs"
+        }
+      ],
+      "verifierCount": 15
+    },
+    {
+      "description": "Legal roster proposals, complete deployment, fixed benchmark routes, and cross-domain validation",
+      "durationMs": 641696.922,
+      "gateKey": "roster_benchmark_and_cross_domain",
+      "passed": true,
+      "passedVerifierCount": 7,
+      "results": [
+        {
+          "durationMs": 13510.369,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "roster_benchmark_and_cross_domain",
+          "passed": true,
+          "verifierName": "verify-formation-candidates-parity.mjs"
+        },
+        {
+          "durationMs": 284.709,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "roster_benchmark_and_cross_domain",
+          "passed": true,
+          "verifierName": "verify-roster-investment-parity.mjs"
+        },
+        {
+          "durationMs": 1.908,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "roster_benchmark_and_cross_domain",
+          "passed": true,
+          "verifierName": "verify-fixed-benchmark-strict-roll-materialization-v2.mjs"
+        },
+        {
+          "durationMs": 136483.252,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "roster_benchmark_and_cross_domain",
+          "passed": true,
+          "verifierName": "verify-fixed-steamroller-assassination-v2.mjs"
+        },
+        {
+          "durationMs": 435831.16,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "roster_benchmark_and_cross_domain",
+          "passed": true,
+          "verifierName": "verify-fixed-steamroller-benchmark-v2.mjs"
+        },
+        {
+          "durationMs": 2816.287,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "roster_benchmark_and_cross_domain",
+          "passed": true,
+          "verifierName": "verify-nested-roster-deployment-v2.mjs"
+        },
+        {
+          "durationMs": 52769.237,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "roster_benchmark_and_cross_domain",
+          "passed": true,
+          "verifierName": "verify-cross-scenario-roster-validation-v1.mjs"
+        }
+      ],
+      "verifierCount": 7
+    },
+    {
+      "description": "External DAG equivalence, bounded real batch, parallel continuation, and checkpoint recovery",
+      "durationMs": 108867.41600000001,
+      "gateKey": "storage_parallel_recovery",
+      "passed": true,
+      "passedVerifierCount": 4,
+      "results": [
+        {
+          "durationMs": 7733.55,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "storage_parallel_recovery",
+          "passed": true,
+          "verifierName": "verify-external-dag-storage.mjs"
+        },
+        {
+          "durationMs": 42135.076,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "storage_parallel_recovery",
+          "passed": true,
+          "verifierName": "verify-external-dag-real-batch.mjs"
+        },
+        {
+          "durationMs": 58991.747,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "storage_parallel_recovery",
+          "passed": true,
+          "verifierName": "verify-strict-policy-probability-and-min-v2.mjs"
+        },
+        {
+          "durationMs": 7.043,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "storage_parallel_recovery",
+          "passed": true,
+          "verifierName": "verify-terminal-resume-checkpoint-v1.mjs"
+        }
+      ],
+      "verifierCount": 4
+    },
+    {
+      "description": "Interactive report, exact current media, publication contract, and fail-closed training export",
+      "durationMs": 110222.228,
+      "gateKey": "report_training_and_human_evidence",
+      "passed": true,
+      "passedVerifierCount": 3,
+      "results": [
+        {
+          "durationMs": 105193.319,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "report_training_and_human_evidence",
+          "passed": true,
+          "verifierName": "verify-search-console-v1.mjs"
+        },
+        {
+          "durationMs": 346.268,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "report_training_and_human_evidence",
+          "passed": true,
+          "verifierName": "verify-search-console-current-media-v1.mjs"
+        },
+        {
+          "durationMs": 4682.641,
+          "errorMessage": "",
+          "errorName": "",
+          "gateKey": "report_training_and_human_evidence",
+          "passed": true,
+          "verifierName": "verify-reachability-publication-v1.mjs"
+        }
+      ],
+      "verifierCount": 3
+    }
+  ],
+  "hostReceiptHash": "80ce324eb55d360e09f7c0a4e66c9e9c4b491fe358112adaeb5503a7bb8dd14e",
+  "passedGateCount": 8,
+  "passedVerifierCount": 79,
+  "readiness": {
+    "completeContinuousStateSpaceExhausted": false,
+    "globalOptimalityProven": false,
+    "naturalWinRateProven": false,
+    "projectReadyForBoundedResearchUse": true,
+    "raceOrFactionOptimalityProven": false,
+    "reverseSearchMayAffectRules": false,
+    "strictForwardHostRemainsRulesAuthority": true,
+    "trainingExportFailClosed": true,
+    "unresolvedAndDeferredMassPreserved": true
+  },
+  "reportHash": "a97d635507cffa9e1300ab47374048252775127f536bdb0f7b4c0a7a42986fdd",
+  "schemaVersion": "warmachine_project_completion_gates_v1",
+  "trainingTruth": false,
+  "verifierCount": 79,
+  "verifierInventoryHash": "146e8c989b3dc1ac766dc9e0ffcf8d0463c302bbebfa2bcdb2426136bd8f7f9d"
+}

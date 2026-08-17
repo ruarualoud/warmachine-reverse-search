@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "warmachine_search_efficiency_policy_v2_verification",
+  "verifiedAt": "2026-08-11",
+  "dimensionCount": 18,
+  "hardDominanceDimensionCount": 6,
+  "orderingOnlyDimensionCount": 12,
+  "modeCases": {
+    "nextTurnRouteRejectedByCurrentTurnHorizon": true,
+    "nextTurnRouteRetainedByLongHorizon": true,
+    "incompleteCurrentTurnNotPromoted": true,
+    "strictIncompleteLongRouteReportableAsBestDiscovered": true,
+    "strictIncompleteLongRouteNotExact": true
+  },
+  "proposalFloorCases": {
+    "probabilityUpperBoundBelowFloorExcluded": true,
+    "probabilityIntervalCrossingFloorRetained": true,
+    "subjectiveExclusionRecordedAsOmittedMass": true,
+    "subjectiveExclusionIsNotRulesRefutation": true
+  },
+  "strategyCases": {
+    "negativeImmediateMaterialSwingRetained": true,
+    "negativeImmediateScoreSwingRetained": true,
+    "deliberateExchangeRetained": true,
+    "lowerRequiredFriendlyRosterInvestmentPreferredInSameContext": true
+  },
+  "paretoSafetyCases": {
+    "sameContextStrictExactMonotoneDominanceArchivesLabel": true,
+    "missingMonotonicityBlocksHardDominance": true,
+    "independentChanceMassBlocksHardDominance": true,
+    "unknownHardDimensionBlocksHardDominance": true,
+    "differentContextBlocksHardDominance": true,
+    "archivedProvenanceRetained": true
+  },
+  "hardRulesPruningOnlyForExactRefutations": true,
+  "globalOptimalityProven": false
+}

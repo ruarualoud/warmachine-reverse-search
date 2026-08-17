@@ -1,0 +1,144 @@
+{
+  "ok": true,
+  "schemaVersion": "warmachine_external_dag_micro_verification_v1",
+  "semanticEquivalence": {
+    "fullJsonTreeRouteCount": 4,
+    "fullJsonTreeBytes": 25049,
+    "uniqueStateCount": 3,
+    "uniqueEdgeCount": 2,
+    "routeLabelCount": 4,
+    "chanceContributionCount": 4,
+    "externalPhysicalBytes": 49743,
+    "boundedWorkingSetBytes": 2312,
+    "peakWorkingSetReductionRatio": 10.834,
+    "canonicalSetsEqual": true
+  },
+  "exactMerge": {
+    "concurrentDuplicateWorkerCount": 2,
+    "duplicateSubmissionCollapsed": true,
+    "outOfOrderSemanticDigestEqual": true,
+    "reopenedStateIds": [
+      "state:07f1d5b8414bb42c958c41755cffb2c30f7b7bb4b69fbe667ef665da16693441"
+    ]
+  },
+  "failureInjection": {
+    "partialWorkerSegmentIgnored": true,
+    "corruptedPublishedSegmentFrozen": true,
+    "partialMergeDidNotPublish": true,
+    "uncommittedMainMergeRecovered": true,
+    "checkpointManifestWithoutPointerIgnored": true,
+    "checkpointPointerCommitRecovered": true,
+    "contentCollisionFailedClosed": true,
+    "receiptDriftReadOnlyFrozen": true,
+    "gcRollbackRestored": true,
+    "gcCommittedRecoveryCompleted": true,
+    "pinnedRootPreserved": true
+  },
+  "budget": {
+    "stoppedGeneration": true,
+    "U": 1,
+    "unresolvedMass": 0.25,
+    "reasons": {
+      "record": "record_budget_exhausted",
+      "ram": "ram_budget_exhausted",
+      "disk": "disk_budget_exhausted",
+      "time": "time_budget_exhausted",
+      "label": "label_budget_exhausted"
+    }
+  },
+  "stateEncoding": {
+    "boundedDeltaReconstructed": true,
+    "maxDeltaDepth": 2,
+    "depthLimitRebasedToFull": true
+  },
+  "finalMetrics": {
+    "schemaVersion": "warmachine_external_dag_metrics_v1",
+    "checkpointId": "checkpoint:d6b8de7a85a3924b0e03e9ecdc0e9f0b86a4384147ea9a59687a229de2260c1f",
+    "V": 3,
+    "G": 4,
+    "E": 2,
+    "L": 8,
+    "C": 4,
+    "U": 0,
+    "unresolvedMass": 0,
+    "objectPhysicalBytes": {
+      "state": {
+        "count": 3,
+        "min": 626,
+        "p50": 630,
+        "p95": 863,
+        "p99": 863,
+        "max": 863
+      },
+      "edge": {
+        "count": 2,
+        "min": 680,
+        "p50": 680,
+        "p95": 680,
+        "p99": 680,
+        "max": 680
+      },
+      "label": {
+        "count": 8,
+        "min": 761,
+        "p50": 773,
+        "p95": 825,
+        "p99": 825,
+        "max": 825
+      },
+      "chance": {
+        "count": 4,
+        "min": 639,
+        "p50": 639,
+        "p95": 643,
+        "p99": 643,
+        "max": 643
+      },
+      "receipt": {
+        "count": 2,
+        "min": 548,
+        "p50": 548,
+        "p95": 552,
+        "p99": 552,
+        "max": 552
+      },
+      "unresolved": {
+        "count": 0,
+        "min": 0,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      }
+    },
+    "labelsPerState": {
+      "count": 2,
+      "min": 1,
+      "p50": 1,
+      "p95": 7,
+      "p99": 7,
+      "max": 7
+    },
+    "liveCanonicalBytes": 11928,
+    "totalPhysicalBytes": 61810,
+    "writeAmplification": 1.2856,
+    "canonicalWriteRatio": 6.6616,
+    "io": {
+      "bytesRead": 440449,
+      "bytesWritten": 79460,
+      "candidateRecordsRead": 20,
+      "indexRowsRead": 302,
+      "sortRunsWritten": 16,
+      "maxBufferedCanonicalBytes": 2312,
+      "merges": 5
+    },
+    "partitionCount": 7
+  },
+  "checkpointIds": [
+    "checkpoint:1c9b3d07c203872c85d6cdd90e2e39594ac23637230a8b988f5739c995009378",
+    "checkpoint:2b5d28fed5d80966407711e16c40c115153c7795d9927f2afd5349e1a8c0e516",
+    "checkpoint:882c709f4c9ce0f89eed75429e32ab66fd02467fff3efbd6d0ba04e35fc36445",
+    "checkpoint:0a86ebe624ed3a6f484f1a39adfbd2f29ee834103a3c81a5da7d4511ed6b7b88",
+    "checkpoint:d6b8de7a85a3924b0e03e9ecdc0e9f0b86a4384147ea9a59687a229de2260c1f"
+  ]
+}

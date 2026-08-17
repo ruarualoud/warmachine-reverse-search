@@ -1,0 +1,14 @@
+node_modules/
+build/
+.DS_Store
+*.log
+*.tmp
+*.tgz
+.env
+.env.*
+!.env.example
+
+# Search runs are external artifacts. Keep only the Wayfinder source-of-truth tickets.
+.scratch/*
+!.scratch/warmachine-custom-matchup-wayfinder-v1/
+!.scratch/warmachine-custom-matchup-wayfinder-v1/**

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "warmachine_typed_interaction_graph_v2_verification_evidence_v1",
+  "verifiedAt": "2026-08-11",
+  "upstreamReceiptHash": "5d8bf918db6bfd3f7b9131df3639b8f1d0bf5907cfba6be0601aea82a946983f",
+  "graphHash": "aed878dadeb2f3125daf1738403c1568508633f1671579ab3359f9d81bb756ed",
+  "canonicalGraph": {
+    "atomCount": 374,
+    "hookOperatorCount": 457,
+    "primitiveCount": 194,
+    "declaredInteractionCount": 489,
+    "quarantinedInteractionCount": 3,
+    "scenarioProfileCount": 7,
+    "nodeCount": 9463,
+    "edgeCount": 23308,
+    "genericOperatorConstraintCount": 454,
+    "evidenceRuleCount": 67,
+    "attachedEvidenceRuleCount": 67,
+    "evidenceInteractionCount": 186,
+    "danglingEdgeCount": 0,
+    "falseAtomBridgeCount": 0,
+    "diagnosticTraversalLeakCount": 0
+  },
+  "fixed106Roster": {
+    "modelCount": 106,
+    "uniqueSourceCount": 102,
+    "sourceOccurrenceCount": 351,
+    "exactMappedSourceCount": 35,
+    "exactMappedAtomCount": 34,
+    "unresolvedSourceCount": 67,
+    "coreRuleFactCount": 18,
+    "baseGeometryFactCount": 4,
+    "attackProfileFactCount": 2,
+    "canonicalDenominatorCount": 126,
+    "wildcardPieceCount": 50
+  },
+  "terminalQueries": {
+    "assassination": {
+      "obligationCount": 7,
+      "relevantOperatorCount": 30,
+      "relevantAtomCount": 26,
+      "relevantCoreFactCount": 20,
+      "relevantPieceCount": 106
+    },
+    "scenarioScore": {
+      "obligationCount": 6,
+      "relevantOperatorCount": 0,
+      "relevantAtomCount": 0,
+      "relevantCoreFactCount": 6,
+      "relevantPieceCount": 44
+    }
+  },
+  "preservation": {
+    "real106StrictTransitionCount": 1,
+    "microFixtureCount": 6,
+    "microActionCount": 50,
+    "microRejectedActionCount": 1,
+    "inputOutputActionIdentityPreserved": true,
+    "hardFilteringPerformed": false
+  },
+  "adversarial": {
+    "sharedHookAtomCount": 6,
+    "reachableAtomCountFromOneSharedHookAtom": 1,
+    "sharedDeclaredStringCreatesSemanticTraversal": false,
+    "wildcardCanCreateHardLock": false
+  },
+  "hardPruningEnabled": false,
+  "verificationCommand": "npm run verify:interaction-graph"
+}

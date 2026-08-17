@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "warmachine_ruleset_update_review_v1",
+  "approved": true,
+  "approvedBy": "Codex strict maintenance review with user-authorized workspace changes",
+  "approvedAt": "2026-08-12T03:53:23+08:00",
+  "reviewedBaselineKey": "warmachine-ruleset-2026-08-12-remote-40041-v3",
+  "candidateSemanticIndexHash": "21b2ec061ff46937af43405b9070ac2f0d5706873f9c22d54f4929aa7c2ef8a5",
+  "impactHash": "7d9aa34c7bbedd7524699ba1af15e538a6e09c07342b9e5077b990c6ef8f1790",
+  "strictGatesPassed": true,
+  "strictGateEvidence": [
+    "Breath Stealer focused verifier passed 9 source, positive, negative, channeling, expiry and stale-source scenarios.",
+    "Precision Strike focused verifier passed 15 source, movement, LOS, blocker, interaction, expiry and stale-source scenarios.",
+    "Damage Transfer ownership verifier exposed one canonical attacker action and two defender-owned responses; human and self-play resolution selected the exact defender response without attacker ownership leakage.",
+    "Warmachine atom registry, 108 of 108 micro-battle fixtures and Route3 full-candidate/restricted-action audit passed on the candidate Host.",
+    "The Two Fronts score route passed 159 strict transitions, reached the defender-turn-three 3:0 terminal and rejected a tampered transition receipt.",
+    "The center-break assassination route passed 60 strict transitions, removed Nymara and produced a strict-certified terminal witness; Chance and adversarial response coverage remain explicitly false for this existential route."
+  ],
+  "skillGatesPassed": true,
+  "skillGateEvidence": [
+    "Strict skill validity audit reported strictExecutorReady=true, partialFamilyCount=0 and two eligible runtime manifests while eight historical manifests remained quarantined.",
+    "Offline ctx2skill/skill2ctx calibration reported promotionReady=true and replayed 108 of 108 micro fixtures.",
+    "The refreshed strict calibration candidate manifest SHA-256 is b60ea501cb1bde16fbf3a6b76fcd5a70ff0a51ce60329d1a38330e82db0262ee."
+  ]
+}

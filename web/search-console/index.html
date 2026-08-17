@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Warmachine 胜利路径工作台</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-block">
+      <strong>Warmachine 胜利路径工作台</strong>
+      <span id="rulesReceipt">rules-v1</span>
+    </div>
+    <div class="session-strip">
+      <span id="sessionStatus" class="status-pill" data-state="idle">未运行</span>
+      <span id="sessionName">尚未创建搜索</span>
+    </div>
+    <div class="top-actions">
+      <button id="newSessionButton" class="icon-command" type="button" title="新建搜索">
+        <span aria-hidden="true">＋</span><span>新搜索</span>
+      </button>
+      <button id="seedButton" class="icon-command" type="button" title="人工注入搜索种子">
+        <span aria-hidden="true">⌁</span><span>注入种子</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="setup-panel" aria-label="终局与搜索设置">
+      <section class="panel-section">
+        <div class="section-heading"><span>比赛场景</span><span class="count" id="gameScenarioCount">0</span></div>
+        <div id="gameScenarioList" class="game-scenario-list"></div>
+      </section>
+      <section class="panel-section">
+        <div class="section-heading"><span>胜利场景</span><span class="count" id="scenarioCount">0</span></div>
+        <div id="scenarioList" class="scenario-list"></div>
+      </section>
+      <section class="panel-section grow">
+        <div class="section-heading"><span>终局位置根</span><span id="anchorCount" class="count">0</span></div>
+        <div id="anchorList" class="anchor-list"></div>
+      </section>
+      <section class="panel-section budget-section">
+        <div class="section-heading"><span>搜索预算</span><span class="muted">有界</span></div>
+        <fieldset class="mode-segment" aria-label="搜索模式">
+          <legend class="sr-only">搜索模式</legend>
+          <label><input type="radio" name="searchMode" value="current_turn"><span>当回合</span></label>
+          <label><input type="radio" name="searchMode" value="long_horizon" checked><span>长线</span></label>
+        </fieldset>
+        <label class="field-row">
+          <span>反推回合</span>
+          <input id="reverseTurnsInput" type="number" min="0" max="6" value="1">
+        </label>
+        <label class="field-row">
+          <span>路线标签</span>
+          <input id="routeLabelsInput" type="number" min="1" max="20000" value="8">
+        </label>
+        <label class="toggle-row">
+          <input id="movementInput" type="checkbox">
+          <span>展开移动前驱</span>
+        </label>
+      </section>
+      <section class="run-controls" aria-label="搜索控制">
+        <button id="startButton" class="primary-command" type="button">
+          <span aria-hidden="true">▶</span><span>开始搜索</span>
+        </button>
+        <div class="control-pair">
+          <button id="pauseButton" class="square-command" type="button" title="暂停搜索" disabled>
+            <span aria-hidden="true">Ⅱ</span><span class="sr-only">暂停</span>
+          </button>
+          <button id="resumeButton" class="square-command" type="button" title="恢复搜索" disabled>
+            <span aria-hidden="true">▶</span><span class="sr-only">恢复</span>
+          </button>
+          <button id="cancelButton" class="square-command danger" type="button" title="取消搜索" disabled>
+            <span aria-hidden="true">■</span><span class="sr-only">取消</span>
+          </button>
+        </div>
+      </section>
+    </aside>
+
+    <section class="result-panel">
+      <header class="terminal-context">
+        <div>
+          <span class="eyebrow">当前终局</span>
+          <strong id="terminalTitle">选择一个胜利场景</strong>
+        </div>
+        <div id="terminalMeta" class="terminal-meta"></div>
+        <span id="terminalRelation" class="terminal-relation">等待终局物化</span>
+      </header>
+      <div class="metric-strip" aria-label="搜索统计">
+        <div class="win-rate-metric"><span>路径概率证据</span><strong id="winRateMetric">待估</strong></div>
+        <div><span>已发现分支</span><strong id="foundMetric">0</strong></div>
+        <div><span>strict 通过</span><strong id="strictMetric">0</strong></div>
+        <div><span>到达部署</span><strong id="deploymentMetric">0</strong></div>
+        <div><span>已处理节点</span><strong id="processedMetric">0</strong></div>
+        <div><span>待展开/未知</span><strong id="unknownMetric">0</strong></div>
+        <div><span>strict 拒绝</span><strong id="rejectedMetric">0</strong></div>
+      </div>
+      <section class="candidate-browser" aria-label="可达候选">
+        <div class="candidate-toolbar">
+          <div><strong>可达候选</strong><span id="branchResultCount" class="count">0</span></div>
+          <fieldset class="filter-segment" aria-label="分支筛选">
+            <legend class="sr-only">分支筛选</legend>
+            <label><input type="radio" name="branchFilter" value="all"><span>全部</span></label>
+            <label><input type="radio" name="branchFilter" value="strict" checked><span>strict</span></label>
+            <label><input type="radio" name="branchFilter" value="deployment"><span>到部署</span></label>
+          </fieldset>
+          <label class="sort-control"><span>查看顺序</span><select id="branchSort">
+            <option value="evidence">证据最完整</option>
+            <option value="reverse_depth">反推最远</option>
+            <option value="action_count">动作最少</option>
+          </select></label>
+          <label class="branch-picker"><span>分支</span><select id="branchSelect" aria-label="结果分支"><option>无结果</option></select></label>
+        </div>
+        <div id="branchCards" class="branch-cards"></div>
+      </section>
+      <nav class="view-tabs" aria-label="报告视图">
+        <button class="tab-button active" data-view="strategy" type="button">策略总览</button>
+        <button class="tab-button" data-view="board" type="button">棋盘回放</button>
+        <button class="tab-button" data-view="graph" type="button">分支图</button>
+        <button class="tab-button" data-view="timeline" type="button">动作明细</button>
+        <button class="tab-button" data-view="compare" type="button">分支比较</button>
+        <button class="tab-button" data-view="dispositions" type="button">未闭合分母</button>
+      </nav>
+      <div class="view-stack">
+        <section id="strategyView" class="report-view active">
+          <div class="strategy-report">
+            <header class="strategy-verdict">
+              <div><span>一句话结论</span><strong id="strategyHeadline">等待搜索结果</strong></div>
+              <div class="strategy-confidence"><span>当前证据</span><strong id="strategyConfidence">未建立</strong><small id="strategyConfidenceNote">strict 路径发布后生成</small></div>
+            </header>
+            <div class="strategy-outcome-strip">
+              <div><span>结果</span><strong id="strategyOutcome">—</strong></div>
+              <div><span>路径规模</span><strong id="strategyRouteScale">—</strong></div>
+              <div><span>概率范围</span><strong id="strategyProbability">—</strong></div>
+              <div><span>未闭合风险</span><strong id="strategyRiskCount">—</strong></div>
+            </div>
+            <div class="strategy-body">
+              <section>
+                <div class="section-heading"><span>推荐执行顺序</span><span id="strategyStepCount" class="count">0</span></div>
+                <div id="strategySteps" class="strategy-steps"></div>
+              </section>
+              <section>
+                <div class="section-heading"><span>为什么这条路成立</span></div>
+                <div id="strategyReasons" class="strategy-facts"></div>
+                <div class="section-heading compact"><span>边界与风险</span></div>
+                <div id="strategyRisks" class="strategy-risks"></div>
+              </section>
+            </div>
+          </div>
+        </section>
+        <section id="graphView" class="report-view">
+          <div id="graphEmpty" class="empty-state">
+            <strong>选择终局位置根并启动搜索</strong>
+            <span>搜索进度会实时更新；strict 分支发布后可逐边检查。</span>
+          </div>
+          <div id="graphViewport" class="graph-viewport" hidden>
+            <svg id="branchGraph" role="img" aria-label="反向搜索分支图"></svg>
+          </div>
+          <div id="branchLegend" class="legend-bar">
+            <span><i class="legend-dot certified"></i>strict 可达</span>
+            <span><i class="legend-dot deferred"></i>预算延迟</span>
+            <span><i class="legend-dot rejected"></i>strict 拒绝</span>
+            <span><i class="legend-dot unknown"></i>逆算/规则未知</span>
+          </div>
+        </section>
+        <section id="boardView" class="report-view">
+          <div class="board-layout">
+            <div class="board-evidence-strip" aria-label="回放展示证据">
+              <div><span>地图来源</span><strong id="boardEvidenceMode">等待状态</strong></div>
+              <div><span>身份匹配</span><strong id="boardIdentityMetric">0 / 0</strong></div>
+              <div><span>真实头像</span><strong id="boardPortraitMetric">0 / 0</strong></div>
+              <div><span>素材缺口</span><strong id="boardAssetGapMetric">0</strong></div>
+            </div>
+            <div class="board-stage">
+              <fieldset class="board-view-controls" aria-label="棋盘视野">
+                <legend class="sr-only">棋盘视野</legend>
+                <button id="boardFullButton" class="active" type="button">全图</button>
+                <button id="boardFocusButton" type="button">行动焦点</button>
+              </fieldset>
+              <canvas id="boardCanvas" width="900" height="720"></canvas>
+            </div>
+            <div class="board-step-summary">
+              <strong id="boardStepTitle">尚未选择状态</strong>
+              <span id="boardStepDetail">选择分支后可逐步回放。</span>
+            </div>
+            <div id="boardStepRail" class="board-step-rail" aria-label="路径步骤"></div>
+            <div class="board-sibling-strip">
+              <span>此状态的已发现后续</span>
+              <div id="boardSiblingBranches" class="board-sibling-branches"></div>
+            </div>
+            <div class="board-timeline">
+              <button id="previousStateButton" class="square-command" type="button" title="上一个状态">←</button>
+              <button id="playStateButton" class="square-command" type="button" title="播放状态变化">▶</button>
+              <input id="stateSlider" type="range" min="0" max="0" value="0" aria-label="状态时间轴">
+              <button id="nextStateButton" class="square-command" type="button" title="下一个状态">→</button>
+              <span id="statePosition">0 / 0</span>
+            </div>
+          </div>
+        </section>
+        <section id="timelineView" class="report-view">
+          <div id="timelineList" class="timeline-list"></div>
+        </section>
+        <section id="compareView" class="report-view">
+          <div class="comparison-note">只比较可审计证据维度；查看顺序不是策略分数，也不代表全局最优。</div>
+          <div class="table-scroll">
+            <table class="data-table comparison-table">
+              <thead><tr><th>分支</th><th>证据</th><th>反推范围</th><th>动作</th><th>关键结果</th><th>概率</th></tr></thead>
+              <tbody id="comparisonRows"></tbody>
+            </table>
+          </div>
+        </section>
+        <section id="dispositionsView" class="report-view">
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead><tr><th>处置</th><th>阶段</th><th>原因</th><th>状态</th></tr></thead>
+              <tbody id="dispositionRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <aside class="inspector-panel" aria-label="分支检查器">
+      <div class="section-heading inspector-title"><span>证据检查器</span><span id="selectionKind" class="count">无选择</span></div>
+      <div id="inspectorEmpty" class="inspector-empty">选择一个分支、状态节点或动作边。</div>
+      <div id="inspectorContent" hidden>
+        <div class="inspector-primary">
+          <span id="inspectorBadge" class="evidence-badge">strict</span>
+          <strong id="inspectorHeading"></strong>
+          <span id="inspectorSubheading" class="muted"></span>
+        </div>
+        <dl id="inspectorFacts" class="fact-list"></dl>
+        <div class="section-heading compact"><span>规则凭据</span></div>
+        <code id="receiptHash" class="hash-block"></code>
+        <div class="section-heading compact"><span>状态变化</span></div>
+        <div id="stateDiff" class="diff-list"></div>
+        <div class="section-heading compact"><span>分支闭合</span></div>
+        <div id="branchClosure" class="closure-grid"></div>
+        <div class="section-heading compact"><span>关键动作</span></div>
+        <div id="keyActionList" class="key-action-list"></div>
+        <div class="section-heading compact"><span>终局假设来源</span></div>
+        <div id="assumptionList" class="assumption-list"></div>
+      </div>
+    </aside>
+
+    <section class="event-panel" aria-label="实时搜索事件">
+      <div class="live-summary">
+        <div class="event-header">
+          <div class="section-heading"><span>实时搜索</span><span id="eventCount" class="count">0</span></div>
+          <span id="liveIndicator" class="live-indicator" data-live="false">离线</span>
+        </div>
+        <div class="live-stage-block">
+          <strong id="liveStage">等待搜索</strong>
+          <span id="liveProgressText">尚无运行数据</span>
+          <div class="progress-track"><i id="liveProgressBar"></i></div>
+        </div>
+      </div>
+      <div id="eventLog" class="event-log"></div>
+    </section>
+  </main>
+
+  <dialog id="seedDialog" class="seed-dialog">
+    <form method="dialog" class="dialog-shell">
+      <header>
+        <div><strong>人工注入搜索种子</strong><span id="seedValidationState" class="muted">未校验</span></div>
+        <button class="square-command" value="cancel" type="submit" title="关闭">×</button>
+      </header>
+      <div class="seed-mode-tabs" role="tablist" aria-label="种子类型">
+        <button class="seed-mode-button active" data-seed-view="quick" type="button">快速构造</button>
+        <button class="seed-mode-button" data-seed-view="exact" type="button">精确终局 JSON</button>
+      </div>
+      <section id="quickSeedView" class="seed-view active">
+        <div class="seed-form-grid">
+          <label><span>比赛场景</span><select id="seedScenarioSelect"></select></label>
+          <label><span>胜利类型</span><select id="seedVictorySelect"></select></label>
+          <label><span>终局位置根</span><select id="seedAnchorSelect"></select></label>
+          <label><span>终局轮次</span><input id="seedRoundInput" type="number" min="1" max="7" value="3"></label>
+          <label class="seed-wide"><span>随机种子</span><input id="seedRandomInput" type="text" value="user-terminal-seed-v1"></label>
+        </div>
+        <div class="seed-preview-block">
+          <span>将提交的可审计种子</span>
+          <code id="quickSeedPreview"></code>
+        </div>
+      </section>
+      <section id="exactSeedView" class="seed-view">
+        <textarea id="seedEditor" spellcheck="false" aria-label="精确终局种子 JSON"></textarea>
+      </section>
+      <div id="seedIssues" class="seed-issues"></div>
+      <footer>
+        <button id="validateSeedButton" class="secondary-command" type="button">✓ 校验</button>
+        <button id="injectSeedButton" class="primary-command" type="button" disabled>▶ 校验并搜索</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

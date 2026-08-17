@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "warmachine_ruleset_update_review_v1",
+  "approved": true,
+  "approvedBy": "Codex strict maintenance review",
+  "approvedAt": "2026-08-11T00:00:00+08:00",
+  "reviewedBaselineKey": "warmachine-ruleset-2026-08-11-remote-40041-v2",
+  "candidateSemanticIndexHash": "17591cc3ea542467cf21cf27682315b65f2b12f09908387134844c26815d5f4c",
+  "impactHash": "1bc01d3dce630c3c3116d4cc665ebbbedc6ba19dff9e8722897dac31562e42f4",
+  "strictGatesPassed": true,
+  "strictGateEvidence": [
+    "Nymara current-data focused verifier passed with Field Marshal grant idempotence assertions.",
+    "Tunnel Ambush and Field Marshal focused verifier passed.",
+    "Fixed Steamroller benchmark passed 159 strict transitions with a certified terminal route witness.",
+    "Tampered fixed-benchmark transition receipt was rejected.",
+    "Offline calibration replayed 108 of 108 strict micro-battle fixtures successfully."
+  ],
+  "skillGatesPassed": true,
+  "skillGateEvidence": [
+    "Strict skill validity audit reported strictExecutorReady=true and partialFamilyCount=0.",
+    "Offline ctx2skill/skill2ctx calibration reported promotionReady=true.",
+    "Runtime manifests remained limited to the two eligible reviewed manifests; eight old manifests remained quarantined."
+  ]
+}

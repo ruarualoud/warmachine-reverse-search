@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "warmachine_nested_roster_deployment_v2_verification",
+  "generatedAt": "2026-08-14T04:34:48.928Z",
+  "upstreamPool": {
+    "schemaVersion": "warmachine_sepsira_fane_construction_pool_v1",
+    "contentHash": "b9e424df007a55d89cc97083e16afbd2868835c3416fcaad6baf1c7fc0f010f9",
+    "remoteVersion": "40041",
+    "cryxSourceProposalCount": 96,
+    "faneSourceProposalCount": 96,
+    "exactListLegality": true,
+    "exhaustiveAllLists": false
+  },
+  "dedupe": {
+    "ledgerHash": "4d3888b16daf209e49a2557a5a9274718fbcc6239e3c60c1a418f49859bd7525",
+    "counts": {
+      "sourceProposalCount": 4,
+      "sourceExactLegalProposalCount": 3,
+      "sourceInvalidProposalCount": 1,
+      "uniqueExactLegalRosterCount": 2,
+      "duplicateLegalAliasCount": 1,
+      "terminalProposalExcludedUniqueCount": 0,
+      "selectedUniqueRosterCount": 1,
+      "budgetUnresolvedUniqueRosterCount": 1
+    },
+    "massLedger": {
+      "sourceProposalMass": 1,
+      "sourceInvalidMass": 0.25,
+      "terminalProposalExcludedMass": 0,
+      "selectedMass": 0.25,
+      "budgetUnresolvedMass": 0.5,
+      "representedMass": 1,
+      "massConserved": true,
+      "semantics": "Uniform source-proposal mass inside the bound finite construction pool. Duplicate canonical rosters merge identities and accumulate alias mass."
+    }
+  },
+  "capability": {
+    "orderingSelectedListKey": "cryx_generated_065_um-ch-mm-rh-xm-dm-al",
+    "exactExcludedListKey": "cryx_generated_001_um-ch-mm-rl-xh-dh-al",
+    "exactMassLedger": {
+      "sourceProposalMass": 1,
+      "sourceInvalidMass": 0,
+      "terminalProposalExcludedMass": 0.5,
+      "selectedMass": 0.5,
+      "budgetUnresolvedMass": 0,
+      "representedMass": 1,
+      "massConserved": true,
+      "semantics": "Uniform source-proposal mass inside the bound finite construction pool. Duplicate canonical rosters merge identities and accumulate alias mass."
+    }
+  },
+  "nested": {
+    "searchHash": "5c4e5a83b53bcb9b90399397d905cd8a4e1c57d464f836b729c1477491e76f90",
+    "counts": {
+      "selectedRosterPairCount": 9,
+      "attemptedRosterPairCount": 2,
+      "deferredSelectedRosterPairCount": 7,
+      "attemptedRosterPairFirstPlayerCount": 4,
+      "strictLegalOpeningCount": 16,
+      "strictRejectedOpeningCount": 0,
+      "formationBudgetUnresolvedCount": 0
+    },
+    "massLedger": {
+      "totalSourceRosterPairMass": 1,
+      "sourceInvalidRosterPairMass": 0,
+      "terminalProposalExcludedRosterPairMass": 0,
+      "rosterBudgetUnresolvedMass": 0.92,
+      "strictLegalOpeningMass": 0.08,
+      "strictRejectedOpeningMass": 0,
+      "formationBudgetUnresolvedMass": 0,
+      "representedMass": 1,
+      "massConserved": true,
+      "semantics": "Independent uniform source-list proposal mass by side, followed by uniform declared first-player alternatives and finite formation-archetype pairs. Canonical duplicate lists accumulate alias mass before nesting."
+    },
+    "sampleOpeningKeys": [
+      "opening-3075c23fccf1a55178cb9e26044800b0de6d9a83b76e5e0df8611677003b7701",
+      "opening-e878a0bddf48c5b6df525f6e7d331103bf16da96f332c5d6306ab722b343ebb8",
+      "opening-0543ad10baba4788ccf58638fae5d99578e8c10de672193f2a8643188a14ce17",
+      "opening-b8dafaac66add91596c8101069987fca8056d10bf926682f06fcf392f5306df9"
+    ]
+  },
+  "fixedOpening": {
+    "searchHash": "2cb906b51493904b4bfe4addd223b10271cdce07ff06cb2130e6a123d880759a",
+    "openingKey": "opening-83ffaca6ee8105d23d19adfdd6889c0c1f71758c8d4e76453ab60a010e77db5e",
+    "modelCount": 103,
+    "rosterPointLedgerKey": "24c697dc91688a1080671d3f",
+    "provenanceHash": "1e10b4254cc67e2f869d06905080ea9987d1c1693e350d74f6a3ba93e810b28a"
+  },
+  "histories": {
+    "openingHistoryCoverageHash": "01769d43fb22a4aacc0a3155aef068240b744493abf36824e83258523e5bc3dd",
+    "openingCounts": {
+      "modelCount": 103,
+      "directlyRelevantModelCount": 2,
+      "strictCompleteHistoryModelCount": 0,
+      "expandedUnresolvedHistoryModelCount": 2,
+      "deferredEnvelopeModelCount": 101,
+      "hardReachabilityRefutedModelCount": 0,
+      "modelMissingFromOpeningCount": 0,
+      "modelMissingFromFinalCount": 0
+    },
+    "strictHistoryCoverageHash": "392ecfc6a196439431ec09876ed7e8f8c061d201f98c95270cc6c32cfb271a2c",
+    "strictCounts": {
+      "modelCount": 2,
+      "directlyRelevantModelCount": 2,
+      "strictCompleteHistoryModelCount": 2,
+      "expandedUnresolvedHistoryModelCount": 0,
+      "deferredEnvelopeModelCount": 0,
+      "hardReachabilityRefutedModelCount": 0,
+      "modelMissingFromOpeningCount": 0,
+      "modelMissingFromFinalCount": 0
+    },
+    "strictSegmentReceiptHash": "48876e344bcc258cd31e96185d126c7ea934e302c1ce97063e28fcc8ba90508a",
+    "corruptReceiptRejected": "strict_receipt_digest_mismatch",
+    "openEnvelopeHardRefuted": false,
+    "closedEnvelopeHardRefuted": true
+  }
+}

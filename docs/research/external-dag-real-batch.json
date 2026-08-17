@@ -1,0 +1,224 @@
+{
+  "ok": true,
+  "schemaVersion": "warmachine_external_dag_real_batch_verification_v1",
+  "hostReceipt": {
+    "schemaVersion": "warmachine_host_dependency_receipt_v1",
+    "projectDRoot": "/Users/rualoud/Downloads/codex_project/project-d",
+    "gitRevision": "de88f85fb2579a937bc5bddf246e5794fdfdd7da",
+    "trackedWorktreeDirty": true,
+    "trackedDirtyPathCount": 176,
+    "sourceHashes": {
+      "scripts/warmachine-rules-v1.mjs": "680a8475ed75124982c015a439bff6ae59d27e16b8adad693ef3548f3a2efecf",
+      "scripts/layer3-function3-adapter.mjs": "ade517bd0379f490ed785246b29d40a8c1ab07e24be9608f6635a245b59b77a7",
+      "scripts/warmachine-rule-atoms-v1.mjs": "2399a62158b3705aa5061b88f8bb5febc76b29bfa9d0cdd5c4d1565d24aa376a",
+      "scripts/warmachine-exact-dice-probability-v1.mjs": "ff3f973a01c9c79d9a4866215f830f7a55787f0402e24ed2f083ad9816c6a20c"
+    },
+    "receiptHash": "45ae27c5fba38387295118a498803a6a40af1d5dbb22d2f852aa472f49aea0d1"
+  },
+  "binding": {
+    "hostReceiptHash": "45ae27c5fba38387295118a498803a6a40af1d5dbb22d2f852aa472f49aea0d1",
+    "sourceHash": "eb8dd4933a583737405ef9468e64665888d8fec42fe5812d99cd69d52a11c7aa",
+    "configHash": "22f6ccf2f0ed540c0223794008a8c3feef3c9dd510755eba898051256ce48bbc"
+  },
+  "fixture": {
+    "roomPath": "/Users/rualoud/Downloads/codex_project/project-d/build/warmachine-ai/sepsira-swarm-vs-fane-v20260805/strict-construction-search-v2/deep/cryx-recursion-screen-fane-ashmael-scenario-blender-balanced-collision-player1-e4937ca7b578/input-room-store.tmp.json",
+    "modelCount": 106,
+    "topLevelStateKeyCount": 41,
+    "requestedDepth": 3,
+    "branchingPerState": 2
+  },
+  "layerMetrics": [
+    {
+      "depth": 0,
+      "frontierIn": 1,
+      "frontierOut": 2,
+      "legalActionProposals": 8,
+      "strictTransitionsApplied": 2,
+      "omittedLegalActions": 6,
+      "candidateSegmentBytes": 208086,
+      "merge": {
+        "durationMs": 2676.085,
+        "bytesWritten": 223022,
+        "sortRunsWritten": 8
+      },
+      "V": 3,
+      "G": 3,
+      "E": 2,
+      "L": 2,
+      "C": 2,
+      "U": 1,
+      "unresolvedMass": 1
+    },
+    {
+      "depth": 1,
+      "frontierIn": 2,
+      "frontierOut": 4,
+      "legalActionProposals": 4,
+      "strictTransitionsApplied": 4,
+      "omittedLegalActions": 0,
+      "candidateSegmentBytes": 324770,
+      "merge": {
+        "durationMs": 4060.699,
+        "bytesWritten": 77662,
+        "sortRunsWritten": 19
+      },
+      "V": 5,
+      "G": 7,
+      "E": 6,
+      "L": 6,
+      "C": 6,
+      "U": 1,
+      "unresolvedMass": 1
+    },
+    {
+      "depth": 2,
+      "frontierIn": 4,
+      "frontierOut": 8,
+      "legalActionProposals": 60,
+      "strictTransitionsApplied": 8,
+      "omittedLegalActions": 52,
+      "candidateSegmentBytes": 651642,
+      "merge": {
+        "durationMs": 10748.767,
+        "bytesWritten": 79285,
+        "sortRunsWritten": 34
+      },
+      "V": 9,
+      "G": 15,
+      "E": 10,
+      "L": 10,
+      "C": 10,
+      "U": 3,
+      "unresolvedMass": 3
+    }
+  ],
+  "graphMetrics": {
+    "V": 9,
+    "G": 15,
+    "E": 10,
+    "L": 10,
+    "C": 10,
+    "U": 3,
+    "unresolvedMass": 3,
+    "convergenceRatioGOverV": 1.6667,
+    "omittedActionCount": 58,
+    "strictRejectedCount": 0
+  },
+  "capacity": {
+    "stateCanonicalBytes": {
+      "count": 9,
+      "min": 563940,
+      "p50": 1616278,
+      "p95": 1623792,
+      "p99": 1623792,
+      "max": 1623792
+    },
+    "stateCanonicalGzipBytes": {
+      "count": 9,
+      "min": 28977,
+      "p50": 54677,
+      "p95": 54829,
+      "p99": 54829,
+      "max": 54829
+    },
+    "statePhysicalBytes": {
+      "count": 9,
+      "min": 4755,
+      "p50": 10535,
+      "p95": 72594,
+      "p99": 72594,
+      "max": 72594
+    },
+    "fullStateCount": 3,
+    "deltaStateCount": 6,
+    "deltaDepth": {
+      "count": 9,
+      "min": 0,
+      "p50": 1,
+      "p95": 2,
+      "p99": 2,
+      "max": 2
+    },
+    "objectPhysicalBytes": {
+      "state": {
+        "count": 9,
+        "min": 4755,
+        "p50": 10535,
+        "p95": 72594,
+        "p99": 72594,
+        "max": 72594
+      },
+      "edge": {
+        "count": 10,
+        "min": 1445,
+        "p50": 1689,
+        "p95": 4161,
+        "p99": 4161,
+        "max": 4161
+      },
+      "label": {
+        "count": 10,
+        "min": 977,
+        "p50": 977,
+        "p95": 981,
+        "p99": 981,
+        "max": 981
+      },
+      "chance": {
+        "count": 10,
+        "min": 783,
+        "p50": 791,
+        "p95": 791,
+        "p99": 791,
+        "max": 791
+      },
+      "receipt": {
+        "count": 8,
+        "min": 4213,
+        "p50": 4401,
+        "p95": 5534,
+        "p99": 5534,
+        "max": 5534
+      },
+      "unresolved": {
+        "count": 3,
+        "min": 654,
+        "p50": 654,
+        "p95": 654,
+        "p99": 654,
+        "max": 654
+      }
+    },
+    "labelsPerState": {
+      "count": 8,
+      "min": 1,
+      "p50": 1,
+      "p95": 2,
+      "p99": 2,
+      "max": 2
+    },
+    "liveCanonicalBytes": 13607478,
+    "totalPhysicalBytes": 1540093,
+    "writeAmplification": 1.0278,
+    "canonicalWriteRatio": 0.1163
+  },
+  "externalExecution": {
+    "io": {
+      "bytesRead": 7483488,
+      "bytesWritten": 1582872,
+      "candidateRecordsRead": 76,
+      "indexRowsRead": 208,
+      "sortRunsWritten": 34,
+      "maxBufferedCanonicalBytes": 1623792,
+      "merges": 3
+    },
+    "recoveryDurationMs": 51.298,
+    "fullJsonTreeMaterializedBytes": 43289740,
+    "boundedMergeWorkingSetBytes": 1623792,
+    "peakWorkingSetReductionRatio": 26.66,
+    "processRssPeakBytes": 569708544,
+    "immutableSegments": 3,
+    "checkpointGeneration": 3
+  },
+  "claimBoundary": "This is a strict Host-backed storage and recovery measurement, not a terminal strategy proof. Omitted legal actions remain unresolved."
+}

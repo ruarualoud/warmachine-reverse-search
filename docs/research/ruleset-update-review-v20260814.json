@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "warmachine_ruleset_update_review_v1",
+  "approved": true,
+  "approvedBy": "Codex strict maintenance review under the user-authorized Warmachine reverse-search long task",
+  "approvedAt": "2026-08-14T00:00:00+08:00",
+  "reviewedBaselineKey": "warmachine-ruleset-2026-08-14-remote-40041-v4",
+  "candidateSemanticIndexHash": "adcb40d42b5c4f8a55e042b2f194f1b1c5973599b7b240b39463330c36608ace",
+  "impactHash": "788fb572a7f33f465cd10b6e8175a8f99002e6b151e405b668da6bbdef225703",
+  "strictGatesPassed": true,
+  "strictGateEvidence": [
+    "The atom registry passed with 378 definitions and 463 hook operators; the consumer-contract gate mapped every active hook, including the newly reconciled Nymara, Fortress King, Precision Strike, Breath Stealer, Destructive Torpor, Critical Wreckage and Killing Spree consumers.",
+    "Focused strict verifiers passed for Fortress King, Nymara, Precision Strike, Breath Stealer, Destructive Torpor, Killing Spree, Critical Slow, Endorphin Dump, Shooting Gallery, Granted Inspiration and warbeast life-spiral aspects.",
+    "All 108 of 108 micro-battle fixtures passed, together with the strict card-text-effects and strict movement, LOS and template suites.",
+    "The reverse Host-authority, assassination range/control boundary, LOS relation, mutable lifecycle/damage/resource, channeled Excarnate and fixed Steamroller benchmark gates passed against the current Host.",
+    "The representative materialization ledger recovered all 41 unique pinned roots with replay receipts: 38 strict materializations, 16 strict rejects and one legal proposal-filtered Stealth automatic miss across the completed final outcomes.",
+    "The typed interaction graph regenerated with 496 declared interactions, zero quarantined interactions, zero graph issues, 67 of 67 core rules attached and no orphan core rules; its remaining pre-promotion structural failures were only the reviewed cardinality baseline checks replaced by this receipt."
+  ],
+  "skillGatesPassed": true,
+  "skillGateEvidence": [
+    "The current 40041 data delta and atom-reuse ledger were regenerated against the active data hash; the atom-reuse receipt SHA-256 is 7fee96b987eb72897e6fc9e016a53e40c9e78d5e04de616699bdc6f76385684f.",
+    "The strict complete-action-index ctx2skill/skill2ctx manifest was regenerated with SHA-256 d237141046d20d524651c6fd7396182bc1c62e2996f63b22076e4d7638532eb0.",
+    "The strict skill validity audit reported strictExecutorReady=true, currentDataSourceReady=true, partialFamilyCount=0, two eligible runtime manifests and eight quarantined historical manifests.",
+    "Offline strict calibration reported promotionReady=true and replayed 108 of 108 micro fixtures; its candidate manifest SHA-256 is 59a20cc49d431fa47ec3d9c69625406622ed197835da31316f82a920c7b833a5."
+  ]
+}

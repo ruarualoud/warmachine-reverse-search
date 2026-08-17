@@ -1,0 +1,170 @@
+{
+  "ok": true,
+  "schemaVersion": "warmachine_search_explosion_storage_research_v1",
+  "researchOnly": true,
+  "productionReady": false,
+  "generatedAt": "2026-08-10T16:13:35.871Z",
+  "hostReceipt": {
+    "schemaVersion": "warmachine_host_dependency_receipt_v1",
+    "projectDRoot": "/Users/rualoud/Downloads/codex_project/project-d",
+    "gitRevision": "de88f85fb2579a937bc5bddf246e5794fdfdd7da",
+    "trackedWorktreeDirty": true,
+    "trackedDirtyPathCount": 176,
+    "sourceHashes": {
+      "scripts/warmachine-rules-v1.mjs": "bd6884e33e8237f55bd9d0ff1f565239ed70fb729e97cee9907e91a22e537329",
+      "scripts/layer3-function3-adapter.mjs": "e44a40af1146f0a04e110da46b2d93ea8e3238c6d6bbf7a02fa14a2d80d56e0c",
+      "scripts/warmachine-rule-atoms-v1.mjs": "2399a62158b3705aa5061b88f8bb5febc76b29bfa9d0cdd5c4d1565d24aa376a",
+      "scripts/warmachine-exact-dice-probability-v1.mjs": "ff3f973a01c9c79d9a4866215f830f7a55787f0402e24ed2f083ad9816c6a20c"
+    },
+    "receiptHash": "76b9205b5219fe81d324c2831261762895e2dcd75c10f36ff5ea1b52d400cbab"
+  },
+  "fixture": {
+    "roomPath": "/Users/rualoud/Downloads/codex_project/project-d/build/warmachine-ai/sepsira-swarm-vs-fane-v20260805/strict-construction-search-v2/deep/cryx-recursion-screen-fane-ashmael-scenario-blender-balanced-collision-player1-e4937ca7b578/input-room-store.tmp.json",
+    "reportPath": "/Users/rualoud/Downloads/codex_project/project-d/build/warmachine-ai/sepsira-swarm-vs-fane-v20260805/strict-construction-search-v2/shallow/cryx-recursion-screen-fane-ashmael-scenario-blender-balanced-collision-player1-e4937ca7b578/report.json",
+    "modelCount": 106,
+    "topLevelStateKeyCount": 65,
+    "activationGroupCount": 17,
+    "sampledActivationGroupKey": "player1_corpse_crawler_22_1",
+    "sampledLegalActionCount": 8,
+    "sampledRejectedActionCount": 1,
+    "sampledActionType": "rule_atom_mandatory_random_straight_normal_movement",
+    "historicalPrincipalVariationStepBytes": 979
+  },
+  "measuredBytes": {
+    "canonicalState": 1601108,
+    "canonicalStateGzip9": 53885,
+    "nextCanonicalState": 1601702,
+    "nextCanonicalStateGzip9": 54054,
+    "persistedStrictAction": 9449,
+    "persistedStrictActionGzip9": 2627,
+    "strictReceipt": 11576,
+    "strictReceiptGzip9": 3828,
+    "routeLabelMean": 882,
+    "routeLabelSetGzip9": 723,
+    "leafDelta": 720,
+    "leafDeltaGzip9": 354,
+    "externalDatabaseAfterCheckpointAndGc": 167936
+  },
+  "leafDelta": {
+    "changedLeafCount": 2,
+    "changedPaths": [
+      "pieces/51/position/xIn",
+      "anyTimeActivationWindow"
+    ]
+  },
+  "representations": {
+    "fullJsonTreeBytes": 25792984,
+    "inMemoryDagBytes": 3230297,
+    "logicalReductionRatio": 7.985,
+    "externalDatabaseBytes": 167936,
+    "externalVsFullTreeReductionRatio": 153.588,
+    "semanticDigestEqual": true
+  },
+  "correctnessChecks": {
+    "uniqueStateCount": 2,
+    "uniqueEdgeCount": 1,
+    "routeLabelCount": 8,
+    "duplicateWorkerSubmissionCount": 16,
+    "uncommittedCrashRowRolledBack": true,
+    "collisionFailClosed": true,
+    "hostReceiptDriftFailClosed": true,
+    "orphanStateGarbageCollected": true,
+    "probabilityMass": [
+      {
+        "proofSuffixId": "assassination-suffix-a",
+        "resolutionStatus": "resolved",
+        "mass": 0.666667
+      },
+      {
+        "proofSuffixId": "assassination-suffix-a",
+        "resolutionStatus": "unresolved",
+        "mass": 0.333333
+      },
+      {
+        "proofSuffixId": "score-suffix-b",
+        "resolutionStatus": "resolved",
+        "mass": 0.666667
+      },
+      {
+        "proofSuffixId": "score-suffix-b",
+        "resolutionStatus": "unresolved",
+        "mass": 0.333333
+      }
+    ],
+    "terminalSuffixIds": [
+      "assassination-suffix-a",
+      "score-suffix-b"
+    ],
+    "deliberateExchangePreserved": true,
+    "intentPreserved": true,
+    "trainingProvenancePreserved": true
+  },
+  "capacityBudgets": {
+    "availableDiskGiBAtMeasurement": 33.87,
+    "localMicroFixture": {
+      "hotRamMiB": 512,
+      "diskGiB": 2,
+      "immutableSegmentMiB": 64,
+      "abortWhenFreeDiskBelowGiB": 20,
+      "projection": {
+        "diskGiB": 2,
+        "conservativeInputs": {
+          "bytesPerUniqueState": 1024,
+          "retainedEdgesPerState": 2.5,
+          "bytesPerEdge": 8192,
+          "labelsPerState": 2,
+          "bytesPerLabel": 2048,
+          "writeAmplification": 4
+        },
+        "liveBytesPerState": 25600,
+        "estimatedLiveUniqueStates": 83886,
+        "estimatedSafeUniqueStatesDuringCompaction": 20971
+      }
+    },
+    "localCryxFane": {
+      "hotRamMiB": 1024,
+      "diskGiB": 8,
+      "immutableSegmentMiB": 128,
+      "abortWhenFreeDiskBelowGiB": 20,
+      "projection": {
+        "diskGiB": 8,
+        "conservativeInputs": {
+          "bytesPerUniqueState": 1024,
+          "retainedEdgesPerState": 2.5,
+          "bytesPerEdge": 8192,
+          "labelsPerState": 2,
+          "bytesPerLabel": 2048,
+          "writeAmplification": 4
+        },
+        "liveBytesPerState": 25600,
+        "estimatedLiveUniqueStates": 335544,
+        "estimatedSafeUniqueStatesDuringCompaction": 83886
+      }
+    },
+    "provisionedServerTarget": {
+      "hotRamMiB": 4096,
+      "diskGiB": 256,
+      "immutableSegmentMiB": 256,
+      "projection": {
+        "diskGiB": 256,
+        "conservativeInputs": {
+          "bytesPerUniqueState": 1024,
+          "retainedEdgesPerState": 2.5,
+          "bytesPerEdge": 8192,
+          "labelsPerState": 2,
+          "bytesPerLabel": 2048,
+          "writeAmplification": 4
+        },
+        "liveBytesPerState": 25600,
+        "estimatedLiveUniqueStates": 10737418,
+        "estimatedSafeUniqueStatesDuringCompaction": 2684354
+      }
+    }
+  },
+  "caveats": [
+    "The Host receipt is dirty and all measurements are valid only for the recorded hashes.",
+    "The leaf-delta sample contains one strict transition and is not a production percentile estimate.",
+    "SQLite is the finite transactional demo, not the chosen large-scale DDD segment implementation.",
+    "Capacity projections are conservative planning inputs and must be recalibrated from multi-layer traces."
+  ]
+}

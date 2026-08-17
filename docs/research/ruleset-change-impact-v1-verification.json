@@ -1,0 +1,595 @@
+{
+  "schemaVersion": "warmachine_ruleset_change_impact_v1_verification",
+  "generatedAt": "2026-08-14T03:52:00.452Z",
+  "current": {
+    "semanticIndexHash": "98f2ad5dd41cfb6d1f2df706a2bf65adaba8537e2b67b4a6e0184c184d203cd0",
+    "counts": {
+      "atomCount": 378,
+      "hookCount": 31,
+      "cardCount": 1671,
+      "ruleSourceCount": 3045,
+      "mappedRuleSourceCount": 471,
+      "unmappedRuleSourceCount": 2574,
+      "distinctRuleFingerprintCount": 2956,
+      "explicitlyAtomMappedFingerprintCount": 446,
+      "behaviorTokenCount": 56,
+      "scenarioCount": 7
+    },
+    "impact": {
+      "schemaVersion": "warmachine_ruleset_change_impact_v1",
+      "previousSemanticIndexHash": "98f2ad5dd41cfb6d1f2df706a2bf65adaba8537e2b67b4a6e0184c184d203cd0",
+      "currentSemanticIndexHash": "98f2ad5dd41cfb6d1f2df706a2bf65adaba8537e2b67b4a6e0184c184d203cd0",
+      "compatible": true,
+      "semanticDrift": false,
+      "rawDataChanged": false,
+      "changeClasses": [
+        "no_change"
+      ],
+      "hostSourcesChanged": [],
+      "atoms": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "hooks": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "cards": {
+        "added": [],
+        "removed": [],
+        "changed": [],
+        "rulesChanged": [],
+        "constructionChanged": [],
+        "metadataChanged": []
+      },
+      "ruleSources": {
+        "added": [],
+        "removed": [],
+        "changed": [],
+        "addedRows": [],
+        "modifiedRows": [],
+        "newSemanticGapSourceIds": [],
+        "semanticReuseReviewSourceIds": []
+      },
+      "behaviorTokens": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "scenarios": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "blastRadius": {
+        "coreExecutorChanged": false,
+        "scenarioSemanticsChanged": false,
+        "impactedAtomKeys": [],
+        "reviewNeighborAtomKeys": [],
+        "impactedCardIds": [],
+        "allStrictWitnessesRequireRevalidation": false,
+        "coverageClaimsRequireRevalidation": false,
+        "constructionPoolsRequireRevalidation": false,
+        "rulesSkillsRequireRecalibration": false
+      },
+      "gates": {
+        "checkpointResumeAllowed": true,
+        "priorDirectionCalibrationUsable": true,
+        "priorTrainingMaterialCurrent": true,
+        "currentCoverageClaimAllowed": true,
+        "unknownNewSemanticsFailClosed": true,
+        "reviewedBaselinePromotionAllowed": true
+      },
+      "requiredActions": [],
+      "claimBoundary": "Exact source fingerprints may propose reuse of an existing atom, but never authorize it. A source without an explicit atom mapping is not automatically unexecutable because core or generic strict execution may own it; new or changed semantics still remain fail-closed until execution classification, source binding where applicable, strict positive and negative scenes, graph regeneration, replay gates and skill recalibration all pass under a newly reviewed baseline.",
+      "impactHash": "34601aef8a96d091495c922681cec93d2d0e4c28fb6f229ff9b3284e27efafa8"
+    }
+  },
+  "probes": {
+    "exactSemanticReuse": {
+      "schemaVersion": "warmachine_ruleset_change_impact_v1",
+      "previousSemanticIndexHash": "98f2ad5dd41cfb6d1f2df706a2bf65adaba8537e2b67b4a6e0184c184d203cd0",
+      "currentSemanticIndexHash": "46dc7b1e6457ea6fdae24f2a4c91a1ce2de4f3b2efbf368e800ccaa2395c0839",
+      "compatible": false,
+      "semanticDrift": true,
+      "rawDataChanged": false,
+      "changeClasses": [
+        "existing_atom_reuse_review",
+        "card_rule_semantics_changed",
+        "construction_semantics_changed"
+      ],
+      "hostSourcesChanged": [],
+      "atoms": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "hooks": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "cards": {
+        "added": [
+          "fixture-new-card"
+        ],
+        "removed": [],
+        "changed": [],
+        "rulesChanged": [],
+        "constructionChanged": [],
+        "metadataChanged": []
+      },
+      "ruleSources": {
+        "added": [
+          "fixture-reused-source"
+        ],
+        "removed": [],
+        "changed": [],
+        "addedRows": [
+          {
+            "sourceId": "fixture-reused-source",
+            "cardIds": [
+              "fixture-new-card"
+            ],
+            "sourceKinds": [
+              "model_ability"
+            ],
+            "mappedAtomKeys": [],
+            "exactSemanticReuseCandidateAtomKeys": [
+              "companion_host_destroyed_or_removed_companion_removed"
+            ],
+            "disposition": "review_exact_semantic_reuse"
+          }
+        ],
+        "modifiedRows": [],
+        "newSemanticGapSourceIds": [],
+        "semanticReuseReviewSourceIds": [
+          "fixture-reused-source"
+        ]
+      },
+      "behaviorTokens": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "scenarios": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "blastRadius": {
+        "coreExecutorChanged": false,
+        "scenarioSemanticsChanged": false,
+        "impactedAtomKeys": [],
+        "reviewNeighborAtomKeys": [],
+        "impactedCardIds": [
+          "fixture-new-card"
+        ],
+        "allStrictWitnessesRequireRevalidation": false,
+        "coverageClaimsRequireRevalidation": true,
+        "constructionPoolsRequireRevalidation": true,
+        "rulesSkillsRequireRecalibration": true
+      },
+      "gates": {
+        "checkpointResumeAllowed": false,
+        "priorDirectionCalibrationUsable": false,
+        "priorTrainingMaterialCurrent": false,
+        "currentCoverageClaimAllowed": false,
+        "unknownNewSemanticsFailClosed": true,
+        "reviewedBaselinePromotionAllowed": false
+      },
+      "requiredActions": [
+        "add_impacted_card_positive_negative_strict_scenes",
+        "invalidate_old_search_checkpoint_resume",
+        "recalibrate_rules_skills_ctx2skill_skill2ctx",
+        "regenerate_construction_pool_and_legal_openings",
+        "review_and_bind_exact_semantic_reuse_candidates",
+        "review_then_promote_new_ruleset_baseline"
+      ],
+      "claimBoundary": "Exact source fingerprints may propose reuse of an existing atom, but never authorize it. A source without an explicit atom mapping is not automatically unexecutable because core or generic strict execution may own it; new or changed semantics still remain fail-closed until execution classification, source binding where applicable, strict positive and negative scenes, graph regeneration, replay gates and skill recalibration all pass under a newly reviewed baseline.",
+      "impactHash": "4473514b6bb7601c7c384c157651c3b15523b2204a003684b5f7d40b9a7667d4"
+    },
+    "unknownNewSemantics": {
+      "schemaVersion": "warmachine_ruleset_change_impact_v1",
+      "previousSemanticIndexHash": "98f2ad5dd41cfb6d1f2df706a2bf65adaba8537e2b67b4a6e0184c184d203cd0",
+      "currentSemanticIndexHash": "4021bc3acb8ff490c5c159d3f927fdbf54b85e37d563b4460105f9944ab0bd5b",
+      "compatible": false,
+      "semanticDrift": true,
+      "rawDataChanged": false,
+      "changeClasses": [
+        "new_unmapped_rule_semantics",
+        "card_rule_semantics_changed",
+        "construction_semantics_changed"
+      ],
+      "hostSourcesChanged": [],
+      "atoms": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "hooks": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "cards": {
+        "added": [
+          "fixture-new-card"
+        ],
+        "removed": [],
+        "changed": [],
+        "rulesChanged": [],
+        "constructionChanged": [],
+        "metadataChanged": []
+      },
+      "ruleSources": {
+        "added": [
+          "fixture-reused-source"
+        ],
+        "removed": [],
+        "changed": [],
+        "addedRows": [
+          {
+            "sourceId": "fixture-reused-source",
+            "cardIds": [
+              "fixture-new-card"
+            ],
+            "sourceKinds": [
+              "model_ability"
+            ],
+            "mappedAtomKeys": [],
+            "exactSemanticReuseCandidateAtomKeys": [],
+            "disposition": "execution_classification_required_fail_closed"
+          }
+        ],
+        "modifiedRows": [],
+        "newSemanticGapSourceIds": [
+          "fixture-reused-source"
+        ],
+        "semanticReuseReviewSourceIds": []
+      },
+      "behaviorTokens": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "scenarios": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "blastRadius": {
+        "coreExecutorChanged": false,
+        "scenarioSemanticsChanged": false,
+        "impactedAtomKeys": [],
+        "reviewNeighborAtomKeys": [],
+        "impactedCardIds": [
+          "fixture-new-card"
+        ],
+        "allStrictWitnessesRequireRevalidation": false,
+        "coverageClaimsRequireRevalidation": true,
+        "constructionPoolsRequireRevalidation": true,
+        "rulesSkillsRequireRecalibration": true
+      },
+      "gates": {
+        "checkpointResumeAllowed": false,
+        "priorDirectionCalibrationUsable": false,
+        "priorTrainingMaterialCurrent": false,
+        "currentCoverageClaimAllowed": false,
+        "unknownNewSemanticsFailClosed": false,
+        "reviewedBaselinePromotionAllowed": false
+      },
+      "requiredActions": [
+        "add_impacted_card_positive_negative_strict_scenes",
+        "classify_then_bind_generic_execution_or_implement_new_atom_hooks",
+        "invalidate_old_search_checkpoint_resume",
+        "recalibrate_rules_skills_ctx2skill_skill2ctx",
+        "regenerate_construction_pool_and_legal_openings",
+        "review_then_promote_new_ruleset_baseline"
+      ],
+      "claimBoundary": "Exact source fingerprints may propose reuse of an existing atom, but never authorize it. A source without an explicit atom mapping is not automatically unexecutable because core or generic strict execution may own it; new or changed semantics still remain fail-closed until execution classification, source binding where applicable, strict positive and negative scenes, graph regeneration, replay gates and skill recalibration all pass under a newly reviewed baseline.",
+      "impactHash": "7e321e77ad3e0cc31d802b662194307b168d741db38cb17adb90812b06dbd14f"
+    },
+    "atomDrift": {
+      "schemaVersion": "warmachine_ruleset_change_impact_v1",
+      "previousSemanticIndexHash": "98f2ad5dd41cfb6d1f2df706a2bf65adaba8537e2b67b4a6e0184c184d203cd0",
+      "currentSemanticIndexHash": "46dc7b1e6457ea6fdae24f2a4c91a1ce2de4f3b2efbf368e800ccaa2395c0839",
+      "compatible": false,
+      "semanticDrift": true,
+      "rawDataChanged": false,
+      "changeClasses": [
+        "atom_hook_or_interaction_changed"
+      ],
+      "hostSourcesChanged": [],
+      "atoms": {
+        "added": [],
+        "removed": [],
+        "changed": [
+          "acid_wash_corrosion_damage_type"
+        ]
+      },
+      "hooks": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "cards": {
+        "added": [],
+        "removed": [],
+        "changed": [],
+        "rulesChanged": [],
+        "constructionChanged": [],
+        "metadataChanged": []
+      },
+      "ruleSources": {
+        "added": [],
+        "removed": [],
+        "changed": [],
+        "addedRows": [],
+        "modifiedRows": [],
+        "newSemanticGapSourceIds": [],
+        "semanticReuseReviewSourceIds": []
+      },
+      "behaviorTokens": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "scenarios": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "blastRadius": {
+        "coreExecutorChanged": false,
+        "scenarioSemanticsChanged": false,
+        "impactedAtomKeys": [
+          "acid_wash_corrosion_damage_type"
+        ],
+        "reviewNeighborAtomKeys": [
+          "acid_wash_corrosion_damage_type",
+          "annihilation_destroyed_model_rfp_source_soul_no_corpse",
+          "banish_damaged_enemy_nonleader_optional_place_window",
+          "blight_spasm_box_living_undead_closest_enemy_damage_then_rfp",
+          "body_snatcher_bag_man_melee_disable_no_tough_destroy_corpse_rfp",
+          "body_snatcher_bone_pile_melee_destroy_within_ten_corpse_rfp",
+          "bone_keeper_weapon_destroy_rfp_optional_corpse_redirect",
+          "brain_damage_weapon_damage_cannot_cast_spells_one_round",
+          "burster_box_living_undead_closest_enemy_damage_then_rfp",
+          "carnivorous_swarm_disabled_cloud_corrosion_hazard_rfp",
+          "consume_small_nonleader_hit_remove_from_play",
+          "continuous_corrosion_on_hit_status",
+          "continuous_fire_on_hit_status",
+          "corpulent_flesh_direct_aoe_hit_suppresses_all_blast_damage_rolls",
+          "critical_amputation_fill_remaining_last_damaged_column_or_branch",
+          "critical_consume_small_nonleader_direct_hit_remove_from_play",
+          "critical_cortex_damage_first_available_cortex_box",
+          "critical_devastation_all_hit_models_shared_d6_throw",
+          "critical_dispel_critical_hit_expire_unit_upkeeps_animi",
+          "critical_knockdown_on_critical_hit_status",
+          "critical_slow_living_on_critical_hit_status",
+          "critical_thunderclap_models_hit_knockdown",
+          "deadly_shot_optional_fixed_three_damage_points",
+          "dispel_hit_expire_unit_upkeeps_animi",
+          "electro_blast_electricity_damage_type",
+          "electro_blast_warjack_direct_hit_disruption",
+          "electro_leap_direct_basic_attack_hit_nearest_model_pow10",
+          "explosive_decomposition_enemy_contact_or_knockdown_pow12_corrosion_continuous_rfp",
+          "flame_burst_boxed_enemy_nearby_continuous_fire",
+          "flare_on_direct_hit_status",
+          "flys_kiss_box_enemy_all_models_within_two_damage_then_rfp",
+          "future_sight_each_attack_and_damage_roll_post_roll_boost_choice",
+          "heart_seeker_damage_extra_die_discard_lowest",
+          "hellmouth_direct_hit_radial_push_toward_before_damage",
+          "incendiary_fire_damage_type",
+          "inflict_pain_warbeast_hit_optional_fury_delta",
+          "knockdown_on_hit_status",
+          "life_trader_hit_self_damage_optional_damage_die",
+          "lightning_generator_direct_basic_hit_d3_consecutive_arcs",
+          "momentum_direct_hit_base_size_slam_or_knockdown",
+          "orbit_placing_model_cannot_target_or_hit_servitor",
+          "protective_rage_off_table_marked_replacement_direct_hit_redirect",
+          "puncture_direct_hit_d3_damage_points",
+          "raw_talent_all_damage_rolls_additional_die",
+          "skewer_weapon_damage_optional_push_toward_contact",
+          "sky_dropped_ignore_cover_flight_blast_suppression",
+          "starve_weapon_damage_next_activation_forfeit_choice",
+          "sufferings_prayer_focus_refill_ranged_damage_lock_transfer_roll_explosion",
+          "thunderbolt_enemy_hit_d3_push_critical_knockdown",
+          "void_blast_destroyed_by_attack_remove_from_play",
+          "vortex_blast_direct_hit_radial_push_toward_before_damage",
+          "witch_mark_direct_hit_spell_target_override",
+          "wither_aoe_enemy_hits_one_round_melee_damage_roll_penalty"
+        ],
+        "impactedCardIds": [
+          "3cbca6d3-aa37-453e-ba16-a1a9aa766bb6",
+          "46f54477-658a-4d68-937f-a5a466f8cd41",
+          "bd88a388-a97a-404c-b2c2-fc3cd5bc0425",
+          "eb657916-706b-4504-bd19-3d2dabe73f1a",
+          "fdd98707-41ff-41b1-b896-ef0d28dde693"
+        ],
+        "allStrictWitnessesRequireRevalidation": true,
+        "coverageClaimsRequireRevalidation": true,
+        "constructionPoolsRequireRevalidation": false,
+        "rulesSkillsRequireRecalibration": true
+      },
+      "gates": {
+        "checkpointResumeAllowed": false,
+        "priorDirectionCalibrationUsable": false,
+        "priorTrainingMaterialCurrent": false,
+        "currentCoverageClaimAllowed": false,
+        "unknownNewSemanticsFailClosed": true,
+        "reviewedBaselinePromotionAllowed": false
+      },
+      "requiredActions": [
+        "invalidate_old_search_checkpoint_resume",
+        "recalibrate_rules_skills_ctx2skill_skill2ctx",
+        "regenerate_typed_interaction_graph",
+        "rerun_atom_hook_and_reverse_contract_gates",
+        "review_then_promote_new_ruleset_baseline"
+      ],
+      "claimBoundary": "Exact source fingerprints may propose reuse of an existing atom, but never authorize it. A source without an explicit atom mapping is not automatically unexecutable because core or generic strict execution may own it; new or changed semantics still remain fail-closed until execution classification, source binding where applicable, strict positive and negative scenes, graph regeneration, replay gates and skill recalibration all pass under a newly reviewed baseline.",
+      "impactHash": "0e34cbd6709f61946e70e5beabadfe6a2931837ad5cbe68ca2843b62722ea118"
+    },
+    "constructionOnlyDrift": {
+      "schemaVersion": "warmachine_ruleset_change_impact_v1",
+      "previousSemanticIndexHash": "98f2ad5dd41cfb6d1f2df706a2bf65adaba8537e2b67b4a6e0184c184d203cd0",
+      "currentSemanticIndexHash": "46dc7b1e6457ea6fdae24f2a4c91a1ce2de4f3b2efbf368e800ccaa2395c0839",
+      "compatible": false,
+      "semanticDrift": true,
+      "rawDataChanged": false,
+      "changeClasses": [
+        "construction_semantics_changed"
+      ],
+      "hostSourcesChanged": [],
+      "atoms": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "hooks": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "cards": {
+        "added": [],
+        "removed": [],
+        "changed": [
+          "001a0f79-6473-4a04-9cc0-9d3288dae4b2"
+        ],
+        "rulesChanged": [],
+        "constructionChanged": [
+          "001a0f79-6473-4a04-9cc0-9d3288dae4b2"
+        ],
+        "metadataChanged": []
+      },
+      "ruleSources": {
+        "added": [],
+        "removed": [],
+        "changed": [],
+        "addedRows": [],
+        "modifiedRows": [],
+        "newSemanticGapSourceIds": [],
+        "semanticReuseReviewSourceIds": []
+      },
+      "behaviorTokens": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "scenarios": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "blastRadius": {
+        "coreExecutorChanged": false,
+        "scenarioSemanticsChanged": false,
+        "impactedAtomKeys": [],
+        "reviewNeighborAtomKeys": [],
+        "impactedCardIds": [],
+        "allStrictWitnessesRequireRevalidation": false,
+        "coverageClaimsRequireRevalidation": true,
+        "constructionPoolsRequireRevalidation": true,
+        "rulesSkillsRequireRecalibration": false
+      },
+      "gates": {
+        "checkpointResumeAllowed": false,
+        "priorDirectionCalibrationUsable": false,
+        "priorTrainingMaterialCurrent": false,
+        "currentCoverageClaimAllowed": false,
+        "unknownNewSemanticsFailClosed": true,
+        "reviewedBaselinePromotionAllowed": false
+      },
+      "requiredActions": [
+        "invalidate_old_search_checkpoint_resume",
+        "recalibrate_rules_skills_ctx2skill_skill2ctx",
+        "regenerate_construction_pool_and_legal_openings",
+        "review_then_promote_new_ruleset_baseline"
+      ],
+      "claimBoundary": "Exact source fingerprints may propose reuse of an existing atom, but never authorize it. A source without an explicit atom mapping is not automatically unexecutable because core or generic strict execution may own it; new or changed semantics still remain fail-closed until execution classification, source binding where applicable, strict positive and negative scenes, graph regeneration, replay gates and skill recalibration all pass under a newly reviewed baseline.",
+      "impactHash": "37e1e4fed9bb0190c1b0e71100b5e2d3f670d14c4d55e40eeb67788b95f69168"
+    },
+    "coreExecutorDrift": {
+      "schemaVersion": "warmachine_ruleset_change_impact_v1",
+      "previousSemanticIndexHash": "98f2ad5dd41cfb6d1f2df706a2bf65adaba8537e2b67b4a6e0184c184d203cd0",
+      "currentSemanticIndexHash": "46dc7b1e6457ea6fdae24f2a4c91a1ce2de4f3b2efbf368e800ccaa2395c0839",
+      "compatible": false,
+      "semanticDrift": true,
+      "rawDataChanged": false,
+      "changeClasses": [
+        "core_executor_changed"
+      ],
+      "hostSourcesChanged": [
+        "scripts/function3-data-utils.mjs"
+      ],
+      "atoms": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "hooks": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "cards": {
+        "added": [],
+        "removed": [],
+        "changed": [],
+        "rulesChanged": [],
+        "constructionChanged": [],
+        "metadataChanged": []
+      },
+      "ruleSources": {
+        "added": [],
+        "removed": [],
+        "changed": [],
+        "addedRows": [],
+        "modifiedRows": [],
+        "newSemanticGapSourceIds": [],
+        "semanticReuseReviewSourceIds": []
+      },
+      "behaviorTokens": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "scenarios": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "blastRadius": {
+        "coreExecutorChanged": true,
+        "scenarioSemanticsChanged": false,
+        "impactedAtomKeys": [],
+        "reviewNeighborAtomKeys": [],
+        "impactedCardIds": [],
+        "allStrictWitnessesRequireRevalidation": true,
+        "coverageClaimsRequireRevalidation": true,
+        "constructionPoolsRequireRevalidation": true,
+        "rulesSkillsRequireRecalibration": true
+      },
+      "gates": {
+        "checkpointResumeAllowed": false,
+        "priorDirectionCalibrationUsable": false,
+        "priorTrainingMaterialCurrent": false,
+        "currentCoverageClaimAllowed": false,
+        "unknownNewSemanticsFailClosed": true,
+        "reviewedBaselinePromotionAllowed": false
+      },
+      "requiredActions": [
+        "invalidate_old_search_checkpoint_resume",
+        "recalibrate_rules_skills_ctx2skill_skill2ctx",
+        "rerun_full_strict_rules_and_fixed_benchmarks",
+        "review_then_promote_new_ruleset_baseline"
+      ],
+      "claimBoundary": "Exact source fingerprints may propose reuse of an existing atom, but never authorize it. A source without an explicit atom mapping is not automatically unexecutable because core or generic strict execution may own it; new or changed semantics still remain fail-closed until execution classification, source binding where applicable, strict positive and negative scenes, graph regeneration, replay gates and skill recalibration all pass under a newly reviewed baseline.",
+      "impactHash": "0f3f9b9da4597b26af0a78d603572d650f44e2223f51b5e0b7200da9ef8b526c"
+    }
+  }
+}

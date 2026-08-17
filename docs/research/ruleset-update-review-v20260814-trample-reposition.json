@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "warmachine_ruleset_update_review_v1",
+  "approved": true,
+  "approvedBy": "Codex strict maintenance review under the user-authorized Warmachine reverse-search long task",
+  "approvedAt": "2026-08-14T00:00:00+08:00",
+  "reviewedBaselineKey": "warmachine-ruleset-2026-08-14-remote-40041-v5",
+  "candidateSemanticIndexHash": "f988b1d9424c62b7ab300d00f8e93fca9caa333c9b949754a95448412386e760",
+  "impactHash": "220e8019c3d397446e9e8edb955b42989b2f9bb0232106f4f862f3d4be7027aa",
+  "strictGatesPassed": true,
+  "strictGateEvidence": [
+    "The semantic impact report found no card, card-source, behavior-token, scenario, roster or raw-data drift. Its only changed atom is reposition_activation_end_independent_advances, caused by one reviewed ordinary-trample interaction edge.",
+    "The isolated strict trample/Reposition verifier executed an ordinary trample from (5,20) to (14,20), destroyed the crossed target, opened the persisted Reposition window at activation end, executed the Reposition advance to (17,20), and completed the activation only after that choice. Its evidence hash is 54a57692e756c0fb739bd55e0107faf895343a3b2a8d7f3c5e1b08f42f1553e0.",
+    "The atom registry passed with 378 definitions and 463 hook operators, and the complete consumer-contract verifier mapped all 31 active hooks after the graph change.",
+    "All 108 of 108 micro-battle fixtures passed after the interaction change; the generated report SHA-256 is 311cc704de2052ff8b3aa63e2b3f14c887c3e34c326bfdf7e2c8384e36203c66.",
+    "The rulebook interaction graph verifier passed with 67 nodes, 186 interactions and zero issues. The typed graph candidate has 497 declared interactions and zero quarantined interactions; its only pre-promotion structural failure is the intentionally stale reviewed cardinality baseline being replaced by this receipt.",
+    "The run and failed-charge exclusion remains attached to the Reposition atom, while the separate Frenzy immediate-end interaction continues to block Reposition. This receipt does not widen either exclusion or claim tactical value."
+  ],
+  "skillGatesPassed": true,
+  "skillGateEvidence": [
+    "The strict complete-action-index ctx2skill/skill2ctx manifest was regenerated after the graph change; its SHA-256 is d237141046d20d524651c6fd7396182bc1c62e2996f63b22076e4d7638532eb0.",
+    "The strict skill validity audit passed with strictExecutorReady=true, currentDataSourceReady=true, partialFamilyCount=0, two eligible runtime manifests and eight quarantined historical manifests; its report SHA-256 is 79a2bb04bccf1f4f61d600f679c9d0ccb64e5bd7d202e7c71b4a41b8d0eaa9d1.",
+    "Offline strict calibration passed with promotionReady=true and replayed 108 of 108 micro fixtures; its report SHA-256 is 1dfc5e9f42eb29893d600258a22a9ef4c47259a0041d877bdc9d2d94d354b105 and its candidate manifest SHA-256 remains 59a20cc49d431fa47ec3d9c69625406622ed197835da31316f82a920c7b833a5.",
+    "Advisory skills remain canAffectRules=false and trainingTruth=false. Strict Host enumeration, preview and apply remain the sole legality and transition authority."
+  ]
+}
