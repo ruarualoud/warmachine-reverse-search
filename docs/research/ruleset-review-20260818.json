@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "warmachine_ruleset_update_review_v1",
+  "approved": true,
+  "approvedBy": "Manus AI automated repository review",
+  "approvedAt": "2026-08-18T00:00:00.000Z",
+  "reviewedBaselineKey": "warmachine-ruleset-2026-08-18-remote-40041-v6",
+  "candidateSemanticIndexHash": "521178fff5d503cb21f847aa32018c59803f0a296fe3aec5428f49e52f1024b0",
+  "impactHash": "b35c373881c9d0ef52cc7ab2c020017178f5e9b924defab0ca509aaa77f8eac0",
+  "engineCommit": "b0c2e557b9adbb68282d655c69e212dd0c9940a3",
+  "strictGatesPassed": true,
+  "strictGateEvidence": [
+    {
+      "repository": "warmachine-strict-engine",
+      "command": "npm run verify && npm run verify:micro && npm run verify:steamroller",
+      "result": "passed",
+      "evidence": "/home/ubuntu/warmachine-team/engine_full_post_audit_validation.log"
+    },
+    {
+      "repository": "warmachine-reverse-search",
+      "command": "npm run verify:upstream",
+      "result": "passed",
+      "evidence": "/home/ubuntu/warmachine-team/search_ruleset_strict_contract_gates.log"
+    },
+    {
+      "repository": "warmachine-reverse-search",
+      "command": "npm run verify:spatial",
+      "result": "passed",
+      "evidence": "/home/ubuntu/warmachine-team/search_ruleset_strict_contract_gates.log"
+    }
+  ],
+  "skillGatesPassed": true,
+  "skillGateEvidence": [
+    {
+      "command": "npm run prepare:ruleset-update",
+      "result": "passed_with_required_fail_closed_invalidation",
+      "impactHash": "b35c373881c9d0ef52cc7ab2c020017178f5e9b924defab0ca509aaa77f8eac0"
+    },
+    {
+      "command": "npm run generate:interaction-graph",
+      "result": "passed",
+      "roomFixture": "fixtures/ruleset-baseline/fixed-roster-room.json",
+      "structuralOk": true,
+      "hardPruningEnabled": false
+    }
+  ],
+  "limitations": [
+    "The old checkpoint and reports remain invalid until Ticket 05 is rebuilt under the promoted receipt.",
+    "This review promotes rule and graph compatibility only; it does not claim deployment reachability, global optimality, or a natural win rate."
+  ]
+}

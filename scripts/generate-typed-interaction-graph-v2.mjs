@@ -17,9 +17,7 @@ import {
 const outputDirectory = path.resolve("build", "typed-interaction-graph-v2");
 const graph = buildWarmachineTypedInteractionGraphV2();
 const roomPath = resolveWarmachineHostPath(
-  "build/warmachine-ai/sepsira-swarm-vs-fane-v20260805/strict-construction-search-v2/deep/" +
-  "cryx-recursion-screen-fane-ashmael-scenario-blender-balanced-collision-player1-e4937ca7b578/" +
-  "input-room-store.tmp.json",
+  "fixtures/ruleset-baseline/fixed-roster-room.json",
 );
 const roomStore = JSON.parse(await readFile(roomPath, "utf8"));
 const room = Object.values(roomStore.roomsById || {})[0];

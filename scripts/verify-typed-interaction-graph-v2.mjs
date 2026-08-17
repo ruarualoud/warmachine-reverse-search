@@ -22,9 +22,7 @@ import { buildWarmachineLazyActionCursorPlan } from "../src/search/lazy-action-c
 import { warmachineRulesetBaselineV1 } from "../src/contracts/ruleset-baseline-v1.mjs";
 
 const FIXED_ROOM_PATH = resolveWarmachineHostPath(
-  "build/warmachine-ai/sepsira-swarm-vs-fane-v20260805/strict-construction-search-v2/deep/" +
-  "cryx-recursion-screen-fane-ashmael-scenario-blender-balanced-collision-player1-e4937ca7b578/" +
-  "input-room-store.tmp.json",
+  "fixtures/ruleset-baseline/fixed-roster-room.json",
 );
 const MICRO_FIXTURE_PATH = resolveWarmachineHostPath(
   "data/function3-fixtures/warmachine-micro-battle-fixtures.json",

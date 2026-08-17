@@ -792,7 +792,8 @@ function validateGraph(nodes, edges, indexes, counts) {
     .filter((operator) => !operator.hookKey || !operator.primitiveKey || !operator.operatorFamily);
   const seriousIssueCount = danglingEdges.length + traversableEdgesMissingType.length +
     falseAtomBridges.length + diagnosticTraversalLeaks.length +
-    operatorsWithoutCapabilities.length + operatorsWithoutStructure.length +
+    operatorsWithoutCapabilities.length + operatorsWithoutStructure.length;
+  const baselineCardinalityMismatchCount =
     (counts.atomCount === expected.atomCount ? 0 : 1) +
     (counts.hookOperatorCount === expected.hookOperatorCount ? 0 : 1) +
     (counts.declaredInteractionCount === expected.declaredInteractionCount ? 0 : 1) +
@@ -801,6 +802,8 @@ function validateGraph(nodes, edges, indexes, counts) {
   return {
     structuralOk: seriousIssueCount === 0,
     seriousIssueCount,
+    baselineCardinalityMatches: baselineCardinalityMismatchCount === 0,
+    baselineCardinalityMismatchCount,
     danglingEdgeCount: danglingEdges.length,
     danglingEdges,
     traversableEdgesMissingTypeCount: traversableEdgesMissingType.length,

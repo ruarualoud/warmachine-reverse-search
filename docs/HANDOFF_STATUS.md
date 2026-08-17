@@ -6,7 +6,7 @@
 
 - `warmachine-strict-engine`：从当前本地工作树导出的独立规则/原子/数据/验证仓库。
 - `warmachine-reverse-search`：独立搜索、批处理和报告仓库，通过内容哈希 Host receipt 依赖 Engine。
-- 当前 Engine 交接提交：`c87c08ca514c401605a3ba88c7b2a3fd1250172f`。
+- 当前 Engine 审核提交：`b0c2e557b9adbb68282d655c69e212dd0c9940a3`（来自交接提交 `c87c08ca514c401605a3ba88c7b2a3fd1250172f` 的独立分支审计修复）。
 - 两仓建议同级克隆；搜索仓库优先读取 `WARMACHINE_ENGINE_ROOT`。
 - `.scratch`、`build`、线上记录和媒体没有进入 Git；Wayfinder 地图/工单保留。
 
@@ -30,7 +30,7 @@ checkpoint 哈希：`d1bfd77088e9304c630158ad36b695b3335727e24fbf54c1c367b368407
 
 Ticket 05 的 Gorman 六项 WIP 中，仅 terrain-blocked 任务 `matchup-terminal-task-d3eddbffd6f093feebd6b96874a7c54b` 已单独通过，处置为 `strict_rejected / line_of_sight_blocked`，报告哈希 `f96b076878afd0f0f31a49fbdf9e95c5a3972057972a8528921c6f11f44731d9`。其余五项和更新后的聚合门没有运行，不得计入完成数。
 
-交接时重新运行规则集影响分析，impact hash 为 `b35c373881c9d0ef52cc7ab2c020017178f5e9b924defab0ca509aaa77f8eac0`。新增原子是 `rampant_fury_same_activation_second_frenzy` 与 `spontaneous_combustion_continuous_effect_damage_dice_and_expiration`，受影响钩子为 `action_contribution`、`attack_hit`、`damage_modifier`。完整机器可读报告见 `docs/research/handoff-ruleset-impact-20260818.json`。
+交接时重新运行规则集影响分析，impact hash 为 `b35c373881c9d0ef52cc7ab2c020017178f5e9b924defab0ca509aaa77f8eac0`。新增原子是 `rampant_fury_same_activation_second_frenzy` 与 `spontaneous_combustion_continuous_effect_damage_dice_and_expiration`，受影响钩子为 `action_contribution`、`attack_hit`、`damage_modifier`。该影响已由 `docs/research/ruleset-review-20260818.json` 审核，基线提升为 `warmachine-ruleset-2026-08-18-remote-40041-v6`，当前收据为 `380` 原子、`466` hook operators、`196` primitives、`501` declared interactions。typed graph 生成与验证均改用 Engine 导出的 `fixtures/ruleset-baseline/fixed-roster-room.json`，不再依赖未提交的历史大型房间工件。
 
 ## 交接烟雾验证
 
@@ -60,8 +60,8 @@ scripts/verify-matchup-gorman-experimental-warhead-filter-tasks-v1.mjs
 
 ## 风险
 
-1. 已审阅 ruleset baseline 是 `378` 原子/`463` 钩子，当前 Engine 是 `380/466`；`verify:ruleset-snapshot` 应继续 fail-closed，直到团队完成影响报告、strict/skill 门和 review receipt 后正式提升基线。
-2. Engine `verify:micro` 当前为 `101/108`；七个漂移项已记录在 Engine `docs/HANDOFF_STATUS.md`，不能把核心 smoke 通过误述为全规则门通过。
+1. 已审阅 ruleset baseline 已提升为 `380` 原子/`466` hook operators；`verify:ruleset-snapshot`、`verify:ruleset-impact`、typed graph、原语和回归门均已在该收据下重建通过。历史 checkpoint、路线、报告和训练材料仍必须以旧 receipt 漂移失效，不能恢复或混用。
+2. Engine `verify:micro` 已为 `108/108`；这一结果仅覆盖已声明的微型夹具。全规则声明仍须结合当前数据分母、规则来源分母、真实卡牌正反 strict 场景与其余受影响门禁，不能以单一微型门禁代替。
 3. Ticket 05 最新六任务代码仍是部分验证状态。
 4. Ticket 06/07 尚无任务专属的合法部署到终局完整 strict 路线。
 5. 初始状态值仍以区间/筛选为主，不具备自然胜率声明条件。
