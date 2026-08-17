@@ -183,14 +183,11 @@ if (!subjectRoster || !challengerRoster) {
   throw new Error("matchup_terminal_source_roster_missing");
 }
 
-const baseDirectory = resolveWarmachineHostPath(
-  "build/warmachine-ai/sepsira-swarm-vs-fane-v20260805",
+const roomStorePath = resolveWarmachineHostPath(
+  "fixtures/ruleset-baseline/fixed-roster-room.json",
 );
-const roomStorePath = path.join(baseDirectory, "local-layer3/state.json");
 const loadedRoomStore = loadJsonWithHash(roomStorePath);
-const templateRoom = loadedRoomStore.value.roomsById?.[
-  "room_f1823ced-bf71-4392-8669-c6330d237efb"
-];
+const templateRoom = Object.values(loadedRoomStore.value.roomsById || {})[0];
 if (!templateRoom) throw new Error("matchup_terminal_opening_template_room_missing");
 const templateHash = stableGraphHash({
   roomStoreContentHash: loadedRoomStore.contentHash,

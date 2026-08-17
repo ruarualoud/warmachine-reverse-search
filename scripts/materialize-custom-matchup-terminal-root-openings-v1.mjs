@@ -63,12 +63,10 @@ const current = loadJson(path.join(batchRoot, "CURRENT.json"));
 const planDirectory = path.join(batchRoot, current.relativePlanDirectory);
 const plan = loadJson(path.join(planDirectory, "plan.json"));
 const roomStorePath = resolveWarmachineHostPath(
-  "build/warmachine-ai/sepsira-swarm-vs-fane-v20260805/local-layer3/state.json",
+  "fixtures/ruleset-baseline/fixed-roster-room.json",
 );
 const loadedRoomStore = loadJsonWithHash(roomStorePath);
-const templateRoom = loadedRoomStore.value.roomsById?.[
-  "room_f1823ced-bf71-4392-8669-c6330d237efb"
-];
+const templateRoom = Object.values(loadedRoomStore.value.roomsById || {})[0];
 if (!templateRoom) {
   throw new Error("matchup_terminal_opening_batch_map_template_missing");
 }

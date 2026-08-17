@@ -34,11 +34,9 @@ const reverseDirectory = path.resolve(scriptDirectory, "..");
 const dataPath = resolveWarmachineHostPath(
   "android-shell/assets/default/warmachine-lite-data.json",
 );
-const baseDirectory = resolveWarmachineHostPath(
-  "build/warmachine-ai/sepsira-swarm-vs-fane-v20260805",
+const roomStorePath = resolveWarmachineHostPath(
+  "fixtures/ruleset-baseline/fixed-roster-room.json",
 );
-const poolPath = path.join(baseDirectory, "strict-construction-pool-v1/report.json");
-const roomStorePath = path.join(baseDirectory, "local-layer3/state.json");
 const outputDirectory = path.resolve(process.argv.find((argument) =>
   argument.startsWith("--output="))?.slice("--output=".length) ||
   path.join(reverseDirectory, ".scratch/custom-matchup-reports/sepsira-six-swarms-vs-fane-v1"));
@@ -231,9 +229,7 @@ const rosterPairs = subjectRepresentatives.flatMap((subject) =>
     challengerRosterKey: challenger.roster.key,
     pairReason: `${subject.reason}:versus:${challenger.leader.leaderName}`,
   })));
-const templateRoom = loadedRoomStore.value.roomsById?.[
-  "room_f1823ced-bf71-4392-8669-c6330d237efb"
-];
+const templateRoom = Object.values(loadedRoomStore.value.roomsById || {})[0];
 if (!templateRoom) throw new Error("representative_opening_template_room_missing");
 const mapTemplateHash = stableGraphHash({
   roomStoreContentHash: loadedRoomStore.contentHash,

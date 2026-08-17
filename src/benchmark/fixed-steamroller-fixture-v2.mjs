@@ -13,8 +13,10 @@ import { bindWarmachineTwoFrontsOpeningV2 } from "./fixed-steamroller-benchmark-
 export const WARMACHINE_FIXED_STEAMROLLER_FIXTURE_V2_SCHEMA =
   "warmachine_fixed_steamroller_fixture_v2";
 
-const DEFAULT_BUILD_DIR = "build/warmachine-ai/sepsira-swarm-vs-fane-v20260805";
-const DEFAULT_ROOM_ID = "room_f1823ced-bf71-4392-8669-c6330d237efb";
+const DEFAULT_POOL_RELATIVE_PATH = "fixtures/ruleset-baseline/construction-pool-report.json";
+const DEFAULT_ROOM_STORE_RELATIVE_PATH = "fixtures/ruleset-baseline/fixed-roster-room.json";
+const DEFAULT_ROOM_ID =
+  "construction-cryx-recursion-screen-fane-ashmael-scenario-blender-balanced-collision-player1-e4937ca7b578";
 
 function requireValue(value, message) {
   if (!value) throw new Error(message);
@@ -30,9 +32,19 @@ function loadJsonWithHash(filePath) {
 }
 
 export function buildWarmachineFixedSteamrollerFixtureV2(rawOptions = {}) {
-  const baseDir = resolveWarmachineHostPath(rawOptions.buildDir || DEFAULT_BUILD_DIR);
-  const poolPath = path.join(baseDir, "strict-construction-pool-v1", "report.json");
-  const roomStorePath = path.join(baseDir, "local-layer3", "state.json");
+  const baseDir = rawOptions.buildDir
+    ? resolveWarmachineHostPath(rawOptions.buildDir)
+    : "";
+  const poolPath = rawOptions.poolRelativePath
+    ? resolveWarmachineHostPath(rawOptions.poolRelativePath)
+    : baseDir
+      ? path.join(baseDir, "strict-construction-pool-v1", "report.json")
+      : resolveWarmachineHostPath(DEFAULT_POOL_RELATIVE_PATH);
+  const roomStorePath = rawOptions.roomStoreRelativePath
+    ? resolveWarmachineHostPath(rawOptions.roomStoreRelativePath)
+    : baseDir
+      ? path.join(baseDir, "local-layer3", "state.json")
+      : resolveWarmachineHostPath(DEFAULT_ROOM_STORE_RELATIVE_PATH);
   const loadedPool = loadJsonWithHash(poolPath);
   const pool = loadedPool.value;
   const sourceMetadata = {
