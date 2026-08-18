@@ -2,6 +2,9 @@ import { stableGraphHash, stableGraphValue } from "../graph/typed-facts-v2.mjs";
 import { warmachineConstructionHost } from
   "../warmachine-construction-host-runtime.mjs";
 import { warmachineHost } from "../warmachine-host-runtime.mjs";
+import {
+  auditWarmachineMatchupTerminalCandidateProgressV1,
+} from "./matchup-terminal-candidate-chunk-v1.mjs";
 
 export const WARMACHINE_MATCHUP_TERMINAL_ROOT_BATCH_PLAN_V1_SCHEMA =
   "warmachine_matchup_terminal_root_batch_plan_v1";
@@ -757,11 +760,44 @@ function checkpointCore(checkpoint = {}) {
 }
 
 function checkpointCounts(tasks = []) {
-  return stableGraphValue({
+  const hasCandidateProgress = tasks.some((row) =>
+    row.searchProgress !== null && row.searchProgress !== undefined);
+  const counts = {
     queued: tasks.filter((row) => row.status === "queued").length,
     leased: tasks.filter((row) => row.status === "leased").length,
     completed: tasks.filter((row) => row.status === "completed").length,
     dispositions: dispositionCounts(tasks),
+  };
+  if (hasCandidateProgress) {
+    counts.inProgress = tasks.filter((row) => row.status !== "completed" &&
+      row.searchProgress !== null && row.searchProgress !== undefined).length;
+  }
+  return stableGraphValue(counts);
+}
+
+function auditTaskCandidateProgress(task = {}, plan = {}) {
+  const searchProgress = task.searchProgress || {};
+  const candidatePlan = searchProgress.candidatePlan || {};
+  const progress = searchProgress.progress || {};
+  const audit = auditWarmachineMatchupTerminalCandidateProgressV1(
+    progress,
+    candidatePlan,
+  );
+  const issues = [...(audit.issues || [])];
+  if (candidatePlan.taskKey !== task.taskKey ||
+      candidatePlan.behaviorSignatureHash !== task.behaviorSignatureHash ||
+      candidatePlan.terminalTaskExecutionContractVersion !==
+        plan.terminalTaskExecutionContractVersion ||
+      candidatePlan.hostReceiptHash !== warmachineHost.receipt.receiptHash ||
+      candidatePlan.constructionHostReceiptHash !==
+        warmachineConstructionHost.receipt.receiptHash) {
+    issues.push("batch_checkpoint_candidate_progress_task_binding_invalid");
+  }
+  return stableGraphValue({
+    ok: issues.length === 0,
+    issues: [...new Set(issues)].sort(),
+    candidatePlanHash: String(candidatePlan.candidatePlanHash || ""),
+    progressHash: String(progress.progressHash || ""),
   });
 }
 
@@ -807,6 +843,7 @@ export function buildWarmachineMatchupTerminalRootBatchCheckpointV1(
       status: "queued",
       lease: null,
       result: null,
+      searchProgress: null,
       takeoverCount: 0,
     })),
   });
@@ -856,6 +893,12 @@ export function auditWarmachineMatchupTerminalRootBatchCheckpointV1(
     if (task.shardIndex !== planned.shardIndex ||
         task.behaviorSignatureHash !== planned.behaviorSignatureHash) {
       issues.push("batch_checkpoint_task_identity_mismatch");
+    }
+    if (task.searchProgress !== null && task.searchProgress !== undefined) {
+      const progressAudit = auditTaskCandidateProgress(task, plan);
+      if (!progressAudit.ok) {
+        issues.push(...progressAudit.issues);
+      }
     }
     if (!allowedStatuses.has(task.status)) {
       issues.push("batch_checkpoint_task_status_invalid");
@@ -968,6 +1011,73 @@ export function acquireWarmachineMatchupTerminalRootBatchLeaseV1(
     acquiredTaskKeys,
     staleLeaseTakeoverCount: takeoverCount,
   };
+}
+
+export function recordWarmachineMatchupTerminalRootBatchCandidateProgressV1(
+  checkpoint = {},
+  plan = {},
+  raw = {},
+) {
+  const audit = auditWarmachineMatchupTerminalRootBatchCheckpointV1(checkpoint, plan);
+  if (!audit.ok) throw new Error(`matchup_terminal_batch_checkpoint_invalid:${
+    audit.issues.join(",")}`);
+  const workerId = String(raw.workerId || "");
+  if (!workerId) throw new Error("matchup_terminal_batch_worker_id_required");
+  const updates = raw.progressUpdates || [];
+  const updateByTaskKey = new Map(updates.map((update) => [
+    String(update.taskKey || ""),
+    update,
+  ]));
+  if (updateByTaskKey.size !== updates.length || updateByTaskKey.has("")) {
+    throw new Error("matchup_terminal_batch_candidate_progress_keys_invalid");
+  }
+  const nowMs = numeric(raw.nowMs);
+  const tasks = structuredClone(checkpoint.tasks || []);
+  for (const task of tasks) {
+    const update = updateByTaskKey.get(task.taskKey);
+    if (!update) continue;
+    if (task.status !== "leased" || task.lease?.workerId !== workerId ||
+        numeric(task.lease?.expiresAtMs) <= nowMs) {
+      throw new Error(`matchup_terminal_batch_candidate_progress_lease_mismatch:${
+        task.taskKey}`);
+    }
+    const candidatePlan = update.candidatePlan || {};
+    const progress = update.progress || {};
+    const progressAudit = auditWarmachineMatchupTerminalCandidateProgressV1(
+      progress,
+      candidatePlan,
+    );
+    if (!progressAudit.ok || candidatePlan.taskKey !== task.taskKey ||
+        candidatePlan.behaviorSignatureHash !== task.behaviorSignatureHash ||
+        candidatePlan.terminalTaskExecutionContractVersion !==
+          plan.terminalTaskExecutionContractVersion ||
+        candidatePlan.hostReceiptHash !== warmachineHost.receipt.receiptHash ||
+        candidatePlan.constructionHostReceiptHash !==
+          warmachineConstructionHost.receipt.receiptHash) {
+      throw new Error(`matchup_terminal_batch_candidate_progress_invalid:${
+        task.taskKey}:${progressAudit.issues.join(",")}`);
+    }
+    task.status = "queued";
+    task.lease = null;
+    task.result = null;
+    task.searchProgress = stableGraphValue({
+      candidatePlan,
+      progress,
+      updatedByWorkerId: workerId,
+      updatedAtMs: nowMs,
+    });
+  }
+  for (const taskKey of updateByTaskKey.keys()) {
+    if (!tasks.some((task) => task.taskKey === taskKey)) {
+      throw new Error(`matchup_terminal_batch_candidate_progress_unknown_task:${taskKey}`);
+    }
+  }
+  return sealCheckpoint({
+    ...checkpoint,
+    revision: numeric(checkpoint.revision) + 1,
+    updatedAtMs: nowMs,
+    tasks,
+  });
 }
 
 export function recordWarmachineMatchupTerminalRootBatchResultsV1(
