@@ -119,13 +119,16 @@ function validateTaskReceipts(task = {}) {
   const actorTaskSideKey = String(
     task.executionEnvelope?.actorAxis?.taskSideKey || "",
   );
-  if (actorTaskSideKey !== terminal.winnerTaskSideKey ||
-      terminal.endingSideKey !== terminal.winnerSideKey ||
+  if (terminal.endingSideKey !== terminal.winnerSideKey ||
       terminal.causalActionFamily !== ACTION_CATEGORY ||
       terminal.resultKind !== "win") {
-    throw new Error("assassination_terminal_task_action_role_binding_mismatch");
+    throw new Error("assassination_terminal_task_terminal_contract_invalid");
   }
-  return terminal;
+  return stableGraphValue({
+    ...terminal,
+    actorTaskSideKey,
+    actorMatchesWinner: actorTaskSideKey === terminal.winnerTaskSideKey,
+  });
 }
 
 function validateEvidenceCorpus(evidenceCorpus = {}, representative = {}) {
@@ -274,11 +277,9 @@ function preferredIncompatibleCoordinates(representative = {}) {
 function fallbackMaterializableCoordinates(representative = {}) {
   const coordinates = representative.coordinates || {};
   return commonSupportedCoordinates(representative) &&
-    representative.scenarioKey === "pressure_point" &&
-    Number(representative.roundNumber) === 7 &&
-    coordinates.lifecycle === "both_sides_prior_losses" &&
-    coordinates.scenarioTerrainSetup ===
-      "all_flags_fallback_no_valid_terrain";
+    ["both_sides_prior_losses", "both_rosters_complete"].includes(
+      coordinates.lifecycle,
+    );
 }
 
 function mappedHostRepresentative(task = {}, terminal = {}, evidenceCorpus = {}) {
@@ -1030,13 +1031,18 @@ function exactPartitionAudit(state = {}, opening = {}, representative = {},
       stableGraphHash(rosterIdentityLedger(state))],
     ["model_count_preserved", Number(opening.modelCount), state.pieces.length],
     ["lifecycle_partition", true,
-      coordinates.lifecycle === "both_sides_prior_losses" &&
-      stableGraphHash(priorLossSides) ===
-        stableGraphHash(["player1", "player2"]) &&
-      outOfPlayPieces.length === priorLossPieceKeys.length &&
-      outOfPlayPieces.every((piece) =>
-        piece.destroyed === true && !leaderLike(piece)) &&
-      (state.pieces || []).filter(leaderLike).every(warmachinePieceInPlayV1)],
+      coordinates.lifecycle === "both_sides_prior_losses"
+        ? stableGraphHash(priorLossSides) ===
+            stableGraphHash(["player1", "player2"]) &&
+          outOfPlayPieces.length === priorLossPieceKeys.length &&
+          outOfPlayPieces.every((piece) =>
+            piece.destroyed === true && !leaderLike(piece)) &&
+          (state.pieces || []).filter(leaderLike).every(warmachinePieceInPlayV1)
+        : coordinates.lifecycle === "both_rosters_complete" &&
+          priorLossPieceKeys.length === 0 &&
+          outOfPlayPieces.length === 0 &&
+          priorLossSides.length === 0 &&
+          (state.pieces || []).every(warmachinePieceInPlayV1)],
     ["critical_models_undamaged", true,
       coordinates.damage === "critical_models_undamaged" &&
       damagedInPlay.length === 0],
@@ -1139,8 +1145,12 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
     candidates[0].pieceKey,
     ...(baseState.pieces || []).filter(leaderLike).map((piece) => piece.pieceKey),
   ]);
-  const priorLossPieceKeys = authorPriorLosses(baseState, protectedKeys);
-  if (!priorLossPieceKeys) {
+  const requiresPriorLosses = representative.coordinates?.lifecycle ===
+    "both_sides_prior_losses";
+  const priorLossPieceKeys = requiresPriorLosses
+    ? authorPriorLosses(baseState, protectedKeys)
+    : [];
+  if (requiresPriorLosses && !priorLossPieceKeys) {
     return proposalFiltered(
       task,
       opening,
@@ -1380,6 +1390,18 @@ export function materializeWarmachineMatchupAssassinationTerminalTaskV1({
       terminalTask,
       opening,
       String(error?.message || error),
+    );
+  }
+  if (terminal.actorMatchesWinner !== true) {
+    return proposalFiltered(
+      terminalTask,
+      opening,
+      "assassination_terminal_actor_side_not_terminal_winner",
+      {
+        actorTaskSideKey: terminal.actorTaskSideKey,
+        winnerTaskSideKey: terminal.winnerTaskSideKey,
+        roleMapping: terminal,
+      },
     );
   }
   if (!warmachineMatchupAssassinationTerminalTaskSupportedV1(terminalTask)) {
