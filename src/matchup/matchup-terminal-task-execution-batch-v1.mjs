@@ -5,6 +5,7 @@ import { warmachineHost } from "../warmachine-host-runtime.mjs";
 import {
   acquireWarmachineMatchupTerminalRootBatchLeaseV1,
   auditWarmachineMatchupTerminalRootBatchCheckpointV1,
+  recordWarmachineMatchupTerminalRootBatchCandidateProgressV1,
   recordWarmachineMatchupTerminalRootBatchResultsV1,
 } from "./matchup-terminal-root-batch-v1.mjs";
 
@@ -170,6 +171,7 @@ function resultDispositionCounts(tasks = []) {
     "proposal_filtered",
     "input_invalid",
     "rules_unknown",
+    "selected_in_progress",
     "budget_deferred",
   ];
   return Object.fromEntries(keys.map((key) => [
@@ -202,6 +204,10 @@ export function executeWarmachineMatchupTerminalTaskBatchV1(raw = {}) {
     group,
   ]));
   const planTaskByKey = new Map((plan.selectedTasks || []).map((task) => [
+    task.taskKey,
+    task,
+  ]));
+  const checkpointTaskByKey = new Map((checkpoint.tasks || []).map((task) => [
     task.taskKey,
     task,
   ]));
@@ -245,6 +251,7 @@ export function executeWarmachineMatchupTerminalTaskBatchV1(raw = {}) {
     );
     nextCheckpoint = lease.checkpoint;
     const results = [];
+    const progressUpdates = [];
     for (const taskKey of lease.acquiredTaskKeys) {
       const terminalTask = planTaskByKey.get(taskKey);
       const group = groupByKey.get(terminalTask.groupKey);
@@ -274,7 +281,10 @@ export function executeWarmachineMatchupTerminalTaskBatchV1(raw = {}) {
           openingLedger: ledger,
           plan,
           evidenceCorpus: raw.evidenceCorpus || null,
-          context: raw.materializerContext || {},
+          context: {
+            ...(raw.materializerContext || {}),
+            candidateProgress: checkpointTaskByKey.get(taskKey)?.searchProgress || null,
+          },
         })
         : {
           report: (() => {
@@ -294,6 +304,28 @@ export function executeWarmachineMatchupTerminalTaskBatchV1(raw = {}) {
             return { ...core, reportHash: stableGraphHash(core) };
           })(),
         };
+      if (rawMaterialization?.candidateProgress) {
+        const candidatePlan = rawMaterialization.candidateProgress.candidatePlan || {};
+        const progress = rawMaterialization.candidateProgress.progress || {};
+        progressUpdates.push({ taskKey, candidatePlan, progress });
+        onProgress({
+          stage: "task_candidate_chunk_complete",
+          taskKey,
+          goalFamily: group.goalFamily,
+          candidatePlanHash: String(candidatePlan.candidatePlanHash || ""),
+          progressHash: String(progress.progressHash || ""),
+          nextSlotIndex: Number(progress.nextSlotIndex || 0),
+          remainingSlotCount: Number(progress.remainingSlotCount || 0),
+        });
+        artifacts.push(stableGraphValue({
+          taskKey,
+          goalFamily: group.goalFamily,
+          disposition: "selected_in_progress",
+          candidateProgress: stableGraphValue({ candidatePlan, progress }),
+        }));
+        executedTaskKeys.push(taskKey);
+        continue;
+      }
       const normalized = normalizeMaterializerResult(
         terminalTask,
         rawMaterialization,
@@ -314,15 +346,28 @@ export function executeWarmachineMatchupTerminalTaskBatchV1(raw = {}) {
       }));
       executedTaskKeys.push(taskKey);
     }
-    nextCheckpoint = recordWarmachineMatchupTerminalRootBatchResultsV1(
-      nextCheckpoint,
-      plan,
-      {
-        workerId,
-        nowMs: nowMs + 1,
-        results,
-      },
-    );
+    if (progressUpdates.length) {
+      nextCheckpoint = recordWarmachineMatchupTerminalRootBatchCandidateProgressV1(
+        nextCheckpoint,
+        plan,
+        {
+          workerId,
+          nowMs: nowMs + 1,
+          progressUpdates,
+        },
+      );
+    }
+    if (results.length) {
+      nextCheckpoint = recordWarmachineMatchupTerminalRootBatchResultsV1(
+        nextCheckpoint,
+        plan,
+        {
+          workerId,
+          nowMs: nowMs + 2,
+          results,
+        },
+      );
+    }
   }
   const finalTaskLedger = (nextCheckpoint.tasks || []).map((task) => {
     if (task.status === "completed") {
@@ -335,6 +380,18 @@ export function executeWarmachineMatchupTerminalTaskBatchV1(raw = {}) {
     }
     const planned = planTaskByKey.get(task.taskKey);
     const goalFamily = groupByKey.get(planned?.groupKey)?.goalFamily || "";
+    if (task.searchProgress !== null && task.searchProgress !== undefined) {
+      return stableGraphValue({
+        taskKey: task.taskKey,
+        disposition: "selected_in_progress",
+        goalFamily,
+        candidatePlanHash: String(task.searchProgress.candidatePlan?.candidatePlanHash || ""),
+        progressHash: String(task.searchProgress.progress?.progressHash || ""),
+        nextSlotIndex: Number(task.searchProgress.progress?.nextSlotIndex || 0),
+        remainingSlotCount:
+          Number(task.searchProgress.progress?.remainingSlotCount || 0),
+      });
+    }
     const supported = Boolean(materializerForTask(materializers, goalFamily, {
       terminalTask: planned,
       groupPlan: groupByKey.get(planned?.groupKey),
@@ -352,11 +409,14 @@ export function executeWarmachineMatchupTerminalTaskBatchV1(raw = {}) {
   });
   const dispositionCounts = resultDispositionCounts(finalTaskLedger);
   const selectedBudgetDeferred = dispositionCounts.budget_deferred;
+  const selectedInProgress = dispositionCounts.selected_in_progress;
   const globallyDeferred = BigInt(plan.candidateDispositionMass?.budget_deferred || "0");
-  const selectedCompleted = finalTaskLedger.length - selectedBudgetDeferred;
+  const selectedCompleted = finalTaskLedger.length - selectedBudgetDeferred -
+    selectedInProgress;
   const candidateVariantMass = BigInt(plan.candidateVariantMass || "0");
   const candidateMassConserved = candidateVariantMass ===
-    BigInt(selectedCompleted) + BigInt(selectedBudgetDeferred) + globallyDeferred;
+    BigInt(selectedCompleted) + BigInt(selectedInProgress) +
+      BigInt(selectedBudgetDeferred) + globallyDeferred;
   const core = stableGraphValue({
     schemaVersion: WARMACHINE_MATCHUP_TERMINAL_TASK_EXECUTION_BATCH_V1_SCHEMA,
     planHash: plan.planHash,
@@ -376,6 +436,7 @@ export function executeWarmachineMatchupTerminalTaskBatchV1(raw = {}) {
       Object.values(dispositionCounts).reduce((sum, count) => sum + count, 0),
     candidateDispositionMass: {
       completed: String(selectedCompleted),
+      selectedInProgress: String(selectedInProgress),
       selectedBudgetDeferred: String(selectedBudgetDeferred),
       unselectedBudgetDeferred: String(globallyDeferred),
     },
@@ -387,7 +448,7 @@ export function executeWarmachineMatchupTerminalTaskBatchV1(raw = {}) {
     gameValueInterval: { lowerBound: 0, upperBound: 1 },
     naturalWinRate: null,
     trainingTruth: false,
-    claimBoundary: "This batch executes only registered task-roster terminal adapters. Missing adapters and unselected work remain budget_deferred; no generic capability pin, legal opening, failed proposal or finite-budget omission is promoted to a strict root, unreachable result, game value or training label.",
+    claimBoundary: "This batch executes only registered task-roster terminal adapters. A task with sealed candidate progress remains selected_in_progress until all its finite slots are consumed or a final strict result is certified. Missing adapters and unselected work remain budget_deferred; no generic capability pin, legal opening, failed proposal, partial candidate block or finite-budget omission is promoted to a strict root, unreachable result, game value or training label.",
   });
   if (!core.selectedTaskMassConserved || !core.candidateMassConserved) {
     throw new Error("matchup_terminal_execution_mass_not_conserved");

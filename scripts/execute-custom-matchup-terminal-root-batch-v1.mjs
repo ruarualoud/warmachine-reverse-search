@@ -194,7 +194,15 @@ progress("batch_execution_complete", {
 const evidenceDirectory = path.join(planDirectory, "terminal-task-evidence");
 for (const artifact of execution.artifacts) {
   const taskDirectory = path.join(evidenceDirectory, artifact.taskKey);
-  writeJsonAtomic(path.join(taskDirectory, "report.json"), artifact.report);
+  if (artifact.report) {
+    writeJsonAtomic(path.join(taskDirectory, "report.json"), artifact.report);
+  }
+  if (artifact.candidateProgress) {
+    writeJsonAtomic(
+      path.join(taskDirectory, "candidate-progress.json"),
+      artifact.candidateProgress,
+    );
+  }
   if (artifact.runtime) {
     writeJsonAtomic(path.join(taskDirectory, "runtime.json"), artifact.runtime);
   }
