@@ -312,7 +312,7 @@ function movementPredecessorMaterializableCoordinates(representative = {}) {
     !coordinates.highStakesCountdownState;
 }
 
-function movementCandidateChunkForTask(task = {}, candidates = [], plan = {},
+function assassinationGeometryCandidateChunkForTask(task = {}, candidates = [], plan = {},
   rawCandidateProgress = null) {
   const representative = task.representative || {};
   const actionRange = String(representative.coordinates?.actionRange || "");
@@ -322,7 +322,10 @@ function movementCandidateChunkForTask(task = {}, candidates = [], plan = {},
       actorPieceKey: candidate.pieceKey,
       anchorIndex: Math.floor(slotIndex / 32),
       angleIndex: slotIndex % 32,
-      attackProfileKey: "strict_advance_then_melee",
+      attackProfileKey: actionRange ===
+        "outside_direct_action_range_requires_prior_movement"
+        ? "strict_advance_then_melee"
+        : "strict_direct_melee_geometry",
       actionRange,
     }),
   ));
@@ -333,7 +336,7 @@ function movementCandidateChunkForTask(task = {}, candidates = [], plan = {},
       terminalTaskExecutionContractVersion:
         plan.terminalTaskExecutionContractVersion,
       candidateEnumerationVersion:
-        "assassination_advance_then_melee_geometry_slots_v1",
+        "assassination_strict_geometry_slots_v2",
       hostReceiptHash: warmachineHost.receipt.receiptHash,
       constructionHostReceiptHash: warmachineConstructionHost.receipt.receiptHash,
       slots,
@@ -1320,10 +1323,14 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
       { actorCandidateCount: candidates.length },
     );
   }
-  const movementChunk = movementPredecessorMaterializableCoordinates(
-    representative,
-  )
-    ? movementCandidateChunkForTask(task, candidates, plan, rawCandidateProgress)
+  const movementChunk = (fallbackMaterializableCoordinates(representative) ||
+    movementPredecessorMaterializableCoordinates(representative))
+    ? assassinationGeometryCandidateChunkForTask(
+      task,
+      candidates,
+      plan,
+      rawCandidateProgress,
+    )
     : null;
   if (movementChunk && !movementChunk.slot) {
     return proposalFiltered(

@@ -85,7 +85,7 @@ function progress(stage, detail = {}) {
   })}\n`, "utf8");
 }
 const TERMINAL_TASK_EXECUTION_CONTRACT_VERSION =
-  "warmachine_terminal_task_execution_contract_v6_20260818_candidate_chunks";
+  "warmachine_terminal_task_execution_contract_v7_20260818_all_assassination_geometry_chunks";
 const shardIndexes = requestedShards
   ? requestedShards.split(",").map(Number)
   : undefined;
