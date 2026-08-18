@@ -2,6 +2,7 @@
 set -euo pipefail
 
 batch_count="${1:-8}"
+candidate_chunk_size="${2:-1}"
 workdir="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$workdir"
 batch_root="$workdir/.scratch/custom-matchup-reports/sepsira-six-swarms-vs-fane-v1/terminal-root-batch-v1"
@@ -25,10 +26,11 @@ for index in $(seq 1 "$batch_count"); do
     echo "[ticket05-microbatch] missing-sealed-checkpoint planHash=$plan_hash" >&2
     exit 2
   fi
-  echo "[ticket05-microbatch] start index=$index planHash=$plan_hash log=$log_path"
+  echo "[ticket05-microbatch] start index=$index planHash=$plan_hash candidateChunkSize=$candidate_chunk_size log=$log_path"
   set +e
   node scripts/execute-custom-matchup-terminal-root-batch-v1.mjs \
-    --maximum-tasks=1 --progress-log="$progress_path" >"$log_path" 2>&1
+    --maximum-tasks=1 --candidate-chunk-size="$candidate_chunk_size" \
+    --progress-log="$progress_path" >"$log_path" 2>&1
   exit_code=$?
   set -e
   node scripts/observe-ticket05-progress-v1.mjs \

@@ -1288,7 +1288,9 @@ function payloadDecisionIncompatibilityEvidence(representative = {},
 
 function materializeFallback(task = {}, opening = {}, terminal = {},
   hostRepresentative = {}, mappingAudit = {}, onProgress = () => {}, plan = {},
-  rawCandidateProgress = null) {
+  rawCandidateProgress = null, rawCandidateChunkSize = 1) {
+  const candidateChunkSize = Math.max(1, Math.min(16,
+    Math.floor(numeric(rawCandidateChunkSize, 1))));
   const representative = task.representative || {};
   const baseState = prepareBaseState(opening, representative, terminal);
   const target = targetCandidates(baseState, task, terminal)[0];
@@ -1363,7 +1365,7 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
         ? {
           slotStartIndex: movementChunk.slot.anchorIndex * 32 +
             movementChunk.slot.angleIndex,
-          maximumSlotCount: 1,
+          maximumSlotCount: candidateChunkSize,
         }
         : {},
     );
@@ -1475,7 +1477,7 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
     const nextProgress = advanceWarmachineMatchupTerminalCandidateProgressV1({
       candidatePlan: movementChunk.candidatePlan,
       progress: movementChunk.progress,
-      maximumSlotCount: 1,
+      maximumSlotCount: candidateChunkSize,
       candidateEvidenceHash: stableGraphHash({
         taskKey: task.taskKey,
         candidatePlanHash: movementChunk.candidatePlan.candidatePlanHash,
@@ -1492,6 +1494,7 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
       completedSlotIndex: movementChunk.slot.slotIndex,
       nextSlotIndex: nextProgress.nextSlotIndex,
       remainingSlotCount: nextProgress.remainingSlotCount,
+      candidateChunkSize,
     });
     return {
       candidateProgress: {
@@ -1726,6 +1729,7 @@ export function materializeWarmachineMatchupAssassinationTerminalTaskV1({
     typeof context.onProgress === "function" ? context.onProgress : () => {},
     plan,
     context.candidateProgress || null,
+    context.candidateChunkSize || 1,
   );
 }
 

@@ -64,6 +64,8 @@ const maximumTasks = Math.max(0, Math.floor(Number(process.argv.find((argument) 
   argument.startsWith("--maximum-tasks="))?.slice("--maximum-tasks=".length) || 16)));
 const requestedShards = process.argv.find((argument) =>
   argument.startsWith("--shards="))?.slice("--shards=".length);
+const candidateChunkSize = Math.max(1, Math.min(16, Math.floor(Number(process.argv.find((argument) =>
+  argument.startsWith("--candidate-chunk-size="))?.slice("--candidate-chunk-size=".length) || 1))));
 const progressLogPath = process.argv.find((argument) =>
   argument.startsWith("--progress-log="))?.slice("--progress-log=".length) || "";
 let progressSequence = 0;
@@ -101,7 +103,11 @@ function writeJsonAtomic(filePath, value) {
   fs.renameSync(temporaryPath, filePath);
 }
 
-progress("arguments_parsed", { maximumTasks, requestedShards: requestedShards || null });
+progress("arguments_parsed", {
+  maximumTasks,
+  requestedShards: requestedShards || null,
+  candidateChunkSize,
+});
 await loadRuntimeModules(progress);
 progress("runtime_modules_ready");
 const batchRoot = path.join(outputDirectory, "terminal-root-batch-v1");
@@ -185,6 +191,7 @@ const execution = executeWarmachineMatchupTerminalTaskBatchV1({
   shardIndexes,
   materializerContext: {
     partitionCapabilityAuditsByTaskKey,
+    candidateChunkSize,
     onProgress: (detail) => progress("materializer", detail),
   },
   onProgress: (detail) => progress("batch", detail),
