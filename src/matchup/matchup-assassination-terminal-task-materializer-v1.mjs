@@ -288,6 +288,25 @@ function fallbackMaterializableCoordinates(representative = {}) {
     );
 }
 
+function movementPredecessorMaterializableCoordinates(representative = {}) {
+  const coordinates = representative.coordinates || {};
+  return representative.terminalClassKey === TERMINAL_CLASS &&
+    representative.sourceResolutionStatus === "officially_confirmed" &&
+    representative.canonicalTerminal?.causalActionFamily === ACTION_CATEGORY &&
+    representative.canonicalTerminal?.resultKind === "win" &&
+    coordinates.actionRange ===
+      "outside_direct_action_range_requires_prior_movement" &&
+    coordinates.baseTopology === "legal_separated" &&
+    coordinates.damage === "critical_models_undamaged" &&
+    coordinates.leaderControl === "strictly_inside" &&
+    coordinates.lineOfSight === "clear" &&
+    coordinates.resource === "zero_available" &&
+    coordinates.lifecycle === "both_rosters_complete" &&
+    !coordinates.trenchCacheLifecycle &&
+    !coordinates.payloadLifecycle &&
+    !coordinates.highStakesCountdownState;
+}
+
 function directLineOfSightBlockedCoordinates(representative = {}) {
   const coordinates = representative.coordinates || {};
   const canonical = representative.canonicalTerminal || {};
@@ -656,7 +675,8 @@ function strictMeleeLosClearEvidence(action = {}) {
   });
 }
 
-function authoredGeometryForActor(baseState = {}, actorKey = "", targetKey = "") {
+function authoredGeometryForActor(baseState = {}, actorKey = "", targetKey = "",
+  actionRange = "strictly_inside", onProgress = () => {}) {
   const sourceActor = (baseState.pieces || []).find((piece) =>
     piece.pieceKey === actorKey);
   const sourceTarget = (baseState.pieces || []).find((piece) =>
@@ -669,15 +689,30 @@ function authoredGeometryForActor(baseState = {}, actorKey = "", targetKey = "")
     .filter((rangeIn) => rangeIn > 0);
   if (!meleeRanges.length) return null;
   const shortestMeleeRangeIn = Math.min(...meleeRanges);
-  const edgeGapIn = Math.min(0.4, shortestMeleeRangeIn * 0.4);
+  const requiresPriorMovement = actionRange ===
+    "outside_direct_action_range_requires_prior_movement";
+  const edgeGapIn = requiresPriorMovement
+    ? shortestMeleeRangeIn + 0.25
+    : Math.min(0.4, shortestMeleeRangeIn * 0.4);
   const anchors = [
     { xIn: 12, yIn: 12 }, { xIn: 18, yIn: 12 },
     { xIn: 24, yIn: 12 }, { xIn: 30, yIn: 12 },
     { xIn: 18, yIn: 18 }, { xIn: 24, yIn: 18 },
     { xIn: 30, yIn: 18 }, { xIn: 24, yIn: 24 },
   ];
-  for (const anchor of anchors) {
+  let geometrySlotIndex = 0;
+  for (let anchorIndex = 0; anchorIndex < anchors.length; anchorIndex += 1) {
+    const anchor = anchors[anchorIndex];
     for (let angleIndex = 0; angleIndex < 32; angleIndex += 1) {
+      const currentGeometrySlotIndex = geometrySlotIndex;
+      geometrySlotIndex += 1;
+      onProgress({
+        stage: "geometry_slot_start",
+        actorPieceKey: actorKey,
+        geometrySlotIndex: currentGeometrySlotIndex,
+        anchorIndex,
+        angleIndex,
+      });
       const state = structuredClone(baseState);
       const actor = state.pieces.find((piece) => piece.pieceKey === actorKey);
       const target = state.pieces.find((piece) => piece.pieceKey === targetKey);
@@ -722,9 +757,11 @@ function authoredGeometryForActor(baseState = {}, actorKey = "", targetKey = "")
           normalizedActor.pieceKey
         ? 0
         : closestPointDistanceIn(normalizedActor, normalizedController);
-      if (!(actorTargetEdgeDistanceIn > 0 &&
-          actorTargetEdgeDistanceIn < shortestMeleeRangeIn) ||
-          !(actorControllerEdgeDistanceIn <
+      const actionRangeMatches = requiresPriorMovement
+        ? actorTargetEdgeDistanceIn > shortestMeleeRangeIn
+        : actorTargetEdgeDistanceIn > 0 &&
+          actorTargetEdgeDistanceIn < shortestMeleeRangeIn;
+      if (!actionRangeMatches || !(actorControllerEdgeDistanceIn <
             numeric(normalizedController.controlRangeIn, 0))) continue;
       const enumeration = enumerateRulesV1Actions(normalized, {
         actorPieceKeys: [actorKey],
@@ -734,7 +771,9 @@ function authoredGeometryForActor(baseState = {}, actorKey = "", targetKey = "")
         includeUntargetedActions: false,
       });
       const directMelee = (enumeration.actions || []).filter((action) =>
-        action.actionType === "melee_attack" &&
+        (requiresPriorMovement
+          ? action.actionType === "advance_then_melee_attack"
+          : action.actionType === "melee_attack") &&
         action.actorPieceKey === actorKey &&
         action.targetPieceKey === targetKey &&
         String(action.metadata?.attackProfile?.mode || "").toLowerCase() ===
@@ -772,6 +811,9 @@ function authoredGeometryForActor(baseState = {}, actorKey = "", targetKey = "")
             normalizedController.controlRangeIn,
             0,
           ),
+          geometrySlotIndex: currentGeometrySlotIndex,
+          anchorIndex,
+          angleIndex,
         }),
       };
     }
@@ -786,7 +828,8 @@ function activationGroupKeyForPiece(piece = {}) {
 }
 
 function executeLethalActivation(state = {}, actor = {}, target = {},
-  attackProfile = {}, routeKey = "", onProgress = () => {}) {
+  attackProfile = {}, routeKey = "", onProgress = () => {},
+  actionRange = "strictly_inside") {
   const attackProfileKey = profileKey(attackProfile);
   return executeWarmachineBenchmarkActivationV2(
     state,
@@ -811,9 +854,11 @@ function executeLethalActivation(state = {}, actor = {}, target = {},
         const action = (scoped.enumeration.actions || []).filter((candidate) =>
           candidate.actorPieceKey === actor.pieceKey &&
           candidate.targetPieceKey === target.pieceKey &&
-          ["melee_attack", "purchased_additional_melee_attack"].includes(
-            candidate.actionType,
-          ) &&
+          (actionRange === "outside_direct_action_range_requires_prior_movement"
+            ? candidate.actionType === "advance_then_melee_attack"
+            : ["melee_attack", "purchased_additional_melee_attack"].includes(
+              candidate.actionType,
+            )) &&
           profileKey(candidate.metadata?.attackProfile || {}) ===
             attackProfileKey)
           .sort((left, right) =>
@@ -1107,10 +1152,17 @@ function exactPartitionAudit(state = {}, opening = {}, representative = {},
       coordinates.baseTopology === "legal_separated" && placementAudit.ok === true &&
       formationAudit.ok === true],
     ["action_range_partition", true,
-      coordinates.actionRange === "strictly_inside" &&
-      authored.geometry.actorTargetEdgeDistanceIn > 0 &&
-      authored.geometry.actorTargetEdgeDistanceIn <
-        authored.geometry.actorMeleeRangeIn],
+      coordinates.actionRange === "strictly_inside"
+        ? authored.geometry.actorTargetEdgeDistanceIn > 0 &&
+          authored.geometry.actorTargetEdgeDistanceIn <
+            authored.geometry.actorMeleeRangeIn &&
+          authored.firstAction?.actionType === "melee_attack"
+        : coordinates.actionRange ===
+            "outside_direct_action_range_requires_prior_movement"
+          ? authored.geometry.actorTargetEdgeDistanceIn >
+              authored.geometry.actorMeleeRangeIn &&
+            authored.firstAction?.actionType === "advance_then_melee_attack"
+          : false],
     ["leader_control_partition", true,
       coordinates.leaderControl === "strictly_inside" &&
       authored.geometry.actorControllerEdgeDistanceIn <
@@ -1221,6 +1273,8 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
       baseState,
       actor.pieceKey,
       target.pieceKey,
+      representative.coordinates?.actionRange,
+      onProgress,
     );
     if (!authored) {
       onProgress({ stage: "actor_geometry_filtered", actorPieceKey: actor.pieceKey });
@@ -1265,6 +1319,7 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
       authored.attackProfile,
       `matchup-assassination:${task.taskKey}:primary`,
       onProgress,
+      representative.coordinates?.actionRange,
     );
     onProgress({ stage: "primary_execution_complete", ok: primary.ok === true });
     onProgress({ stage: "replay_execution_start", actorPieceKey: actor.pieceKey });
@@ -1275,6 +1330,7 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
       authored.attackProfile,
       `matchup-assassination:${task.taskKey}:replay`,
       onProgress,
+      representative.coordinates?.actionRange,
     );
     onProgress({ stage: "replay_execution_complete", ok: replay.ok === true });
     const executionAudit = terminalExecutionAudit(
@@ -1353,6 +1409,19 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
     inPlayModelCount: partitionAudit.inPlayModelCount,
     priorLossPieceKeys,
     geometry: authored.geometry,
+    movementPredecessorEvidence: representative.coordinates?.actionRange ===
+        "outside_direct_action_range_requires_prior_movement"
+      ? stableGraphValue({
+        required: true,
+        initialActionType: authored.firstAction?.actionType || "",
+        initialActorTargetEdgeDistanceIn:
+          authored.geometry.actorTargetEdgeDistanceIn,
+        meleeRangeIn: authored.geometry.actorMeleeRangeIn,
+        initialStateOutsideDirectRange:
+          authored.geometry.actorTargetEdgeDistanceIn >
+          authored.geometry.actorMeleeRangeIn,
+      })
+      : null,
     candidateLineOfSightEvidence: authored.losEvidence,
     lineOfSightEvidence: executionAudit.fatalActionLineOfSightEvidence,
     fatalActionKey: executionAudit.fatalActionKey,
@@ -1532,7 +1601,8 @@ export function warmachineMatchupAssassinationTerminalTaskSupportedV1(
     terminalTask.executionEnvelope?.actionCategory === ACTION_CATEGORY &&
     (directLineOfSightBlockedCoordinates(terminalTask.representative) ||
       preferredIncompatibleCoordinates(terminalTask.representative) ||
-      fallbackMaterializableCoordinates(terminalTask.representative));
+      fallbackMaterializableCoordinates(terminalTask.representative) ||
+      movementPredecessorMaterializableCoordinates(terminalTask.representative));
 }
 
 export function buildWarmachineMatchupAssassinationTerminalTaskAdapterV1() {
