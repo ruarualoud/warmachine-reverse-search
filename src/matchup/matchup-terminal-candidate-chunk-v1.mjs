@@ -1,4 +1,6 @@
 import { stableGraphHash, stableGraphValue } from "../graph/typed-facts-v2.mjs";
+import { verifyWarmachineMatchupTerminalReplayTransitionProgressV1 } from
+  "./matchup-terminal-replay-transition-chunk-v1.mjs";
 
 export const WARMACHINE_MATCHUP_TERMINAL_CANDIDATE_CHUNK_PLAN_V1_SCHEMA =
   "warmachine_matchup_terminal_candidate_chunk_plan_v1";
@@ -114,6 +116,7 @@ export function buildWarmachineMatchupTerminalCandidateProgressV1(raw = {}) {
     completedChunks,
     chunkCount: completedChunks.length,
     acceptedCandidateSemanticHash: String(raw.acceptedCandidateSemanticHash || ""),
+    replayTransitionProgress: stableGraphValue(raw.replayTransitionProgress || null),
     updatedAtMs: numericInteger(raw.updatedAtMs),
   });
   return seal(core, "progressHash");
@@ -171,6 +174,29 @@ export function auditWarmachineMatchupTerminalCandidateProgressV1(
   if (expectedStart !== numericInteger(progress.nextSlotIndex, -1)) {
     issues.push("matchup_terminal_candidate_progress_cursor_gap");
   }
+  const replayEnvelope = progress.replayTransitionProgress || null;
+  if (replayEnvelope !== null) {
+    const phase = String(replayEnvelope.phase || "");
+    const primary = replayEnvelope.primary || null;
+    const replay = replayEnvelope.replay || null;
+    if (!["primary", "replay"].includes(phase) || !primary) {
+      issues.push("matchup_terminal_candidate_replay_transition_envelope_invalid");
+    } else {
+      const primaryAudit = verifyWarmachineMatchupTerminalReplayTransitionProgressV1(
+        primary,
+        { candidateKey: String(replayEnvelope.primaryCandidateKey || "") },
+      );
+      if (!primaryAudit.ok) {
+        issues.push("matchup_terminal_candidate_primary_transition_progress_invalid");
+      }
+      if (replay && !verifyWarmachineMatchupTerminalReplayTransitionProgressV1(
+        replay,
+        { candidateKey: String(replayEnvelope.replayCandidateKey || "") },
+      ).ok) {
+        issues.push("matchup_terminal_candidate_replay_transition_progress_invalid");
+      }
+    }
+  }
   return stableGraphValue({
     ok: issues.length === 0,
     issues: [...new Set(issues)].sort(),
@@ -216,6 +242,7 @@ export function advanceWarmachineMatchupTerminalCandidateProgressV1(raw = {}) {
     completedChunks,
     acceptedCandidateSemanticHash: String(raw.acceptedCandidateSemanticHash || "") ||
       String(progress.acceptedCandidateSemanticHash || ""),
+    replayTransitionProgress: raw.replayTransitionProgress || null,
     updatedAtMs: raw.updatedAtMs,
   });
 }

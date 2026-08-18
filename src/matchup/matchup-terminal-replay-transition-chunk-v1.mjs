@@ -16,6 +16,7 @@ function sealedProgressCore(input = {}) {
   const state = input.currentState || input.state || {};
   const accumulatedReceipts = input.accumulatedReceipts || [];
   const accumulatedSelectionAudit = input.accumulatedSelectionAudit || [];
+  const resumeInitialGroup = input.resumeInitialGroup || {};
   return {
     schemaVersion: WARMACHINE_MATCHUP_TERMINAL_REPLAY_TRANSITION_CHUNK_V1_SCHEMA,
     candidateKey: String(input.candidateKey || ""),
@@ -27,6 +28,7 @@ function sealedProgressCore(input = {}) {
     accumulatedReceiptHashes: asRows(accumulatedReceipts).map((row) =>
       String(row?.receiptHash || "")),
     accumulatedSelectionAudit: stableGraphValue(asRows(accumulatedSelectionAudit)),
+    resumeInitialGroup: stableGraphValue(resumeInitialGroup),
     transitionCount: Number(input.transitionCount || 0),
     completed: input.completed === true,
     failureReason: String(input.failureReason || ""),
@@ -112,6 +114,7 @@ export function executeWarmachineMatchupTerminalReplayTransitionChunkV1(input = 
     transitionCount: accumulatedReceipts.length,
     completed,
     failureReason,
+    resumeInitialGroup: result.resumeInitialGroup || existing?.resumeInitialGroup || {},
     upstreamReceiptHash: input.upstreamReceiptHash,
   });
   return stableGraphValue({

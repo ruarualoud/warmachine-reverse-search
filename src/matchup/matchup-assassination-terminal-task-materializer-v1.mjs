@@ -22,6 +22,9 @@ import {
   buildWarmachineMatchupTerminalCandidateProgressV1,
 } from "./matchup-terminal-candidate-chunk-v1.mjs";
 import {
+  executeWarmachineMatchupTerminalReplayTransitionChunkV1,
+} from "./matchup-terminal-replay-transition-chunk-v1.mjs";
+import {
   auditRulesV1StaticPlacement,
   auditRulesV1StaticUnitFormation,
   auditRulesV1SteamrollerScenarioTerrainSetup,
@@ -887,7 +890,7 @@ function activationGroupKeyForPiece(piece = {}) {
 
 function executeLethalActivation(state = {}, actor = {}, target = {},
   attackProfile = {}, routeKey = "", onProgress = () => {},
-  actionRange = "strictly_inside") {
+  actionRange = "strictly_inside", executionOptions = {}) {
   const attackProfileKey = profileKey(attackProfile);
   return executeWarmachineBenchmarkActivationV2(
     state,
@@ -932,7 +935,8 @@ function executeLethalActivation(state = {}, actor = {}, target = {},
           },
         } : null;
       },
-      maxSteps: 12,
+      maxSteps: Math.max(1, Number(executionOptions.maxSteps || 12)),
+      resumeInitialGroup: executionOptions.resumeInitialGroup || null,
       onProgress: (detail) => onProgress({
         stage: "strict_activation",
         routeKey,
@@ -940,6 +944,67 @@ function executeLethalActivation(state = {}, actor = {}, target = {},
       }),
     },
   );
+}
+
+function executeLethalActivationTransitionChunk(predecessor = {}, actor = {},
+  target = {}, attackProfile = {}, routeKey = "", onProgress = () => {},
+  actionRange = "strictly_inside", candidateKey = "", priorProgress = null) {
+  const activationGroupKey = activationGroupKeyForPiece(actor);
+  const initialStateHash = stableGraphHash(normalizeRulesV1State(predecessor));
+  return executeWarmachineMatchupTerminalReplayTransitionChunkV1({
+    candidateKey,
+    activationGroupKey,
+    initialStateHash,
+    initialState: predecessor,
+    progress: priorProgress,
+    maximumTransitionCount: 1,
+    upstreamReceiptHash: warmachineHost.receipt.receiptHash,
+    runActivationTransitionChunk: (state, options) => {
+      const execution = executeLethalActivation(
+        state,
+        actor,
+        target,
+        attackProfile,
+        routeKey,
+        onProgress,
+        actionRange,
+        {
+          maxSteps: options.maximumTransitionCount,
+          resumeInitialGroup: priorProgress?.resumeInitialGroup || null,
+        },
+      );
+      return {
+        ...execution,
+        completed: execution.completed === true,
+        resumeInitialGroup: execution.resumeInitialGroup ||
+          priorProgress?.resumeInitialGroup || {},
+      };
+    },
+  });
+}
+
+function executionFromTransitionProgress(progress = {}) {
+  return {
+    ok: progress.completed === true && !progress.failureReason,
+    completed: progress.completed === true,
+    state: progress.currentState || {},
+    receipts: progress.accumulatedReceipts || [],
+    selectionAudit: progress.accumulatedSelectionAudit || [],
+    activationReceiptHash: progress.progressHash || "",
+  };
+}
+
+function candidateProgressWithReplayTransitionEnvelope(movementChunk = {}, envelope = null) {
+  const candidatePlan = movementChunk.candidatePlan || {};
+  const prior = movementChunk.progress || {};
+  return buildWarmachineMatchupTerminalCandidateProgressV1({
+    candidatePlan,
+    nextSlotIndex: prior.nextSlotIndex,
+    completedChunks: prior.completedChunks || [],
+    acceptedCandidateSemanticHash: prior.acceptedCandidateSemanticHash || "",
+    replayTransitionProgress: envelope,
+    updatedAtMs: Date.now(),
+  });
 }
 
 function receiptEvents(execution = {}) {
@@ -1415,19 +1480,62 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
     }
     if (strictExecutionAttempted) break;
     strictExecutionAttempted = true;
-    onProgress({ stage: "primary_execution_start", actorPieceKey: actor.pieceKey });
-    const primary = executeLethalActivation(
-      predecessor,
-      authored.actor,
-      authored.target,
-      authored.attackProfile,
-      `matchup-assassination:${task.taskKey}:primary`,
-      onProgress,
-      representative.coordinates?.actionRange,
-    );
-    onProgress({ stage: "primary_execution_complete", ok: primary.ok === true });
-    onProgress({ stage: "replay_execution_start", actorPieceKey: actor.pieceKey });
-    const replay = executeLethalActivation(
+    const geometrySlotIndex = movementChunk?.slot?.slotIndex;
+    const primaryCandidateKey = `matchup-assassination:${task.taskKey}:` +
+      `${geometrySlotIndex}:primary`;
+    const replayCandidateKey = `matchup-assassination:${task.taskKey}:` +
+      `${geometrySlotIndex}:replay`;
+    const priorTransitionEnvelope = movementChunk?.progress
+      ?.replayTransitionProgress || null;
+    let primaryTransition = null;
+    if (!priorTransitionEnvelope || priorTransitionEnvelope.phase === "primary") {
+      onProgress({ stage: "primary_transition_chunk_start", actorPieceKey: actor.pieceKey });
+      primaryTransition = executeLethalActivationTransitionChunk(
+        predecessor,
+        authored.actor,
+        authored.target,
+        authored.attackProfile,
+        `matchup-assassination:${task.taskKey}:primary`,
+        onProgress,
+        representative.coordinates?.actionRange,
+        primaryCandidateKey,
+        priorTransitionEnvelope?.primary || null,
+      );
+      onProgress({
+        stage: "primary_transition_chunk_complete",
+        actorPieceKey: actor.pieceKey,
+        kind: primaryTransition.kind,
+        transitionCount: primaryTransition.progress?.transitionCount || 0,
+      });
+      if (primaryTransition.kind === "in_progress" ||
+          primaryTransition.kind === "completed") {
+        const nextProgress = candidateProgressWithReplayTransitionEnvelope(
+          movementChunk,
+          {
+            phase: primaryTransition.kind === "completed" ? "replay" : "primary",
+            primaryCandidateKey,
+            replayCandidateKey,
+            primary: primaryTransition.progress,
+            replay: null,
+          },
+        );
+        return {
+          candidateProgress: {
+            candidatePlan: movementChunk.candidatePlan,
+            progress: nextProgress,
+          },
+        };
+      }
+    } else {
+      primaryTransition = {
+        kind: "completed",
+        progress: priorTransitionEnvelope.primary,
+        execution: executionFromTransitionProgress(priorTransitionEnvelope.primary),
+      };
+    }
+    const primary = primaryTransition.execution ||
+      executionFromTransitionProgress(primaryTransition.progress);
+    const replayTransition = executeLethalActivationTransitionChunk(
       structuredClone(predecessor),
       authored.actor,
       authored.target,
@@ -1435,8 +1543,37 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
       `matchup-assassination:${task.taskKey}:replay`,
       onProgress,
       representative.coordinates?.actionRange,
+      replayCandidateKey,
+      priorTransitionEnvelope?.replay || null,
     );
-    onProgress({ stage: "replay_execution_complete", ok: replay.ok === true });
+    onProgress({
+      stage: "replay_transition_chunk_complete",
+      actorPieceKey: actor.pieceKey,
+      kind: replayTransition.kind,
+      transitionCount: replayTransition.progress?.transitionCount || 0,
+    });
+    if (replayTransition.kind === "in_progress" || replayTransition.kind === "completed") {
+      if (replayTransition.kind === "in_progress") {
+        const nextProgress = candidateProgressWithReplayTransitionEnvelope(
+          movementChunk,
+          {
+            phase: "replay",
+            primaryCandidateKey,
+            replayCandidateKey,
+            primary: primaryTransition.progress,
+            replay: replayTransition.progress,
+          },
+        );
+        return {
+          candidateProgress: {
+            candidatePlan: movementChunk.candidatePlan,
+            progress: nextProgress,
+          },
+        };
+      }
+    }
+    const replay = replayTransition.execution ||
+      executionFromTransitionProgress(replayTransition.progress);
     const executionAudit = terminalExecutionAudit(
       predecessor,
       authored,

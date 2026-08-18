@@ -229,7 +229,28 @@ assert.notEqual(execution.report.checkpointAfterHash,
 assert.equal(execution.report.checkpointBeforeHash, checkpoint.checkpointHash);
 assert.equal(execution.checkpoint.tasks.find((row) =>
   row.taskKey === PREFERRED_FILTERED_TASK_KEY)?.status, "completed");
-assert.equal(execution.checkpoint.tasks.find((row) =>
+let strictExecution = execution;
+let strictResumeCount = 0;
+while (strictExecution.checkpoint.tasks.find((row) =>
+  row.taskKey === STRICT_FALLBACK_TASK_KEY)?.status !== "completed" &&
+  strictResumeCount < 16) {
+  strictExecution = executeWarmachineMatchupTerminalTaskBatchV1({
+    plan,
+    checkpoint: strictExecution.checkpoint,
+    openingReport,
+    openingRuntime,
+    evidenceCorpus,
+    workerId: `verify-assassination-terminal-task-adapter-resume-${strictResumeCount}`,
+    nowMs: 3_100_000 + strictResumeCount,
+    leaseDurationMs: 600_000,
+    maximumTasks: 1,
+    taskKeys: [STRICT_FALLBACK_TASK_KEY],
+    materializersByGoalFamily: { assassination: adapter },
+  });
+  strictResumeCount += 1;
+}
+assert.ok(strictResumeCount > 0);
+assert.equal(strictExecution.checkpoint.tasks.find((row) =>
   row.taskKey === STRICT_FALLBACK_TASK_KEY)?.status, "completed");
 
 const filtered = execution.artifacts.find((artifact) =>
@@ -265,7 +286,7 @@ assert.equal(
   true,
 );
 
-const strict = execution.artifacts.find((artifact) =>
+const strict = strictExecution.artifacts.find((artifact) =>
   artifact.taskKey === STRICT_FALLBACK_TASK_KEY);
 assert.ok(strict);
 assertSealed(strict.report);
