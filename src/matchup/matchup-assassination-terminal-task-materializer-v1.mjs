@@ -282,6 +282,45 @@ function fallbackMaterializableCoordinates(representative = {}) {
     );
 }
 
+function directLineOfSightBlockedCoordinates(representative = {}) {
+  const coordinates = representative.coordinates || {};
+  const canonical = representative.canonicalTerminal || {};
+  return representative.terminalClassKey === TERMINAL_CLASS &&
+    representative.sourceResolutionStatus === "officially_confirmed" &&
+    canonical.causalActionFamily === ACTION_CATEGORY &&
+    canonical.resultKind === "win" &&
+    coordinates.actionRange === "strictly_inside" &&
+    coordinates.baseTopology === "legal_separated" &&
+    coordinates.damage === "critical_models_undamaged" &&
+    coordinates.leaderControl === "strictly_inside" &&
+    coordinates.resource === "zero_available" &&
+    coordinates.lifecycle === "both_rosters_complete" &&
+    ["model_blocked", "terrain_blocked", "stealth_blocks_beyond_five"].includes(
+      coordinates.lineOfSight,
+    ) &&
+    ["pressure_point", "fault_line", "two_fronts", "trench_warfare"].includes(
+      representative.scenarioKey,
+    );
+}
+
+function directLineOfSightBlockedEvidence(representative = {}, mappingAudit = {}) {
+  const coordinates = representative.coordinates || {};
+  return stableGraphValue({
+    scenarioKey: representative.scenarioKey,
+    roundNumber: Number(representative.roundNumber),
+    lineOfSight: coordinates.lineOfSight,
+    requiredDirectActionEvidence: {
+      actionType: "melee_attack",
+      hasClearLine: true,
+      blockedLineCount: 0,
+      legalityCode: "STRICT_MELEE_LOS_BASE_TO_BASE_CLEAR_V20260815",
+    },
+    directActionCandidateNotMaterialized: true,
+    hostReceiptHash: warmachineHost.receipt.receiptHash,
+    representativeMappingAudit: mappingAudit,
+  });
+}
+
 function mappedHostRepresentative(task = {}, terminal = {}, evidenceCorpus = {}) {
   const representative = task.representative || {};
   const hostCell = (evidenceCorpus.corpus?.cells || []).find((cell) =>
@@ -1442,6 +1481,14 @@ export function materializeWarmachineMatchupAssassinationTerminalTaskV1({
       mappingAudit,
     );
   }
+  if (directLineOfSightBlockedCoordinates(terminalTask.representative)) {
+    return proposalFiltered(
+      terminalTask,
+      opening,
+      "assassination_terminal_direct_action_line_of_sight_not_clear",
+      directLineOfSightBlockedEvidence(terminalTask.representative, mappingAudit),
+    );
+  }
   if (preferredIncompatibleCoordinates(terminalTask.representative)) {
     return proposalFiltered(
       terminalTask,
@@ -1468,7 +1515,8 @@ export function warmachineMatchupAssassinationTerminalTaskSupportedV1(
 ) {
   return terminalTask.representative?.terminalClassKey === TERMINAL_CLASS &&
     terminalTask.executionEnvelope?.actionCategory === ACTION_CATEGORY &&
-    (preferredIncompatibleCoordinates(terminalTask.representative) ||
+    (directLineOfSightBlockedCoordinates(terminalTask.representative) ||
+      preferredIncompatibleCoordinates(terminalTask.representative) ||
       fallbackMaterializableCoordinates(terminalTask.representative));
 }
 

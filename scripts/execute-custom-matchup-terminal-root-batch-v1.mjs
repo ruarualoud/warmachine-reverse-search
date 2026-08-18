@@ -76,7 +76,7 @@ function progress(stage, detail = {}) {
   })}\n`, "utf8");
 }
 const TERMINAL_TASK_EXECUTION_CONTRACT_VERSION =
-  "warmachine_terminal_task_execution_contract_v2_20260818";
+  "warmachine_terminal_task_execution_contract_v3_20260818";
 const shardIndexes = requestedShards
   ? requestedShards.split(",").map(Number)
   : undefined;
