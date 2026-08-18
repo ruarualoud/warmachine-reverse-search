@@ -13,7 +13,8 @@ for index in $(seq 1 "$batch_count"); do
   echo "[ticket05-microbatch] start index=${index} log=${log_path}"
   set +e
   (
-    timeout --signal=TERM --kill-after=15s 180s npm run execute:custom-matchup-terminal-root-batch -- --maximum-tasks=1
+    timeout --signal=TERM --kill-after=5s 90s \
+      node scripts/execute-custom-matchup-terminal-root-batch-v1.mjs --maximum-tasks=1
   ) >"$log_path" 2>&1
   exit_code=$?
   set -e
