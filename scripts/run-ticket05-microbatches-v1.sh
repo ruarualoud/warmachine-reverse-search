@@ -10,11 +10,13 @@ mkdir -p "$log_dir"
 for index in $(seq 1 "$batch_count"); do
   timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
   log_path="$log_dir/${timestamp}-task-${index}.log"
-  echo "[ticket05-microbatch] start index=${index} log=${log_path}"
+  progress_path="${log_path%.log}.progress.jsonl"
+  echo "[ticket05-microbatch] start index=${index} log=${log_path} progress=${progress_path}"
   set +e
   (
     timeout --signal=TERM --kill-after=5s 90s \
-      node scripts/execute-custom-matchup-terminal-root-batch-v1.mjs --maximum-tasks=1
+      node scripts/execute-custom-matchup-terminal-root-batch-v1.mjs \
+        --maximum-tasks=1 --progress-log="$progress_path"
   ) >"$log_path" 2>&1
   exit_code=$?
   set -e

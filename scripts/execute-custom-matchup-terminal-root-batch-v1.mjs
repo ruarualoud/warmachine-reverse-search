@@ -47,6 +47,17 @@ const maximumTasks = Math.max(0, Math.floor(Number(process.argv.find((argument) 
   argument.startsWith("--maximum-tasks="))?.slice("--maximum-tasks=".length) || 16)));
 const requestedShards = process.argv.find((argument) =>
   argument.startsWith("--shards="))?.slice("--shards=".length);
+const progressLogPath = process.argv.find((argument) =>
+  argument.startsWith("--progress-log="))?.slice("--progress-log=".length) || "";
+function progress(stage, detail = {}) {
+  if (!progressLogPath) return;
+  fs.mkdirSync(path.dirname(progressLogPath), { recursive: true });
+  fs.appendFileSync(progressLogPath, `${JSON.stringify({
+    atMs: Date.now(),
+    stage,
+    ...detail,
+  })}\n`, "utf8");
+}
 const TERMINAL_TASK_EXECUTION_CONTRACT_VERSION =
   "warmachine_terminal_task_execution_contract_v2_20260818";
 const shardIndexes = requestedShards
@@ -64,6 +75,7 @@ function writeJsonAtomic(filePath, value) {
   fs.renameSync(temporaryPath, filePath);
 }
 
+progress("arguments_parsed", { maximumTasks, requestedShards: requestedShards || null });
 const batchRoot = path.join(outputDirectory, "terminal-root-batch-v1");
 const currentPath = path.join(batchRoot, "CURRENT.json");
 const current = loadJson(currentPath);
@@ -81,18 +93,35 @@ const evidenceCorpus = loadJson(path.join(
   outputDirectory,
   "terminal-demand-evidence-corpus.json",
 ));
-const partitionCapabilityAuditsByTaskKey = Object.fromEntries(
-  (plan.selectedTasks || []).filter((task) =>
-    warmachineMatchupTerminalPartitionCapabilityAuditRequiredV1(task)).map((task) => [
-    task.taskKey,
-    auditWarmachineMatchupTerminalPartitionCapabilityV1({
+progress("inputs_loaded", {
+  selectedTaskCount: (plan.selectedTasks || []).length,
+  checkpointRevision: checkpoint.revision,
+});
+const terminalTaskByKey = new Map((plan.selectedTasks || []).map((task) => [
+  task.taskKey,
+  task,
+]));
+const partitionCapabilityAuditCache = new Map();
+const partitionCapabilityAuditsByTaskKey = new Proxy(Object.create(null), {
+  get(_target, property) {
+    if (typeof property !== "string") return undefined;
+    if (partitionCapabilityAuditCache.has(property)) {
+      return partitionCapabilityAuditCache.get(property);
+    }
+    const task = terminalTaskByKey.get(property);
+    if (!task || !warmachineMatchupTerminalPartitionCapabilityAuditRequiredV1(task)) {
+      return undefined;
+    }
+    const audit = auditWarmachineMatchupTerminalPartitionCapabilityV1({
       plan,
       openingReport,
       openingRuntime,
-      taskKey: task.taskKey,
-    }),
-  ]),
-);
+      taskKey: property,
+    });
+    partitionCapabilityAuditCache.set(property, audit);
+    return audit;
+  },
+});
 
 const sourceUnresolvedAdapter =
   buildWarmachineMatchupSourceUnresolvedTerminalAdapterV1();
@@ -114,6 +143,7 @@ const simultaneousOrSourceUnresolvedAdapter = Object.freeze({
     ? simultaneousTerminalAdapter.materialize(context)
     : sourceUnresolvedAdapter.materialize(context),
 });
+progress("batch_execution_start");
 const execution = executeWarmachineMatchupTerminalTaskBatchV1({
   plan,
   checkpoint,
@@ -133,6 +163,10 @@ const execution = executeWarmachineMatchupTerminalTaskBatchV1({
   },
 });
 
+progress("batch_execution_complete", {
+  executedTaskCount: execution.report.executedTaskCount,
+  checkpointAfterHash: execution.checkpoint.checkpointHash,
+});
 const evidenceDirectory = path.join(planDirectory, "terminal-task-evidence");
 for (const artifact of execution.artifacts) {
   const taskDirectory = path.join(evidenceDirectory, artifact.taskKey);
@@ -168,6 +202,10 @@ writeJsonAtomic(currentPath, {
   currentHash: stableGraphHash(currentCore),
 });
 
+progress("artifacts_written", {
+  executedTaskCount: execution.report.executedTaskCount,
+  checkpointAfterHash: execution.checkpoint.checkpointHash,
+});
 process.stdout.write(`${JSON.stringify({
   ok: true,
   planHash: plan.planHash,
