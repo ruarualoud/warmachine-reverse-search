@@ -28,6 +28,8 @@ const maximumTasks = Math.max(2, Math.floor(Number(process.argv.find((argument) 
   argument.startsWith("--maximum-tasks="))?.slice("--maximum-tasks=".length) || 64)));
 const shardCount = Math.max(1, Math.floor(Number(process.argv.find((argument) =>
   argument.startsWith("--shards="))?.slice("--shards=".length) || 4)));
+const TERMINAL_TASK_EXECUTION_CONTRACT_VERSION =
+  "warmachine_terminal_task_execution_contract_v2_20260818";
 
 function loadJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -124,6 +126,8 @@ const plan = buildWarmachineMatchupTerminalRootBatchPlanV1({
   },
   maximumMaterializationTasks: maximumTasks,
   shardCount,
+  terminalTaskExecutionContractVersion:
+    TERMINAL_TASK_EXECUTION_CONTRACT_VERSION,
 });
 if (plan.pinnedTaskCount !== pinnedRows.length ||
     !plan.selectedTasks.slice(0, pinnedRows.length).every((task) =>

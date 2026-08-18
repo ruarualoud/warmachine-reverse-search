@@ -47,6 +47,8 @@ const maximumTasks = Math.max(0, Math.floor(Number(process.argv.find((argument) 
   argument.startsWith("--maximum-tasks="))?.slice("--maximum-tasks=".length) || 16)));
 const requestedShards = process.argv.find((argument) =>
   argument.startsWith("--shards="))?.slice("--shards=".length);
+const TERMINAL_TASK_EXECUTION_CONTRACT_VERSION =
+  "warmachine_terminal_task_execution_contract_v2_20260818";
 const shardIndexes = requestedShards
   ? requestedShards.split(",").map(Number)
   : undefined;
@@ -67,6 +69,10 @@ const currentPath = path.join(batchRoot, "CURRENT.json");
 const current = loadJson(currentPath);
 const planDirectory = path.join(batchRoot, current.relativePlanDirectory);
 const plan = loadJson(path.join(planDirectory, "plan.json"));
+if (plan.terminalTaskExecutionContractVersion !==
+    TERMINAL_TASK_EXECUTION_CONTRACT_VERSION) {
+  throw new Error("matchup_terminal_execution_contract_version_drift");
+}
 const checkpointPath = path.join(planDirectory, "checkpoint.json");
 const checkpoint = loadJson(checkpointPath);
 const openingReport = loadJson(path.join(planDirectory, "opening-batch-report.json"));

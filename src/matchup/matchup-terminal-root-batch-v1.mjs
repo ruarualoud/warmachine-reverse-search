@@ -686,6 +686,9 @@ export function buildWarmachineMatchupTerminalRootBatchPlanV1(raw = {}) {
     groupPlanByKey.get(row.groupKey)?.constructionMacroProfileKey))].sort();
   const core = stableGraphValue({
     schemaVersion: WARMACHINE_MATCHUP_TERMINAL_ROOT_BATCH_PLAN_V1_SCHEMA,
+    terminalTaskExecutionContractVersion: String(
+      raw.terminalTaskExecutionContractVersion || "unversioned",
+    ),
     receipts,
     taskKey: String(task.taskKey || ""),
     groupCount: groupPlans.length,
