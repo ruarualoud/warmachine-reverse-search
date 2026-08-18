@@ -1362,6 +1362,17 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
     );
     if (!authored) {
       onProgress({ stage: "actor_geometry_filtered", actorPieceKey: actor.pieceKey });
+      if (movementChunk) {
+        onProgress({
+          stage: "geometry_slot_complete",
+          taskKey: task.taskKey,
+          geometrySlotIndex: movementChunk.slot.slotIndex,
+          anchorIndex: movementChunk.slot.anchorIndex,
+          angleIndex: movementChunk.slot.angleIndex,
+          actorPieceKey: actor.pieceKey,
+          outcome: "no_legal_advance_then_melee_action",
+        });
+      }
       actorAttempts.push(stableGraphValue({
         actorPieceKey: actor.pieceKey,
         disposition: "proposal_filtered",
@@ -1465,6 +1476,15 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
         actorAttempts,
       }),
       updatedAtMs: Date.now(),
+    });
+    onProgress({
+      stage: "candidate_chunk_ready",
+      taskKey: task.taskKey,
+      candidatePlanHash: movementChunk.candidatePlan.candidatePlanHash,
+      progressHash: nextProgress.progressHash,
+      completedSlotIndex: movementChunk.slot.slotIndex,
+      nextSlotIndex: nextProgress.nextSlotIndex,
+      remainingSlotCount: nextProgress.remainingSlotCount,
     });
     return {
       candidateProgress: {

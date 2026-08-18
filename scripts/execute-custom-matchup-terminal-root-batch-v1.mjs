@@ -66,12 +66,21 @@ const requestedShards = process.argv.find((argument) =>
   argument.startsWith("--shards="))?.slice("--shards=".length);
 const progressLogPath = process.argv.find((argument) =>
   argument.startsWith("--progress-log="))?.slice("--progress-log=".length) || "";
+let progressSequence = 0;
 function progress(stage, detail = {}) {
   if (!progressLogPath) return;
+  const memory = process.memoryUsage();
+  progressSequence += 1;
   fs.mkdirSync(path.dirname(progressLogPath), { recursive: true });
   fs.appendFileSync(progressLogPath, `${JSON.stringify({
     atMs: Date.now(),
+    sequence: progressSequence,
+    pid: process.pid,
     stage,
+    rssBytes: memory.rss,
+    heapUsedBytes: memory.heapUsed,
+    heapTotalBytes: memory.heapTotal,
+    externalBytes: memory.external,
     ...detail,
   })}\n`, "utf8");
 }
