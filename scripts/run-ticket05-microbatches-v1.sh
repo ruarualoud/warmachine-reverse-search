@@ -14,15 +14,14 @@ for index in $(seq 1 "$batch_count"); do
   echo "[ticket05-microbatch] start index=${index} log=${log_path} progress=${progress_path}"
   set +e
   (
-    timeout --signal=TERM --kill-after=5s 90s \
-      node scripts/execute-custom-matchup-terminal-root-batch-v1.mjs \
-        --maximum-tasks=1 --progress-log="$progress_path"
+    node scripts/execute-custom-matchup-terminal-root-batch-v1.mjs \
+      --maximum-tasks=1 --progress-log="$progress_path"
   ) >"$log_path" 2>&1
   exit_code=$?
   set -e
   tail -n 28 "$log_path"
   if [[ "$exit_code" -ne 0 ]]; then
-    echo "[ticket05-microbatch] stopped index=${index} exit_code=${exit_code}; checkpoint remains the last atomically written state." >&2
+    echo "[ticket05-microbatch] failed index=${index} exit_code=${exit_code}; checkpoint remains the last atomically written state." >&2
     exit "$exit_code"
   fi
 done

@@ -196,6 +196,7 @@ export function executeWarmachineMatchupTerminalTaskBatchV1(raw = {}) {
   if (!workerId) throw new Error("matchup_terminal_execution_worker_id_required");
   const nowMs = numeric(raw.nowMs);
   const materializers = raw.materializersByGoalFamily || {};
+  const onProgress = typeof raw.onProgress === "function" ? raw.onProgress : () => {};
   const groupByKey = new Map((plan.groupPlans || []).map((group) => [
     group.groupKey,
     group,
@@ -211,9 +212,17 @@ export function executeWarmachineMatchupTerminalTaskBatchV1(raw = {}) {
     return Boolean(materializerForTask(materializers, groupPlan?.goalFamily, {
       terminalTask: planned,
       groupPlan,
-      context: raw.materializerContext || {},
+      context: {
+        ...(raw.materializerContext || {}),
+        supportProbe: true,
+      },
     }));
   }).map((task) => task.taskKey);
+  onProgress({
+    stage: "available_tasks_resolved",
+    availableTaskCount: availableTaskKeys.length,
+    availableTaskKeys: availableTaskKeys.slice(0, 8),
+  });
   const maximumTasks = Math.max(0, Math.floor(numeric(
     raw.maximumTasks,
     availableTaskKeys.length,
@@ -252,6 +261,11 @@ export function executeWarmachineMatchupTerminalTaskBatchV1(raw = {}) {
         openingReport,
         openingRuntime,
       );
+      onProgress({
+        stage: "task_materialization_start",
+        taskKey,
+        goalFamily: group.goalFamily,
+      });
       const rawMaterialization = opening
         ? materializer({
           terminalTask,
@@ -284,6 +298,12 @@ export function executeWarmachineMatchupTerminalTaskBatchV1(raw = {}) {
         terminalTask,
         rawMaterialization,
       );
+      onProgress({
+        stage: "task_materialization_complete",
+        taskKey,
+        goalFamily: group.goalFamily,
+        disposition: normalized.result.disposition,
+      });
       results.push(normalized.result);
       artifacts.push(stableGraphValue({
         taskKey,

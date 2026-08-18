@@ -460,9 +460,27 @@ export function auditWarmachineMatchupTerminalPartitionCapabilityV1(raw = {}) {
   const openingReport = raw.openingReport || {};
   const openingRuntime = raw.openingRuntime || {};
   const taskKey = String(raw.taskKey || "");
+  const artifactsPrevalidatedByBatch = raw.artifactsPrevalidatedByBatch === true;
   if (!taskKey) fail("terminal_partition_capability_task_key_required");
-  assertPlan(plan);
-  assertOpeningArtifacts(plan, openingReport, openingRuntime);
+  if (artifactsPrevalidatedByBatch) {
+    // The batch executor has already verified the full sealed plan and opening
+    // artifacts before leasing this task. Preserve receipt and identity checks
+    // here, but avoid rebuilding their large canonical graphs per task.
+    if (plan.schemaVersion !== PLAN_SCHEMA ||
+        openingReport.schemaVersion !== OPENING_REPORT_SCHEMA ||
+        openingRuntime.schemaVersion !== OPENING_RUNTIME_SCHEMA ||
+        String(openingReport.planHash || "") !== String(plan.planHash || "") ||
+        String(openingRuntime.planHash || "") !== String(plan.planHash || "") ||
+        String(openingRuntime.reportHash || "") !== String(openingReport.reportHash || "")) {
+      fail("terminal_partition_capability_batch_prevalidation_identity_invalid");
+    }
+    assertCurrentReceipts(plan.receipts || {}, "terminal_partition_capability_plan");
+    assertCurrentReceipts(openingReport, "terminal_partition_capability_opening_report");
+    assertCurrentReceipts(openingRuntime, "terminal_partition_capability_opening_runtime");
+  } else {
+    assertPlan(plan);
+    assertOpeningArtifacts(plan, openingReport, openingRuntime);
+  }
   const { terminalTask, partitionValue, required } = taskByKey(plan, taskKey);
   const { taskLedger, opening } = exactOpeningForTask(
     terminalTask,
@@ -483,6 +501,8 @@ export function auditWarmachineMatchupTerminalPartitionCapabilityV1(raw = {}) {
     schemaVersion:
       WARMACHINE_MATCHUP_TERMINAL_PARTITION_CAPABILITY_AUDIT_V1_SCHEMA,
     taskKey,
+    artifactValidationMode: artifactsPrevalidatedByBatch
+      ? "batch_prevalidated_sealed_artifacts" : "standalone_sealed_artifacts",
     openingKey: opening.openingKey,
     constructionOpeningKey: String(opening.constructionOpeningKey || ""),
     planHash: plan.planHash,

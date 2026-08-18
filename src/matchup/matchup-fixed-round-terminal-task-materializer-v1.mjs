@@ -2192,6 +2192,9 @@ export function warmachineMatchupFixedRoundTerminalTaskSupportedV1(
       terminalTask.executionEnvelope?.actionCategory !== FIXED_ACTION_CATEGORY) {
     return false;
   }
+  // Queue selection must remain inexpensive. Exact partition capability audits are
+  // evaluated only after a task has been leased for materialization.
+  if (context.supportProbe === true) return true;
   if (representative.sourceResolutionStatus !== "officially_confirmed") return true;
   if (context.partitionCapabilityAuditsByTaskKey?.[terminalTask.taskKey]) {
     return true;

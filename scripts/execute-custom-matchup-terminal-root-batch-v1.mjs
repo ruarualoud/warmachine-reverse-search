@@ -4,38 +4,55 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { stableGraphHash, stableGraphValue } from
-  "../src/graph/typed-facts-v2.mjs";
-import {
-  summarizeWarmachineMatchupTerminalRootBatchV1,
-} from "../src/matchup/matchup-terminal-root-batch-v1.mjs";
-import {
-  buildWarmachineMatchupSourceUnresolvedTerminalAdapterV1,
-} from "../src/matchup/matchup-terminal-source-resolution-materializer-v1.mjs";
-import {
-  buildWarmachineMatchupFixedRoundTerminalTaskAdapterV1,
-} from "../src/matchup/matchup-fixed-round-terminal-task-materializer-v1.mjs";
-import {
-  buildWarmachineMatchupScoreTerminalTaskAdapterV1,
-} from "../src/matchup/matchup-score-terminal-task-materializer-v1.mjs";
-import {
-  buildWarmachineMatchupSimultaneousTerminalTaskAdapterV1,
-} from
-  "../src/matchup/matchup-simultaneous-terminal-task-materializer-v1.mjs";
-import {
-  buildWarmachineMatchupAssassinationTerminalTaskAdapterV1,
-} from
-  "../src/matchup/matchup-assassination-terminal-task-materializer-v1.mjs";
-import {
-  auditWarmachineMatchupTerminalPartitionCapabilityV1,
-  warmachineMatchupTerminalPartitionCapabilityAuditRequiredV1,
-} from "../src/matchup/matchup-terminal-partition-capability-audit-v1.mjs";
-import {
-  executeWarmachineMatchupTerminalTaskBatchV1,
-} from "../src/matchup/matchup-terminal-task-execution-batch-v1.mjs";
-import { warmachineConstructionHost } from
-  "../src/warmachine-construction-host-runtime.mjs";
-import { warmachineHost } from "../src/warmachine-host-runtime.mjs";
+let stableGraphHash;
+let stableGraphValue;
+let summarizeWarmachineMatchupTerminalRootBatchV1;
+let buildWarmachineMatchupSourceUnresolvedTerminalAdapterV1;
+let buildWarmachineMatchupFixedRoundTerminalTaskAdapterV1;
+let buildWarmachineMatchupScoreTerminalTaskAdapterV1;
+let buildWarmachineMatchupSimultaneousTerminalTaskAdapterV1;
+let buildWarmachineMatchupAssassinationTerminalTaskAdapterV1;
+let auditWarmachineMatchupTerminalPartitionCapabilityV1;
+let warmachineMatchupTerminalPartitionCapabilityAuditRequiredV1;
+let executeWarmachineMatchupTerminalTaskBatchV1;
+let warmachineConstructionHost;
+let warmachineHost;
+
+async function loadRuntimeModules(progress) {
+  const typedFacts = await import("../src/graph/typed-facts-v2.mjs");
+  ({ stableGraphHash, stableGraphValue } = typedFacts);
+  progress("runtime_module_loaded", { module: "typed_facts" });
+  ({ summarizeWarmachineMatchupTerminalRootBatchV1 } =
+    await import("../src/matchup/matchup-terminal-root-batch-v1.mjs"));
+  progress("runtime_module_loaded", { module: "terminal_root_batch" });
+  ({ executeWarmachineMatchupTerminalTaskBatchV1 } =
+    await import("../src/matchup/matchup-terminal-task-execution-batch-v1.mjs"));
+  progress("runtime_module_loaded", { module: "task_execution_batch" });
+  ({ auditWarmachineMatchupTerminalPartitionCapabilityV1,
+    warmachineMatchupTerminalPartitionCapabilityAuditRequiredV1 } =
+    await import("../src/matchup/matchup-terminal-partition-capability-audit-v1.mjs"));
+  progress("runtime_module_loaded", { module: "partition_capability_audit" });
+  ({ buildWarmachineMatchupSourceUnresolvedTerminalAdapterV1 } =
+    await import("../src/matchup/matchup-terminal-source-resolution-materializer-v1.mjs"));
+  progress("runtime_module_loaded", { module: "source_unresolved_adapter" });
+  ({ buildWarmachineMatchupFixedRoundTerminalTaskAdapterV1 } =
+    await import("../src/matchup/matchup-fixed-round-terminal-task-materializer-v1.mjs"));
+  progress("runtime_module_loaded", { module: "fixed_round_adapter" });
+  ({ buildWarmachineMatchupScoreTerminalTaskAdapterV1 } =
+    await import("../src/matchup/matchup-score-terminal-task-materializer-v1.mjs"));
+  progress("runtime_module_loaded", { module: "score_adapter" });
+  ({ buildWarmachineMatchupSimultaneousTerminalTaskAdapterV1 } =
+    await import("../src/matchup/matchup-simultaneous-terminal-task-materializer-v1.mjs"));
+  progress("runtime_module_loaded", { module: "simultaneous_adapter" });
+  ({ buildWarmachineMatchupAssassinationTerminalTaskAdapterV1 } =
+    await import("../src/matchup/matchup-assassination-terminal-task-materializer-v1.mjs"));
+  progress("runtime_module_loaded", { module: "assassination_adapter" });
+  ({ warmachineConstructionHost } =
+    await import("../src/warmachine-construction-host-runtime.mjs"));
+  progress("runtime_module_loaded", { module: "construction_host" });
+  ({ warmachineHost } = await import("../src/warmachine-host-runtime.mjs"));
+  progress("runtime_module_loaded", { module: "rules_host" });
+}
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const reverseDirectory = path.resolve(scriptDirectory, "..");
@@ -76,6 +93,8 @@ function writeJsonAtomic(filePath, value) {
 }
 
 progress("arguments_parsed", { maximumTasks, requestedShards: requestedShards || null });
+await loadRuntimeModules(progress);
+progress("runtime_modules_ready");
 const batchRoot = path.join(outputDirectory, "terminal-root-batch-v1");
 const currentPath = path.join(batchRoot, "CURRENT.json");
 const current = loadJson(currentPath);
@@ -117,6 +136,7 @@ const partitionCapabilityAuditsByTaskKey = new Proxy(Object.create(null), {
       openingReport,
       openingRuntime,
       taskKey: property,
+      artifactsPrevalidatedByBatch: true,
     });
     partitionCapabilityAuditCache.set(property, audit);
     return audit;
@@ -154,7 +174,11 @@ const execution = executeWarmachineMatchupTerminalTaskBatchV1({
   nowMs: Date.now(),
   maximumTasks,
   shardIndexes,
-  materializerContext: { partitionCapabilityAuditsByTaskKey },
+  materializerContext: {
+    partitionCapabilityAuditsByTaskKey,
+    onProgress: (detail) => progress("materializer", detail),
+  },
+  onProgress: (detail) => progress("batch", detail),
   materializersByGoalFamily: {
     assassination: assassinationTerminalAdapter,
     scenario_score_threshold: scoreTerminalAdapter,
