@@ -211,7 +211,11 @@ export function executeWarmachineMatchupTerminalTaskBatchV1(raw = {}) {
     task.taskKey,
     task,
   ]));
+  const requestedTaskKeys = raw.taskKeys === undefined
+    ? null
+    : new Set((raw.taskKeys || []).map(String));
   const availableTaskKeys = (checkpoint.tasks || []).filter((task) => {
+    if (requestedTaskKeys && !requestedTaskKeys.has(task.taskKey)) return false;
     if (!currentTaskEligible(task, nowMs)) return false;
     const planned = planTaskByKey.get(task.taskKey);
     const groupPlan = groupByKey.get(planned?.groupKey);

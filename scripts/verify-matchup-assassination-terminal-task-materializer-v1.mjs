@@ -120,14 +120,20 @@ const assassinationTasks = (plan.selectedTasks || []).filter((task) =>
   assassinationGroups.has(task.groupKey));
 const supportedTasks = assassinationTasks.filter((task) =>
   warmachineMatchupAssassinationTerminalTaskSupportedV1(task));
-assert.deepEqual(supportedTasks.map((task) => task.taskKey), [
+const verificationTaskKeys = [
   PREFERRED_FILTERED_TASK_KEY,
   STRICT_FALLBACK_TASK_KEY,
-]);
+];
+const verificationTasks = verificationTaskKeys.map((taskKey) => {
+  const task = supportedTasks.find((candidate) => candidate.taskKey === taskKey);
+  assert.ok(task, `expected_strict_assassination_baseline_task_supported:${taskKey}`);
+  return task;
+});
+assert.deepEqual(verificationTasks.map((task) => task.taskKey), verificationTaskKeys);
 
-const preferredTask = supportedTasks[0];
-const fallbackTask = supportedTasks[1];
-for (const terminalTask of supportedTasks) {
+const preferredTask = verificationTasks[0];
+const fallbackTask = verificationTasks[1];
+for (const terminalTask of verificationTasks) {
   assert.equal(
     checkpoint.tasks.find((row) => row.taskKey === terminalTask.taskKey)?.status,
     "queued",
@@ -178,7 +184,7 @@ const leasePreview = acquireWarmachineMatchupTerminalRootBatchLeaseV1(
     nowMs: 2_000_000,
     leaseDurationMs: 600_000,
     maximumTasks: 2,
-    taskKeys: supportedTasks.map((task) => task.taskKey),
+    taskKeys: verificationTasks.map((task) => task.taskKey),
   },
 );
 assert.deepEqual(leasePreview.acquiredTaskKeys, [
@@ -207,6 +213,7 @@ const execution = executeWarmachineMatchupTerminalTaskBatchV1({
   nowMs: 3_000_000,
   leaseDurationMs: 600_000,
   maximumTasks: 2,
+  taskKeys: verificationTaskKeys,
   materializersByGoalFamily: {
     assassination: adapter,
   },

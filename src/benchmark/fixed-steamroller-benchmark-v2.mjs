@@ -675,7 +675,10 @@ export function executeWarmachineBenchmarkActivationV2(
   let state = normalizeRulesV1State(stateInput);
   const startingSideKey = state.activeSideKey;
   const initialGroup = buildWarmachineActivationGroups(state)
-    .find((group) => group.groupKey === activationGroupKey) || null;
+    .find((group) => group.groupKey === activationGroupKey) ||
+    (rawOptions.resumeInitialGroup?.groupKey === activationGroupKey
+      ? stableGraphValue(rawOptions.resumeInitialGroup)
+      : null);
   if (!initialGroup) {
     return {
       ok: false,
@@ -839,6 +842,7 @@ export function executeWarmachineBenchmarkActivationV2(
     upstreamReceiptHash: warmachineHost.receipt.receiptHash,
     activationGroupKey,
     actorPieceKeys: initialGroup.actorPieceKeys,
+    resumeInitialGroup: stableGraphValue(initialGroup),
     startingSideKey,
     startingStateHash: stableGraphHash(normalizeRulesV1State(stateInput)),
     endingStateHash: stableGraphHash(state),
