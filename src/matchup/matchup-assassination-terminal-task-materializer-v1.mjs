@@ -247,6 +247,12 @@ function validatePlanAndGroup(task = {}, groupPlan = {}, plan = {}) {
   }
 }
 
+function resourceModeForCoordinates(coordinates = {}) {
+  return ["zero_available", "maximum_native_resource"].includes(
+    coordinates.resource,
+  ) ? coordinates.resource : "";
+}
+
 function commonSupportedCoordinates(representative = {}) {
   const coordinates = representative.coordinates || {};
   return representative.terminalClassKey === TERMINAL_CLASS &&
@@ -257,8 +263,7 @@ function commonSupportedCoordinates(representative = {}) {
     coordinates.baseTopology === "legal_separated" &&
     coordinates.damage === "critical_models_undamaged" &&
     coordinates.leaderControl === "strictly_inside" &&
-    coordinates.lineOfSight === "clear" &&
-    coordinates.resource === "zero_available";
+    coordinates.lineOfSight === "clear";
 }
 
 function preferredIncompatibleCoordinates(representative = {}) {
@@ -277,6 +282,7 @@ function preferredIncompatibleCoordinates(representative = {}) {
 function fallbackMaterializableCoordinates(representative = {}) {
   const coordinates = representative.coordinates || {};
   return commonSupportedCoordinates(representative) &&
+    Boolean(resourceModeForCoordinates(coordinates)) &&
     ["both_sides_prior_losses", "both_rosters_complete"].includes(
       coordinates.lifecycle,
     );
@@ -611,8 +617,14 @@ function prepareBaseState(opening = {}, representative = {}, terminal = {}) {
   for (const field of WARMACHINE_RULES_V1_RUNTIME_WINDOW_FIELDS) {
     state[field] = null;
   }
+  const resourceMode = resourceModeForCoordinates(
+    representative.coordinates || {},
+  );
+  if (!resourceMode) {
+    throw new Error("assassination_terminal_resource_partition_not_materializable");
+  }
   for (const piece of state.pieces || []) piece.activated = true;
-  setWarmachineNativeResourcesForTerminalSeedV1(state, "zero_available");
+  setWarmachineNativeResourcesForTerminalSeedV1(state, resourceMode);
   return state;
 }
 
@@ -1085,9 +1097,12 @@ function exactPartitionAudit(state = {}, opening = {}, representative = {},
     ["critical_models_undamaged", true,
       coordinates.damage === "critical_models_undamaged" &&
       damagedInPlay.length === 0],
-    ["zero_resource_predecessor", true,
-      coordinates.resource === "zero_available" &&
-      resourceRows.every((row) => row.resource === 0)],
+    ["native_resource_predecessor", true,
+      coordinates.resource === "zero_available"
+        ? resourceRows.every((row) => row.resource === 0)
+        : coordinates.resource === "maximum_native_resource"
+          ? resourceRows.every((row) => row.resource === row.maximum)
+          : false],
     ["base_topology_partition", true,
       coordinates.baseTopology === "legal_separated" && placementAudit.ok === true &&
       formationAudit.ok === true],
