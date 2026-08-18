@@ -4,7 +4,7 @@ set -euo pipefail
 batch_count="${1:-8}"
 workdir="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$workdir"
-batch_root=".scratch/custom-matchup-reports/sepsira-six-swarms-vs-fane-v1/terminal-root-batch-v1"
+batch_root="$workdir/.scratch/custom-matchup-reports/sepsira-six-swarms-vs-fane-v1/terminal-root-batch-v1"
 log_dir="$batch_root/microbatch-logs"
 current_path="$batch_root/CURRENT.json"
 mkdir -p "$log_dir"
