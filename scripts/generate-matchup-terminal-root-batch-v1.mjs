@@ -29,7 +29,7 @@ const maximumTasks = Math.max(2, Math.floor(Number(process.argv.find((argument) 
 const shardCount = Math.max(1, Math.floor(Number(process.argv.find((argument) =>
   argument.startsWith("--shards="))?.slice("--shards=".length) || 4)));
 const TERMINAL_TASK_EXECUTION_CONTRACT_VERSION =
-  "warmachine_terminal_task_execution_contract_v5_20260818";
+  "warmachine_terminal_task_execution_contract_v6_20260818_candidate_chunks";
 
 function loadJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));

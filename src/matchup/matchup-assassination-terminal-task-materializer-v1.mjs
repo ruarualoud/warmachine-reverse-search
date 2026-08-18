@@ -17,6 +17,11 @@ import {
   setWarmachineNativeResourcesForTerminalSeedV1,
 } from "./two-fronts-score-terminal-seed-v1.mjs";
 import {
+  advanceWarmachineMatchupTerminalCandidateProgressV1,
+  buildWarmachineMatchupTerminalCandidateChunkPlanV1,
+  buildWarmachineMatchupTerminalCandidateProgressV1,
+} from "./matchup-terminal-candidate-chunk-v1.mjs";
+import {
   auditRulesV1StaticPlacement,
   auditRulesV1StaticUnitFormation,
   auditRulesV1SteamrollerScenarioTerrainSetup,
@@ -305,6 +310,41 @@ function movementPredecessorMaterializableCoordinates(representative = {}) {
     !coordinates.trenchCacheLifecycle &&
     !coordinates.payloadLifecycle &&
     !coordinates.highStakesCountdownState;
+}
+
+function movementCandidateChunkForTask(task = {}, candidates = [], plan = {},
+  rawCandidateProgress = null) {
+  const representative = task.representative || {};
+  const actionRange = String(representative.coordinates?.actionRange || "");
+  const slots = candidates.flatMap((candidate) => Array.from(
+    { length: 8 * 32 },
+    (_ignored, slotIndex) => stableGraphValue({
+      actorPieceKey: candidate.pieceKey,
+      anchorIndex: Math.floor(slotIndex / 32),
+      angleIndex: slotIndex % 32,
+      attackProfileKey: "strict_advance_then_melee",
+      actionRange,
+    }),
+  ));
+  const candidatePlan = rawCandidateProgress?.candidatePlan ||
+    buildWarmachineMatchupTerminalCandidateChunkPlanV1({
+      taskKey: task.taskKey,
+      behaviorSignatureHash: task.behaviorSignatureHash,
+      terminalTaskExecutionContractVersion:
+        plan.terminalTaskExecutionContractVersion,
+      candidateEnumerationVersion:
+        "assassination_advance_then_melee_geometry_slots_v1",
+      hostReceiptHash: warmachineHost.receipt.receiptHash,
+      constructionHostReceiptHash: warmachineConstructionHost.receipt.receiptHash,
+      slots,
+    });
+  const progress = rawCandidateProgress?.progress ||
+    buildWarmachineMatchupTerminalCandidateProgressV1({
+      candidatePlan,
+      updatedAtMs: Date.now(),
+    });
+  const slot = candidatePlan.slots?.[progress.nextSlotIndex] || null;
+  return stableGraphValue({ candidatePlan, progress, slot });
 }
 
 function directLineOfSightBlockedCoordinates(representative = {}) {
@@ -676,7 +716,7 @@ function strictMeleeLosClearEvidence(action = {}) {
 }
 
 function authoredGeometryForActor(baseState = {}, actorKey = "", targetKey = "",
-  actionRange = "strictly_inside", onProgress = () => {}) {
+  actionRange = "strictly_inside", onProgress = () => {}, rawWindow = {}) {
   const sourceActor = (baseState.pieces || []).find((piece) =>
     piece.pieceKey === actorKey);
   const sourceTarget = (baseState.pieces || []).find((piece) =>
@@ -700,20 +740,36 @@ function authoredGeometryForActor(baseState = {}, actorKey = "", targetKey = "",
     { xIn: 18, yIn: 18 }, { xIn: 24, yIn: 18 },
     { xIn: 30, yIn: 18 }, { xIn: 24, yIn: 24 },
   ];
-  let geometrySlotIndex = 0;
-  for (let anchorIndex = 0; anchorIndex < anchors.length; anchorIndex += 1) {
+  const totalGeometrySlotCount = anchors.length * 32;
+  const slotStartIndex = Math.min(
+    totalGeometrySlotCount,
+    Math.max(0, Math.floor(numeric(rawWindow.slotStartIndex, 0))),
+  );
+  const maximumSlotCount = Math.max(1, Math.floor(numeric(
+    rawWindow.maximumSlotCount,
+    totalGeometrySlotCount,
+  )));
+  const slotEndExclusive = Math.min(
+    totalGeometrySlotCount,
+    slotStartIndex + maximumSlotCount,
+  );
+  for (let currentGeometrySlotIndex = slotStartIndex;
+    currentGeometrySlotIndex < slotEndExclusive;
+    currentGeometrySlotIndex += 1) {
+    const anchorIndex = Math.floor(currentGeometrySlotIndex / 32);
+    const angleIndex = currentGeometrySlotIndex % 32;
     const anchor = anchors[anchorIndex];
-    for (let angleIndex = 0; angleIndex < 32; angleIndex += 1) {
-      const currentGeometrySlotIndex = geometrySlotIndex;
-      geometrySlotIndex += 1;
-      onProgress({
-        stage: "geometry_slot_start",
-        actorPieceKey: actorKey,
-        geometrySlotIndex: currentGeometrySlotIndex,
-        anchorIndex,
-        angleIndex,
-      });
-      const state = structuredClone(baseState);
+    onProgress({
+      stage: "geometry_slot_start",
+      actorPieceKey: actorKey,
+      geometrySlotIndex: currentGeometrySlotIndex,
+      anchorIndex,
+      angleIndex,
+      slotStartIndex,
+      slotEndExclusive,
+      totalGeometrySlotCount,
+    });
+    const state = structuredClone(baseState);
       const actor = state.pieces.find((piece) => piece.pieceKey === actorKey);
       const target = state.pieces.find((piece) => piece.pieceKey === targetKey);
       const controller = state.pieces.find((piece) =>
@@ -816,7 +872,6 @@ function authoredGeometryForActor(baseState = {}, actorKey = "", targetKey = "",
           angleIndex,
         }),
       };
-    }
   }
   return null;
 }
@@ -1229,7 +1284,8 @@ function payloadDecisionIncompatibilityEvidence(representative = {},
 }
 
 function materializeFallback(task = {}, opening = {}, terminal = {},
-  hostRepresentative = {}, mappingAudit = {}, onProgress = () => {}) {
+  hostRepresentative = {}, mappingAudit = {}, onProgress = () => {}, plan = {},
+  rawCandidateProgress = null) {
   const representative = task.representative || {};
   const baseState = prepareBaseState(opening, representative, terminal);
   const target = targetCandidates(baseState, task, terminal)[0];
@@ -1264,10 +1320,31 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
       { actorCandidateCount: candidates.length },
     );
   }
+  const movementChunk = movementPredecessorMaterializableCoordinates(
+    representative,
+  )
+    ? movementCandidateChunkForTask(task, candidates, plan, rawCandidateProgress)
+    : null;
+  if (movementChunk && !movementChunk.slot) {
+    return proposalFiltered(
+      task,
+      opening,
+      "assassination_terminal_movement_candidate_slots_exhausted",
+      {
+        candidatePlanHash: movementChunk.candidatePlan.candidatePlanHash,
+        progressHash: movementChunk.progress.progressHash,
+        totalSlotCount: movementChunk.candidatePlan.totalSlotCount,
+      },
+    );
+  }
+  const attemptedCandidates = movementChunk
+    ? candidates.filter((candidate) => candidate.pieceKey ===
+      movementChunk.slot.actorPieceKey)
+    : candidates;
   const actorAttempts = [];
   let accepted = null;
   let strictExecutionAttempted = false;
-  for (const actor of candidates) {
+  for (const actor of attemptedCandidates) {
     onProgress({ stage: "actor_geometry_start", actorPieceKey: actor.pieceKey });
     const authored = authoredGeometryForActor(
       baseState,
@@ -1275,6 +1352,13 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
       target.pieceKey,
       representative.coordinates?.actionRange,
       onProgress,
+      movementChunk
+        ? {
+          slotStartIndex: movementChunk.slot.anchorIndex * 32 +
+            movementChunk.slot.angleIndex,
+          maximumSlotCount: 1,
+        }
+        : {},
     );
     if (!authored) {
       onProgress({ stage: "actor_geometry_filtered", actorPieceKey: actor.pieceKey });
@@ -1366,6 +1450,28 @@ function materializeFallback(task = {}, opening = {}, terminal = {},
       break;
     }
     break;
+  }
+  if (!accepted && movementChunk &&
+      movementChunk.progress.nextSlotIndex <
+        movementChunk.candidatePlan.totalSlotCount) {
+    const nextProgress = advanceWarmachineMatchupTerminalCandidateProgressV1({
+      candidatePlan: movementChunk.candidatePlan,
+      progress: movementChunk.progress,
+      maximumSlotCount: 1,
+      candidateEvidenceHash: stableGraphHash({
+        taskKey: task.taskKey,
+        candidatePlanHash: movementChunk.candidatePlan.candidatePlanHash,
+        slot: movementChunk.slot,
+        actorAttempts,
+      }),
+      updatedAtMs: Date.now(),
+    });
+    return {
+      candidateProgress: {
+        candidatePlan: movementChunk.candidatePlan,
+        progress: nextProgress,
+      },
+    };
   }
   if (!accepted) {
     return proposalFiltered(
@@ -1591,6 +1697,8 @@ export function materializeWarmachineMatchupAssassinationTerminalTaskV1({
     hostRepresentative,
     mappingAudit,
     typeof context.onProgress === "function" ? context.onProgress : () => {},
+    plan,
+    context.candidateProgress || null,
   );
 }
 
