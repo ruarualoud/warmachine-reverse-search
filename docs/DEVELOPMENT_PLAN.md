@@ -35,7 +35,9 @@ Wayfinder 共 `14` 个工单。当前状态：`01–04` 完成，`05` 进行中�
 
 ### Ticket 05：批量终局根物化
 
-当前可信生产基线：v4 执行合同计划 `6768bd50ccd9a8321de9818b90192feaa0f889c7582dda6d2b6cd5d566bf3512`，checkpoint `e9740d0289ab54f91d2307bb087f0c51b0e005babaa9a9a25a65eb790ff073e3`，完成 `50/64`。
+> **2026-08-19 核查更正**：本节此前的状态描述与 `docs/HANDOFF_STATUS.md`、`.scratch/.../CURRENT.json` 三处互不一致。执行层已确认存在方向性错误，整改路线、缺陷证据与验收标准见 `docs/EXECUTION_AUDIT_AND_REMEDIATION_GUIDE.md` 与收据 `docs/research/execution-audit-20260819.json`。在完成该文档的 R0（状态归一）、R1（Engine 八分片真实执行）、R2（族级合同分离）与 Ticket 05a（折叠内核）之前，**不得向几何搜索投入机时**。
+
+当前可信生产基线：v4 执行合同计划 `6768bd50ccd9a8321de9818b90192feaa0f889c7582dda6d2b6cd5d566bf3512`，checkpoint `e9740d0289ab54f91d2307bb087f0c51b0e005babaa9a9a25a65eb790ff073e3`，完成 `50/64`。v5 至 v8 的四次合同迁移已被核查判定为证据倒退（v8 计划 `4215fc135da9` 仅 `2/64`，且 64 个 taskKey 集合与 v4 完全相同），其中得分 `11/11`、固定轮次 `13/13`、同时胜负 `16/16` 三族的作废与刺杀几何分块这一唯一真实语义变化无关。v8 计划保留为历史工件，执行入口回退至 v4 基线。
 
 已闭合得分 `11/11`、固定轮次 `13/13`、同时胜负 `16/16`；刺杀 `10/24`。处置为 strict root `12`、strict reject `4`、候选过滤 `28`、来源未决 `6`、预算延迟 `14`、输入无效 `0`，候选质量守恒。剩余 `14` 项均为已识别但未实现的严格刺杀前驱：先行移动、遮挡/真视、精确支付或控制权转移、战兽损伤，以及 Payload/High Stakes/Trench 场景生命周期；不得以重复空扫描将其标为完成。
 
@@ -86,16 +88,25 @@ Wayfinder 共 `14` 个工单。当前状态：`01–04` 完成，`05` 进行中�
 
 提供一个聚合命令运行 focused、纵向、跨阵营、恢复、漂移和浏览器门。固定题至少有一条刺杀、一条得分的开局到终局 strict 路线；所有数值和未闭合质量可见，无超范围结论。
 
+### Ticket 05a：折叠内核（自 Ticket 14 前置拆出）
+
+实现刺杀几何枚举的三级剪枝：射程与视线可达性预筛（不改变枚举集合，无需升级合同）、角度等价折叠（签名分桶，需等价性对照实验）、锚点拓扑类别折叠与支配剪枝（存在性命题专用，须声明未证明唯一性）。当前分母 `7936 = 31 candidates × 8 anchors × 32 angles` 无任何剪枝，单任务约 `70` 机时、剩余 `14` 项刺杀约 `988` 机时，属不可完成量级。每级折叠须在至少三个结构不同任务上与全枚举对照，收据入库后方可采用。详见 `docs/EXECUTION_AUDIT_AND_REMEDIATION_GUIDE.md` 第四节。
+
 ### Ticket 14：条件对局空间扩充与可证明折叠
 
-在 Ticket 13 之后建立用户可协商的有限条件对局空间。冻结规则收据、阵容、场景/地图/地形、部署、先后手、机会口径、几何离散化、回合上限与策略边界；在证明前提下逐层采用地图对称、可交换模型、拓扑类别和支配剪枝。每次扩充必须报告枚举质量、等价折叠质量、支配剪枝质量、来源未决、用户待选场景和未展开质量；任一条件轴变化都使旧 checkpoint fail-closed。详见 `docs/TICKET_14_CONDITIONAL_GAME_SPACE_EXPANSION.md`。
+折叠内核部分已前置为 Ticket 05a。本 Ticket 保留产品化部分：在 Ticket 13 之后建立用户可协商的有限条件对局空间。冻结规则收据、阵容、场景/地图/地形、部署、先后手、机会口径、几何离散化、回合上限与策略边界；在证明前提下逐层采用地图对称、可交换模型、拓扑类别和支配剪枝。每次扩充必须报告枚举质量、等价折叠质量、支配剪枝质量、来源未决、用户待选场景和未展开质量；任一条件轴变化都使旧 checkpoint fail-closed。详见 `docs/TICKET_14_CONDITIONAL_GAME_SPACE_EXPANSION.md`。
 
 ## 团队并行建议
 
-- A 线：Ticket 05 适配器与批次守恒。
-- B 线：Ticket 06 刺杀前驱和移动/激活连接器。
-- C 线：Ticket 07 得分前驱与 Steamroller 历史。
-- D 线：Ticket 10 报告/控制台，但只消费稳定 schema。
+整改期间按目标族与任务键切分，禁止按槽位切分（会造成同一任务 checkpoint 写冲突）。批执行器的 `taskKeys` 参数用于分配互不重叠的任务集合。
+
+- A 线：Engine 八分片真实执行与规则回归修复（R1，与搜索完全解耦，优先级最高）。
+- B 线：R0 状态归一、R2 族级合同分离与远端同步修复。
+- C 线：Ticket 05a 折叠内核与等价性对照实验。
+- D 线：Ticket 06/07 纵向连接原型，可用现有 `12` 项 strict root 起步。
+- E 线：Ticket 08 概率对抗闭包设计，最终目标的必要条件。
+
+合并规则仍为 `merge_only_when_exact_task_rosters_representative_map_deployment_initiative_and_receipts_match`；收据不一致的分片不得合并。
 - Engine 线：只处理搜索暴露出的精确规则缺口，并提供正反 verifier。
 
 并行分支不得同时改共享 schema；先在小 PR 固化 schema，再并行消费者。每个搜索 PR 必须记录 Engine receipt 和 focused 命令。

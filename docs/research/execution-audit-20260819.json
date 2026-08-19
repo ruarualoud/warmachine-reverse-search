@@ -1,0 +1,175 @@
+{
+  "schemaVersion": "warmachine_execution_audit_receipt_v1",
+  "auditDate": "2026-08-19",
+  "auditor": "Manus AI",
+  "branch": "manus/phase1-ruleset-ticket05",
+  "repositories": {
+    "warmachine-strict-engine": {
+      "head": "acdfe8a",
+      "origin": "acdfe8a",
+      "synced": true
+    },
+    "warmachine-reverse-search": {
+      "head": "bfabb6a",
+      "origin": "bb993e0",
+      "synced": false,
+      "unpushedCommits": ["ccbd305", "b65b2f6", "af1ca35", "bfabb6a"],
+      "dirtyPaths": [
+        "scripts/execute-custom-matchup-terminal-root-batch-v1.mjs",
+        "scripts/generate-matchup-terminal-root-batch-v1.mjs"
+      ]
+    }
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "critical",
+      "title": "计划级合同版本导致跨族证据被无关作废",
+      "evidence": {
+        "v4Plan": "6768bd50ccd9a8321de9818b90192feaa0f889c7582dda6d2b6cd5d566bf3512",
+        "v4Settled": 50,
+        "v8Plan": "4215fc135da9b0df8555fb7ca3306d8fa503aa2e2ff7c6082083f14eefc28ad0",
+        "v8Settled": 2,
+        "taskKeySetsIdentical": true,
+        "voidedSettledCount": 48,
+        "unrelatedFamiliesVoided": [
+          "scenario_score_threshold",
+          "fixed_round_tiebreak",
+          "simultaneous_leader_tiebreak"
+        ]
+      },
+      "remediation": "R2 族级合同映射"
+    },
+    {
+      "id": "F2",
+      "severity": "critical",
+      "title": "几何枚举分母在当前实现下不可完成",
+      "evidence": {
+        "slotsPerAssassinationTask": 7936,
+        "decomposition": "31 candidates x 8 anchors x 32 angles",
+        "measuredSecondsPerSlot": [30, 35],
+        "measuredPeakRssBytes": [847065088, 1597000000],
+        "microbatchRunsObserved": 34,
+        "cumulativeObservedMinutes": 18.8,
+        "maxNextSlotIndexEverReached": 282,
+        "estimatedHoursPerTask": 70.5,
+        "estimatedHoursForRemaining14": 987.6
+      },
+      "remediation": "Ticket 05a 折叠内核"
+    },
+    {
+      "id": "F3",
+      "severity": "critical",
+      "title": "缺少射程预筛、角度等价折叠与支配剪枝",
+      "evidence": {
+        "sourceFile": "src/matchup/matchup-assassination-terminal-task-materializer-v1.mjs",
+        "lines": "318-354",
+        "symbol": "assassinationGeometryCandidateChunkForTask",
+        "pattern": "candidates.flatMap(() => Array.from({length: 8*32}))",
+        "missingPruning": ["melee_range_reachability_prefilter", "angle_equivalence_folding", "dominance_pruning"]
+      },
+      "remediation": "Ticket 05a 三级剪枝"
+    },
+    {
+      "id": "F4",
+      "severity": "high",
+      "title": "CI 分片验证曾因参数风格不匹配静默空跑",
+      "evidence": {
+        "correctFlags": ["--shard-count", "--shard-index", "--execute"],
+        "incorrectFlagsUsed": ["--shardCount", "--shardIndex"],
+        "silentFallback": {"shardIndex": 0, "execute": false},
+        "verifierDenominator": 263,
+        "ruleAtomVerifierCount": 235,
+        "strictTransitionVerifierCount": 28,
+        "shardDistribution": {"0": 18, "1": 39, "2": 34, "3": 30, "4": 41, "5": 41, "6": 31, "7": 29},
+        "shard1ExecutedResult": {
+          "selected": 39,
+          "failed": 8,
+          "failedVerifierKeys": [
+            "verify-warmachine-rule-atom-attack-type-v20260712",
+            "verify-warmachine-rule-atom-bag-man-v20260715",
+            "verify-warmachine-rule-atom-banish-v20260712",
+            "verify-warmachine-rule-atom-blade-glide-v20260712",
+            "verify-warmachine-rule-atom-blood-shadow-v20260712",
+            "verify-warmachine-rule-atom-rune-mark-v20260720",
+            "verify-warmachine-rule-atom-skewer-v20260713",
+            "verify-warmachine-strict-movement-los-template-v20260625"
+          ]
+        },
+        "shardsNotYetExecuted": [2, 3, 4, 5, 6, 7],
+        "verifiersNotYetExecuted": 205
+      },
+      "remediation": "R1 八分片真实执行"
+    },
+    {
+      "id": "F5",
+      "severity": "high",
+      "title": "Ticket 14 折叠内核排序错置于其依赖者之后",
+      "evidence": {
+        "plannedPosition": "after Ticket 13",
+        "actualDependents": ["Ticket 05"]
+      },
+      "remediation": "拆出 Ticket 05a 折叠内核前置"
+    },
+    {
+      "id": "F6",
+      "severity": "high",
+      "title": "最终目标缺少必要条件 Ticket 08",
+      "evidence": {
+        "ticket08Status": "not_started",
+        "missingCapabilities": [
+          "and_min_opponent_nodes",
+          "conditional_probability_mass_conservation",
+          "unexpanded_upper_bound",
+          "initial_state_value_interval"
+        ],
+        "implication": "Ticket 05/06/07 全闭合仍无法判定对抗优劣，只能证明单侧路线存在性"
+      },
+      "remediation": "Ticket 08 提升至关键路径"
+    },
+    {
+      "id": "F7",
+      "severity": "medium",
+      "title": "最终目标对象口径需澄清",
+      "evidence": {
+        "userTerm": "Narro",
+        "codeEntity": "Fane of Nyrro",
+        "actualFactionName": "Dusk",
+        "fixedTaskKey": "sepsira-six-swarms-vs-fane-v1",
+        "subject": {"factionName": "Cryx", "armyName": "Necrofactorium", "leader": "Master Necrosurgeon Sepsira"},
+        "challenger": {"factionName": "Dusk", "armyName": "Fane of Nyrro", "leaderMode": "all_in_army"},
+        "scopeNote": "可求解命题限定为该固定题与其冻结条件轴，非阵营级全局对抗"
+      },
+      "remediation": "结论中显式声明范围"
+    },
+    {
+      "id": "F8",
+      "severity": "medium",
+      "title": "三处状态记录互相矛盾",
+      "evidence": {
+        "developmentPlan": {"plan": "6768bd50ccd9", "checkpoint": "e9740d02", "completed": "50/64"},
+        "handoffStatus": {"plan": "b8bd8427", "checkpoint": "d1bfd770", "settled": 37},
+        "currentPointer": {"plan": "4215fc135da9", "completed": "2/64"}
+      },
+      "remediation": "R0 状态归一"
+    }
+  ],
+  "foldingEstimate": {
+    "assumptionsAreConservativeEngineeringEstimates": true,
+    "stages": [
+      {"stage": "当前实现(无剪枝)", "slotsPerTask": 7936, "hoursFor14Tasks": 987.6, "speedup": 1.0},
+      {"stage": "一级 射程/LOS预筛", "slotsPerTask": 1024, "hoursFor14Tasks": 127.4, "speedup": 7.8},
+      {"stage": "二级 +角度等价折叠", "slotsPerTask": 256, "hoursFor14Tasks": 31.9, "speedup": 31.0},
+      {"stage": "三级 +锚点拓扑+支配剪枝", "slotsPerTask": 96, "hoursFor14Tasks": 11.9, "speedup": 82.7}
+    ],
+    "level3ExpectedHoursFor14Tasks": 6.0
+  },
+  "contractGovernanceRules": {
+    "noVersionBumpFor": ["chunk_size", "log_frequency", "process_isolation", "timeout_threshold", "observability_events", "finer_resume_breakpoints_within_existing_order"],
+    "versionBumpRequiredFor": ["enumeration_order_change", "enumeration_set_change", "completion_semantics_change", "ruleset_receipt_change"],
+    "bumpScope": "per_goal_family_only",
+    "mandatoryMigrationImpactStatement": true,
+    "maxBumpsPerFamilyPerAcceptanceCycle": 1
+  },
+  "claimBoundary": "本收据记录的是对既有工件与源码的直接观测，以及一次实际执行的 Engine 分片验证。折叠收益为保守工程估计，不构成已验证的覆盖度结论；未执行分片的回归状态未知；任何对抗优劣结论在 Ticket 08 闭合前均不成立。"
+}
