@@ -1,8 +1,8 @@
 # 批量物化刺杀与得分需求组终局根
 
 Type: prototype
-Status: open
-Blocked by: 02, 03, 04
+Status: resolved
+Blocked by: 02, 03, 04, 14, 15, 16, 17, 18
 Part of: ../map.md
 
 ## Question
@@ -19,12 +19,15 @@ Part of: ../map.md
 
 ## Progress
 
+- Ticket 05 已在当前 `59` 文件 Search 执行闭包和新 Engine 收据下关闭。生产计划 `764d6d64...` 选择 `64` 个任务、`39/39` 个 strict 唯一开局和 `10,628,352` 候选质量；checkpoint `005bb9c8...` 完成 `51/64`：`13` 个任务专属 strict 根、`4` 个 Host strict reject、`28` 个精确候选过滤、`6` 个规则来源未决、`input_invalid=0`。其余 `13` 个未实现刺杀分区保持 `budget_deferred`，既不算不可达也不提供训练标签，全部质量守恒。
+- 当前分族状态为：得分 `11/11`、同时击杀 `16/16`、固定轮次 `13/13` 完整处置；刺杀 `11/24` 已完成，其中 `3` 个 strict 根和 `8` 个关系过滤，另 `13` 个适配器覆盖分区公开延迟。Ticket 06/07 只消费当前 strict 根反推到开局，不把延迟分区从值上界中删除。
+- 重建后的首批生产执行发现固定轮次、得分、同时击杀适配器按旧行为签名重算，错误产生 `8` 个 `input_invalid`；刺杀适配器已使用新签名。现已统一四类适配器，把 `executionSemanticReceiptHash` 纳入行为签名，并重建种子、计划、开局和 checkpoint。三类 focused verifier 均通过，复跑五批生产保持 `input_invalid=0`；旧误判 checkpoint 不继承。
 - 已重建内容绑定的有限生产计划：`2,049` 个需求组、`18,517` 个代表、`13` 个构筑宏型；当前预算选择 `64` 个终局任务。先手与 Attacker 关系不再和 side permutation 独立交叉，候选总质量由旧错误计划的 `21,256,704` 修正为 `10,628,352`，未选择质量继续保持 `budget_deferred`。
 - `64/64` 个任务均已绑定严格合法开局，归并为 `39` 个真实军表/场景/地图/部署/先手开局，覆盖全部七个 Steamroller 场景和三类场景地形设置。开局只证明合法部署，不证明后续终局或反向路径。
 - 修复了两项会污染后续执行的身份错误：部署区现在按 Attacker/Defender 而非固定玩家编号定向；终局批次开局键现在包含场景与场景地形，不再用仅描述构筑/阵型的旧 `openingKey` 在不同场景间碰撞。旧构筑键仍作为来源保留。
 - 新增统一终局执行批次：只租赁已注册适配器的精确任务，严格校验任务/开局/收据，保存六类处置并守恒选择质量；缺少适配器或未获预算的任务继续是 `budget_deferred`，不会被写成拒绝或不可达。
-- 当前生产计划 `b8bd8427...` 的 checkpoint `d1bfd770...` 已完成 `37/64`：`12` 个任务专属 strict 根、`2` 个 Host strict reject、`17` 个精确候选过滤、`6` 个规则来源未决和 `27` 个适配器预算延迟，`input_invalid=0` 且候选质量守恒。得分族 `11/11`、固定轮次族 `13/13` 已全部处置；刺杀族 `3/24`、同时击杀族 `10/16` 已处置，剩余 `21+6=27` 个精确任务。
-- 刺杀适配器已进入生产：Vordak 以 Talon 两次初始攻击和一次购买攻击将 Sepsira 从 `17` 盒降到 `0`；真实致死攻击收据与 Feast 放弃决定所拥有的伤害提交收据分别绑定，近战 LOS 不再借用 sibling ranged action，执行与独立重放一致。
+- 历史生产计划 `b8bd8427...` 的 `37/64` 结果只保留为旧执行收据下的证据，不能恢复或计入当前进度。
+- 刺杀适配器已进入生产：Vordak 以 Talon 两次初始攻击和一次购买且命中/伤害双增幅的攻击将 Sepsira 从 `17` 盒降到 `0`，伤害为 `8/8/14`，第三击正确产生 `3 Fury`；真实致死攻击收据与 Feast 放弃决定所拥有的伤害提交收据分别绑定，近战 LOS 不再借用 sibling ranged action，执行与独立重放一致。移动后近战样例还证明第二个初始武器在购买窗口前必须执行。
 - 同时击杀适配器现以结束行动的一方而非胜者绑定执行者；Strygon Toxic Spittle 会对 Host 枚举的每个次要目标提交独立最大骰并逐个放弃可用的强迫/资源增幅。完整军表格已证明 clear、模型完全遮挡、地形遮挡、射程边界、loser prior loss 和 controller transfer/channel：Spray 对模型 `81/81` 采样线完全阻挡仍因核心 Spray 规则合法，对阻挡地形则由 Host 以 `line_of_sight_blocked` 严格拒绝；零 Fury 的 Strygon 仍可通过控制范围内的 Ashmael 强迫增幅。合法最大骰但两位 Leader 存活的格只过滤该精确候选，不外推整族不可达。
 - Wolves at Our Heels 新增 Gorman di Wulfe `Experimental Warhead` 专用 strict 根：完整 `78` 模型状态中 Ashmael 与 Sepsira 均预置到 `1` 盒，目标处于近战而获得 `+4 DEF`，命中目标数为 `14`；`[6,6]` 依核心自动命中规则形成精确 `1/36` 分支。Host 逐个记录并放弃所有可用 Shield Guard/直接命中改目标窗口，直击与 AOE 爆炸分别移除两位 Leader，比分 `0:0 -> 1:1`，Wolves 两 token 目标明确不加 token，最终按场景存在量 `6:3` 裁定声明胜方；持续火焰/腐蚀、收据、事件和终态哈希均经独立重放一致。该根不证明从部署可达、自然概率、策略价值或胜率。
 - 批次通用 verifier 不再把所有 `strict_rejected` 错当成静态摆放拒绝：静态摆放拒绝仍要求 issue codes；动作级 Host 拒绝必须保存与报告原因一致的 `hostRejectionEvidence.rejection.reason`。当前地形 LOS 拒绝以 `81/81` 采样线全阻挡通过该门禁。

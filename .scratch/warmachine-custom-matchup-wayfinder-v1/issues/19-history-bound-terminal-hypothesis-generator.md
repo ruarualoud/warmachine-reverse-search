@@ -1,0 +1,36 @@
+# 建立历史比分与几何绑定的胜利场景预设器
+
+Type: prototype
+Status: closed
+Blocked by: 01, 05
+Part of: ../map.md
+
+## Question
+
+怎样把刺杀、得分、同时击杀和固定轮次终局扩展为有限、可审计的多回合胜利场景假设，使每一条历史得分都绑定精确结算窗、得分来源和当时位置关系，而不是把比分当作可独立改写的字段？
+
+## Acceptance
+
+- 每个预设联合声明场景、地图、轮次、行动方、终局类别、结算前比分，以及每条得分的玩家、来源、结算窗和必要几何关系。
+- Kill Box、目标/区域控制、争夺、场景地形和其它位置相关来源必须绑定 Leader/模型位置关系；不能只给账本增加分数。
+- 用差分约束和 Steamroller 阈值矩阵提前排除数学上不可能的比分历史，但最终得分、控制和终局始终由当前 Host strict 结算。
+- 只有具体反向分支在对应结算窗重放出全部得分来源时，才可绑定该预设；不匹配只淘汰该分支与该预设的组合，不外推整个终局族不可达。
+- 刺杀路线中的附带场景得分与纯得分胜利使用同一历史合同；全部未枚举位置、来源和轮次组合保留为 unresolved 或 budget deferred，并维持质量守恒。
+- 至少覆盖七张 Steamroller 场景、Kill Box 开关/例外、双方控制来源、不同轮次与先后手，并用 Ticket 06 当前矛盾路线证明错误比分改写会 fail closed。
+
+## Progress
+
+- [x] 已有 Ticket 01 的有限终局代表与需求分组、Ticket 05 的任务专属 strict 终局根，以及七场景胜利阈值矩阵可作为输入。
+- [x] 已建立固定得分窗的差分可行性分析。当前 Ticket 06 路线在 player2 第 4 回合结束新增 player1 `pressure-c` 1 分后，要求初始分差同时满足 `d >= -2` 与 `d <= -3`，证明仅改写早期比分无法避免提前终局。
+- [x] 明确与 Ticket 06 解耦：本工单负责复杂历史预设的有限生成、来源绑定和筛选调度；Ticket 06 可选择一个已由 Host strict 认证且无提前终局的简单刺杀根完成存在性路线，不等待本工单全量完成。
+- [x] 定义并物化历史绑定预设 schema、有限分区、处置质量账和 Host 结算收据。
+- [x] 把 Ticket 06/07 的分支前沿接入预设匹配器，并补七场景正反夹具与当前真实路线回归。
+
+## Result
+
+- `warmachine_steamroller_strict_history_binding_v1` 从当前 Host strict `end_turn` 转换中提取逐窗比分、完整新增得分行、来源事件与位置义务，再独立重放每个结算窗；比分或历史前缀漂移均 fail closed。
+- 七张 Steamroller 场景、目标与场景地形控制、Kill Box 启用时序、Pressure Point `12"` 距离及 Wolves at Our Heels 第四回合 `16"` 例外均有正反夹具；改变模型位置后不能继续绑定原预设。
+- Ticket 06 的两个结算窗严格保持 `0:0`；Ticket 07 的五个结算窗严格复现 `0:0 -> 0:0 -> 0:0 -> 3:0 -> 6:1`，共绑定 `7` 个得分来源。
+- 旧式 `3:0 -> 4:0 -> 后续刺杀` 在预设生成阶段以 `history_bound_terminal_earlier_scenario_victory` 排除；把 Ticket 07 最终 successor 直接改成 `4:0` 又会以 `history_bound_terminal_successor_state_mismatch` 拒绝。比分字段不能脱离当时 Host 几何和结算事件改写。
+- 当前组合门禁为 `npm run verify:ticket19-history-bound-terminal`；真实路线报告 hash 为 `35c030a7857a4a0f039236b238268d4b4841574acf26b40726f101e734f9f9ee`，绑定 Host receipt `539dabd1710cd151ddb8a85c1107c81982be202584f834393d82adc7b79faa44`。
+- 本工单只证明声明结算窗的历史绑定正确，不证明未提供的中间动作、自然概率、部署到终局的全域可达性或策略最优性。

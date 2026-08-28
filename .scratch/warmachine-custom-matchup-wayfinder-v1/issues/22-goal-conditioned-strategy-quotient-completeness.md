@@ -1,0 +1,37 @@
+# 建立目标条件化的完整策略有限商
+
+Type: prototype
+Status: open
+Blocked by: 08, 19, 20
+Part of: ../map.md
+
+Implementation design: `docs/goal-conditioned-strategy-quotient-v1.md`
+
+## Question
+
+怎样在 Ticket 20 的完整 rules-v1 行为商上，用目标兼容的交替随机模拟、Pareto 支配和可证上下界删去策略重复或确定无效的空间，同时证明每个仍可能有效的具体策略都有一个保留代表？
+
+## Acceptance
+
+- 明确区分规则行为商 `Q_rule` 与目标策略商 `Q_goal`；前者只保证合法行为不丢失，不能直接承担策略剪枝结论。
+- “有效策略”绑定 Host/数据/地图/军表/先手/有限时域/信息模型和公开多维目标；不得用单一 ranker 分数、LLM、Skill 或固定权重定义完整性。
+- 状态支配按最大目标兼容交替随机模拟固定点计算：我方节点保留我方全部选择，对手节点使用反向量词，Chance 使用精确质量提升；未来动作资格、历史或观察签名不兼容时禁止合并。
+- 比较签名还必须绑定声明初始分布与可达上下文。未来行为双模拟可以形成 `Q_rule` 等价类，但不可达成员不能替代从声明开局可达的策略；到达前缀、历史和信息集合不兼容时保持不同的 `Q_goal` 单元。
+- 等价合并必须由同一个对称关系直接满足概率交替双模拟；两个方向分别存在单向模拟不足以签发合并。单向支配必须保存被删项、代表项、逐层动作映射、Chance 耦合和规则收据。
+- 反向目标域必须是全部潜在有效策略的过近似包络。每个 `Q_rule` 单元唯一处置为 retained、proven unreachable、dominance pruned、upper-bound pruned 或 unresolved；“反向没找到”自动归 unresolved。
+- 上界剪枝只在候选的乐观多维上界被某个 strict 已认证策略的保证下界逐维支配时成立；近似分数、平均值或采样频次不能 hard prune。
+- 独立 strict 正向补集队列探索全部 unresolved 单元；发现更好路线时精化反向义务语言/分区。反例命中已认证剪枝时整批商失效。
+- focused 微型随机对抗博弈至少证明：坐标表示差异但策略等价可合并；确定劣化绕路可支配剪枝；对手新增有害回应阻止错误合并；Chance 分布差异阻止错误合并；反向漏掉的优解进入补集队列并触发精化；安全上界可剪枝；未处置分支使完整性失败。
+- 同分母对照实验必须分别报告符号关系成本和昂贵 strict 根成本，比较纯正向、纯反向与混合方案的有效策略类召回、错误硬剪枝和未决债务。当前有限实验为 `66` 个候选、`11` 个规则行为类、`6` 个潜在有效类；混合方法用 `9` 个 strict 根取得 `6/6` 召回和零错误硬剪枝，纯正向完整展开需 `58` 个根，纯反向漏掉 `1` 个有效类。该结果只授权继续真实接入，不授权真实 Warmachine 完整性声明。
+- `effectiveStrategyQuotientComplete=true` 要求 Ticket 20 完整、交替模拟固定点、处置分母守恒、Chance 守恒、CEGAR 无债务、补集队列为空且 unresolved 为零。
+- 报告区分规则等价类、策略等价类、Pareto 代表、已认证剪枝和未决补集；当前目标维度变更时相关策略商收据失效重建。
+
+## Completion Boundary
+
+本工单只对声明任务、当前 Host、有限时域和公开目标向量证明策略商完整。它不保证商空间很小；真实互不支配的策略必须保留，也不宣称未来规则、未知偏好、无限时域或全游戏全局最优。
+
+## Prototype Evidence
+
+- `npm run verify:strategy-quotient`：固定 17 状态正负例。
+- `npm run experiment:strategy-quotient-search`：三法同域/同 strict 根预算对照和 128 个确定性排列。
+- `docs/research/strategy-quotient-search-experiment-v1.md`：结果、成本和声明边界。
