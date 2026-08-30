@@ -216,7 +216,7 @@ OfficialRuleSource
 
 完成证据：当前来源 ownership 为动态 `100%`，且任意新增/修改来源会自动生成未决债务并定向使依赖证据失效。
 
-当前证据：当前数据版本为 `40049`，动态来源分母 `3159`。截至 23.8w，精确闭环 `554`、未闭环 `2605`；规则注册表为 `528` 个原子定义 / `631` 个钩子声明，全部当前声明 proof role 闭合。23.8w 新增参与者来源合同，证明 Heavy Weapon Hardpoint 只作为 Weapon Crate 资格前置而不生成重复触发；两条 True Sight 身份和 Guided 复用现有 targeting/automatic-hit Host。Engine/Layer3/Route3/LLM/Search Host-only 通过 `16` 条结构化证明、`14/14` mutation 和 micro `108/108`，聚合报告 `16a9c26f...355a`，Search 侧规则重复实现为零。父纵切、全局 Strict、Skill/training、`Q_rule`、值与线上实验均未晋级。当前调度固定重放 `1274` 条人工审阅来源，扣除 `17` 条已闭环审阅来源后剩 `1257` 条、`2306` 个义务和 `2228` 个实现片；下一批按共享 Host/动作族批量处理，不再把调度片数量冒充完整规则闭环数。
+当前证据：当前数据版本为 `40049`，动态来源分母 `3159`。截至 23.8x，精确闭环 `572`、未闭环 `2587`；规则注册表为 `547` 个原子定义 / `650` 个钩子声明，全部当前声明 proof role 闭合。23.8x 用一个共享 strict Host 闭合 `18` 条 Field Marshal 来源：复用 `15` 个载荷原子，只新增一个 transport-only Unyielding 载荷，并以 `21` 条显式 allowlist 钩子运输防止文本推断和派生来源自举。Engine/Layer3/Route3-LLM-facing/Search Host-only 通过 `156` 条结构化证明、`15/15` mutation 和 micro `108/108`，聚合报告 `1ae7723b...a085`，Search 侧规则重复实现为零。Field Marshal 当前为 `22/62` 精确闭环，剩余 `40` 条需要载荷语义开发或审计；父纵切、全局 Strict、Skill/training、`Q_rule`、值与线上实验均未晋级。固定 `1274` 条人工审阅分母不因批量执行重新生成；下一批继续按共享 Host/动作族闭合完整来源，不把实现片、钩子或调度义务冒充规则来源完成数。
 
 ### Slice 23.9: 自动关联闭包、性质测试与变异门
 
