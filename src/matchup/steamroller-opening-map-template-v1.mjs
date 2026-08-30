@@ -59,6 +59,12 @@ export function buildWarmachineSteamrollerOpeningMapTemplateV1(raw = {}) {
   if (!raw.templateRoom || !raw.baseTemplateHash || !mapKey) {
     throw new Error("steamroller_opening_map_template_source_incomplete");
   }
+  const topologyAudit = raw.topologyAudit || null;
+  if (topologyAudit && (topologyAudit.ok !== true ||
+      String(topologyAudit.mapKey || "") !== mapKey ||
+      !topologyAudit.topologyAuditHash)) {
+    throw new Error(`steamroller_opening_map_topology_audit_invalid:${mapKey}`);
+  }
   if (!sourceLayout?.deploymentGeometryExactWithinScope) {
     throw new Error(`steamroller_opening_deployment_layout_unavailable:${scenarioKey}`);
   }
@@ -81,6 +87,7 @@ export function buildWarmachineSteamrollerOpeningMapTemplateV1(raw = {}) {
     mapKey,
     firstPlayerSideKey,
     scenarioTerrainSetupClassKey,
+    topologyAuditHash: String(topologyAudit?.topologyAuditHash || ""),
     shapes: templateRoom.shapes,
     deployments: templateRoom.deployments,
   });
@@ -93,6 +100,9 @@ export function buildWarmachineSteamrollerOpeningMapTemplateV1(raw = {}) {
     scenarioKey,
     firstPlayerSideKey,
     scenarioTerrainSetupClassKey,
+    topologyAudit: topologyAudit ? stableGraphValue(topologyAudit) : null,
+    topologyAuditHash: String(topologyAudit?.topologyAuditHash || ""),
+    topologyRealizationHash: String(raw.topologyRealizationHash || ""),
     officialScenarioLayoutHash: layout.sha256,
   };
 }

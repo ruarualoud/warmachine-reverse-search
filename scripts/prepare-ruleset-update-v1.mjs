@@ -25,6 +25,7 @@ const candidateBaseline = {
   baselineKey: `candidate-${currentIndex.cardData.remoteVersion || "unknown"}-${
     currentIndex.semanticIndexHash.slice(0, 12)}`,
   host: snapshot.observed.host,
+  focusedEngineReceipt: snapshot.observed.focusedEngineReceipt,
   reverseRegistry: snapshot.observed.reverseRegistry,
   interactionGraph: snapshot.observed.interactionGraph,
   fixedRosterProjection: snapshot.observed.fixedRosterProjection,

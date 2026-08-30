@@ -48,13 +48,34 @@ const report = buildWarmachineProjectCompletionGateReportV1({
   hostReceiptHash: warmachineHost.receipt.receiptHash,
   discoveredVerifierNames,
   verifierResults,
+  ruleSemanticsAuthority: warmachineHost.ruleSemanticsAuthority,
 });
-assert.equal(report.readiness.projectReadyForBoundedResearchUse, true);
-assert.equal(report.readiness.strictForwardHostRemainsRulesAuthority, true);
+assert.equal(report.completionPassed, false);
+assert.equal(report.semanticAuthority.passed, false);
+assert.equal(report.readiness.projectReadyForBoundedResearchUse, false);
+assert.equal(report.readiness.researchExecutionAllowed, true);
+assert.equal(report.readiness.projectReadyForStrictClaims, false);
+assert.equal(report.readiness.strictForwardHostRemainsRulesAuthority, false);
 assert.equal(report.readiness.reverseSearchMayAffectRules, false);
 assert.equal(report.readiness.completeContinuousStateSpaceExhausted, false);
 assert.equal(report.readiness.globalOptimalityProven, false);
 assert.equal(report.trainingTruth, false);
+
+const readyAuthorityReport = buildWarmachineProjectCompletionGateReportV1({
+  hostReceiptHash: warmachineHost.receipt.receiptHash,
+  discoveredVerifierNames,
+  verifierResults,
+  ruleSemanticsAuthority: {
+    schemaVersion: "warmachine_rule_semantics_authority_v1",
+    authorityReceiptHash: "a".repeat(64),
+    sourceAuthority: { current: true },
+    verdict: { globalStrictReady: true, strictExecutorReady: true },
+    quarantine: { active: false },
+    failClosedReasons: [],
+  },
+});
+assert.equal(readyAuthorityReport.completionPassed, true);
+assert.equal(readyAuthorityReport.readiness.projectReadyForStrictClaims, true);
 
 const evidencePath = new URL(
   "../docs/research/project-completion-gates-v1-verification.json",
@@ -71,6 +92,8 @@ console.log(JSON.stringify({
   passedGateCount: report.passedGateCount,
   verifierCount: report.verifierCount,
   passedVerifierCount: report.passedVerifierCount,
+  semanticAuthorityPassed: report.semanticAuthority.passed,
+  completionPassed: report.completionPassed,
   gateRows: report.gateRows.map((gate) => ({
     gateKey: gate.gateKey,
     verifierCount: gate.verifierCount,

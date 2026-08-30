@@ -10,6 +10,10 @@ import { generateWarmachinePreviousTurnEndPredecessorsV1 } from
 import { buildWarmachineReverseReachabilityCandidateSetV2 } from
   "./reachability-contract-v2.mjs";
 import {
+  auditWarmachineReverseStateBoundaryV1,
+  summarizeWarmachineReverseStateBoundaryAuditV1,
+} from "./reverse-state-invariants-v1.mjs";
+import {
   generateWarmachineTerminalEventPredecessorsV1,
   warmachineReverseStateSemanticHashV1,
 } from "./terminal-event-predecessor-v1.mjs";
@@ -81,6 +85,61 @@ export function searchWarmachineTerminalRootedOpponentTurnV1(
   rawOptions = {},
 ) {
   const maximumRoutes = Math.max(1, Number(rawOptions.maximumRoutes || 1_000));
+  const rootStateInvariantAudit = auditWarmachineReverseStateBoundaryV1(
+    terminalStateInput,
+    { boundaryKind: "terminal_rooted_worklist_root" },
+  );
+  if (!rootStateInvariantAudit.ok) {
+    const unresolved = stableGraphValue([{
+      stageKey: "terminal_rooted_worklist_root",
+      stateHash: warmachineReverseStateSemanticHashV1(terminalStateInput),
+      reason: "reverse_predecessor_state_invariant_rejected",
+      stateInvariantAudit:
+        summarizeWarmachineReverseStateBoundaryAuditV1(
+          rootStateInvariantAudit,
+        ),
+      issues: rootStateInvariantAudit.issues,
+    }]);
+    const core = {
+      schemaVersion: WARMACHINE_TERMINAL_ROOTED_WORKLIST_V1_SCHEMA,
+      terminalCellKey: String(terminalCell.cellKey || ""),
+      terminalGoalType: String(terminalCell.goalType || ""),
+      terminalStateHash: warmachineReverseStateSemanticHashV1(
+        terminalStateInput,
+      ),
+      routeCount: 0,
+      unresolvedCount: unresolved.length,
+      publicCandidates: [],
+      unresolved,
+      rootStateInvariantAudit:
+        summarizeWarmachineReverseStateBoundaryAuditV1(
+          rootStateInvariantAudit,
+        ),
+      candidateSet: buildWarmachineReverseReachabilityCandidateSetV2([], {
+        queryKey: String(terminalCell.cellKey || ""),
+        successorStateKey: String(terminalStateInput.stateKey || ""),
+        maximumCandidates: 0,
+      }),
+      oracleIsolationAudit: {
+        inputKinds: [
+          "terminal_state",
+          "terminal_hypothesis_cell",
+          "reverse_budgets",
+        ],
+        openingRead: false,
+        forwardRouteRead: false,
+        intermediateStateRead: false,
+        passed: true,
+      },
+      claimBoundary: "The terminal-rooted worklist rejects an illegal terminal state before applying any inverse operator.",
+    };
+    return {
+      ...core,
+      routes: [],
+      reportHash: stableGraphHash(stableGraphValue(core)),
+      ok: false,
+    };
+  }
   const terminal = generateWarmachineTerminalEventPredecessorsV1(
     terminalStateInput,
     terminalCell,
@@ -266,6 +325,8 @@ export function searchWarmachineTerminalRootedOpponentTurnV1(
     unresolvedCount: unresolved.length,
     publicCandidates: stableGraphValue(publicCandidates),
     unresolved: stableGraphValue(unresolved),
+    rootStateInvariantAudit:
+      summarizeWarmachineReverseStateBoundaryAuditV1(rootStateInvariantAudit),
     candidateSet,
     oracleIsolationAudit: {
       inputKinds: ["terminal_state", "terminal_hypothesis_cell", "reverse_budgets"],

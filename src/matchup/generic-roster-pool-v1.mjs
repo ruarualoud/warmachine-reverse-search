@@ -77,21 +77,6 @@ function slug(value = "roster") {
     .replace(/^-+|-+$/g, "").slice(0, 80) || "roster";
 }
 
-function modelCount(card = {}) {
-  const abilities = [
-    ...(card.cardAbilities || []),
-    ...(card.models || []).flatMap((model) => model.abilities || []),
-  ];
-  if (abilities.some((ability) => ability.name === "Created")) return 0;
-  const gruntMatch = String(card.pointCostDescription || "").match(/(\d+)\s+Grunts?/i);
-  if (gruntMatch) return Number(gruntMatch[1]);
-  if (card.cardTypeName === "Unit" && (card.healthValues || []).length > 1) {
-    return card.healthValues.length;
-  }
-  if (["Army", "Defense"].includes(String(card.cardTypeName || ""))) return 0;
-  return 1;
-}
-
 function allowance(card = {}, pointLimit = 100) {
   const raw = String(card.fieldAllowance || "").trim().toUpperCase();
   if (raw === "C" || raw === "L") return 1;
@@ -171,7 +156,7 @@ function loadoutVariantAllowed(variant = {}, constraint = null) {
   return true;
 }
 
-function structuralFeatures(card = {}, choices = []) {
+function structuralFeatures(card = {}, choices = [], Builder = {}) {
   const model = (card.models || [])[0] || {};
   const type = String(card.cardTypeName || "").toLowerCase();
   const abilities = [
@@ -204,7 +189,9 @@ function structuralFeatures(card = {}, choices = []) {
   const resourceCapacity = numeric(model.stats?.fury, 0) ||
     (/warjack/i.test(type) ? 3 : 0);
   return {
-    models: /weapon attachment/.test(type) ? 0 : modelCount(card),
+    models: /weapon attachment/.test(type)
+      ? 0
+      : Builder.cardPhysicalModelSpecs(card).length,
     units: /unit/.test(type) && !/attachment/.test(type) ? 1 : 0,
     cohorts: /warjack|warbeast|monstrosity|colossal|gargantuan/.test(type) ? 1 : 0,
     solos: /solo/.test(type) ? 1 : 0,
@@ -243,21 +230,6 @@ function structuralFeatures(card = {}, choices = []) {
       : 0,
     pathing: /flight|pathfinder|incorporeal|ghostly/i.test(interactionText) ? 1 : 0,
   };
-}
-
-function effectivePhysicalModelsByEntry(summary = {}, Builder = {}) {
-  const counts = new Map((summary.entries || []).map((entry) => [
-    entry.id,
-    modelCount(entry.card),
-  ]));
-  for (const entry of summary.entries || []) {
-    if (!entry.attachedToEntryId || !Builder.isWeaponAttachmentCard?.(entry.card)) continue;
-    counts.set(
-      entry.attachedToEntryId,
-      Math.max(0, numeric(counts.get(entry.attachedToEntryId)) - 1),
-    );
-  }
-  return counts;
 }
 
 function addFeatures(left = {}, right = {}) {
@@ -331,6 +303,12 @@ function retainGoalBucketState(bucketRows = [], state = {}, score = 0, maximumRo
 }
 
 function packagePool(data = {}, army = {}, pointLimit = 100, rawOptions = {}) {
+  const Builder = rawOptions.Builder;
+  if (!Builder?.cardPhysicalModelSpecs ||
+      !Builder?.effectivePhysicalModelsByEntry ||
+      !Builder?.validateForceForEncounter) {
+    throw new Error("warmachine_force_builder_strict_construction_contract_missing");
+  }
   const cardsById = new Map((data.cards || []).map((card) => [card.id, card]));
   const excludedCardIds = new Set((rawOptions.excludedCardIds || []).map(String));
   const excludedCardNames = new Set((rawOptions.excludedCardNames || []).map(String));
@@ -420,7 +398,7 @@ function packagePool(data = {}, army = {}, pointLimit = 100, rawOptions = {}) {
         maximumCopies: Math.min(remainingAllowance, Math.floor(pointLimit / cost)),
         optionSelections: variant.selections,
         optionSummary: variant.optionSummary,
-        features: structuralFeatures(card, variant.choices),
+        features: structuralFeatures(card, variant.choices, Builder),
       });
     }
   }
@@ -631,12 +609,12 @@ function selectedLoadoutChoices(card = {}, optionSelections = {}) {
       (slot.choices || []).find((choice) => choice.id === choiceId)).filter(Boolean));
 }
 
-function completeRosterBaseFeatures(data = {}, leader = {}, fixedCards = []) {
+function completeRosterBaseFeatures(data = {}, leader = {}, fixedCards = [], Builder = {}) {
   const cardsById = new Map((data.cards || []).map((card) => [card.id, card]));
-  let features = structuralFeatures(leader);
+  let features = structuralFeatures(leader, [], Builder);
   for (const companionId of leader.companionIds || []) {
     const companion = cardsById.get(companionId);
-    if (companion) features = addFeatures(features, structuralFeatures(companion));
+    if (companion) features = addFeatures(features, structuralFeatures(companion, [], Builder));
   }
   for (const row of fixedCards) {
     for (let copy = 0; copy < row.count; copy += 1) {
@@ -644,6 +622,7 @@ function completeRosterBaseFeatures(data = {}, leader = {}, fixedCards = []) {
       features = addFeatures(features, structuralFeatures(
         row.card,
         selectedLoadoutChoices(row.card, loadout.optionSelections),
+        Builder,
       ));
     }
   }
@@ -764,7 +743,7 @@ function assignUnboundBattlegroupMembersToLeader(force, data, Builder) {
 }
 
 function materializeCandidate(raw = {}) {
-  const { data, Builder, army, leader, fixedCards, state, candidateIndex } = raw;
+  const { data, Builder, army, leader, fixedCards, state, candidateIndex, pointLimit } = raw;
   const cardsById = new Map(data.cards.map((card) => [card.id, card]));
   const cardsByName = new Map(data.cards.map((card) => [card.name, card]));
   let force = Builder.createForce(data, {
@@ -839,9 +818,15 @@ function materializeCandidate(raw = {}) {
     Builder,
   );
   force = battlegroupResult.force;
-  const summary = Builder.computeForceSummary(force, data);
-  if (summary.warnings.length) throw new Error(summary.warnings.join(" | "));
-  const physicalModelsByEntryId = effectivePhysicalModelsByEntry(summary, Builder);
+  const validation = Builder.validateForceForEncounter(force, data, { pointLimit });
+  if (!validation.ok) {
+    throw new Error(validation.checks
+      .filter((check) => check.status !== "passed")
+      .map((check) => `${check.code}:${(check.warnings || []).join(";")}`)
+      .join(" | "));
+  }
+  const summary = validation.summary;
+  const physicalModelsByEntryId = Builder.effectivePhysicalModelsByEntry(summary);
   const exportText = Builder.exportForceToWarTableText(summary.force, data);
   const rosterIdentity = stableGraphHash({
     armyId: army.id,
@@ -994,6 +979,7 @@ function exactLegalStatesByGoal(raw = {}) {
             fixedCards,
             state,
             candidateIndex: exactAttemptCount - 1,
+            pointLimit: raw.pointLimit,
           });
           if (roster.totalPoints !== raw.pointLimit) {
             outcomesByState.set(signature, "rejected");
@@ -1144,6 +1130,7 @@ export function generateWarmachineGenericRosterPoolV1(raw = {}) {
       excludedCardNames: raw.excludedCardNames || [],
       excludedCardTypeNames: raw.excludedCardTypeNames || [],
       loadoutConstraints: raw.loadoutConstraints || [],
+      Builder,
     },
   );
   const pointSearch = searchExactPointPackages(
@@ -1169,6 +1156,7 @@ export function generateWarmachineGenericRosterPoolV1(raw = {}) {
       data,
       leader,
       fixedCardObjects,
+      Builder,
     );
     const leaderExactStates = pointSearch.exactStates.map((state) =>
       withCompleteRosterFeatures(state, baseFeatures, pointSearch.goalProfiles));

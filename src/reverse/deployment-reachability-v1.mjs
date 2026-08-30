@@ -4,11 +4,14 @@ import {
   auditDeploymentTokens,
   warmachineConstructionHost,
 } from "../warmachine-construction-host-runtime.mjs";
+import { warmachinePieceInPlayV1 } from "./piece-lifecycle-v1.mjs";
 import { warmachineReverseStateSemanticHashV1 } from
   "./terminal-event-predecessor-v1.mjs";
 
 export const WARMACHINE_DEPLOYMENT_REACHABILITY_V1_SCHEMA =
   "warmachine_deployment_reachability_v1";
+export const WARMACHINE_DECLARED_MOVEMENT_DEPLOYMENT_LOWER_BOUND_V1_SCHEMA =
+  "warmachine_declared_movement_deployment_reachability_lower_bound_v1";
 
 function numeric(value, fallback = 0) {
   const result = Number(value);
@@ -56,6 +59,279 @@ function tokenForPiece(piece = {}) {
     offTable: false,
     notDeployed: false,
     dormantReplacement: false,
+  };
+}
+
+function activationGroupKey(piece = {}) {
+  return String(
+    piece.unitGroupId || piece.unitId || piece.metadata?.unitGroupId ||
+    piece.metadata?.unitId || piece.pieceKey || "",
+  );
+}
+
+function deploymentZoneForSide(deployments = {}, sideKey = "") {
+  const source = sideKey === "player1"
+    ? deployments.p1_deploy || deployments.player1
+    : deployments.p2_deploy || deployments.player2;
+  if (!source) return null;
+  return {
+    x: numeric(source.xIn ?? source.x),
+    y: numeric(source.yIn ?? source.y),
+    width: Math.max(0, numeric(source.widthIn ?? source.width)),
+    height: Math.max(0, numeric(source.heightIn ?? source.height)),
+  };
+}
+
+function declaredMovementAllowanceIn(piece = {}, movementGroup = {}) {
+  const explicitByPiece = movementGroup.maximumMovementInByPieceKey?.[
+    piece.pieceKey
+  ];
+  const explicit = Number.isFinite(Number(explicitByPiece))
+    ? Number(explicitByPiece)
+    : Number.isFinite(Number(movementGroup.maximumMovementIn))
+      ? Number(movementGroup.maximumMovementIn)
+      : null;
+  const additional = Math.max(0, numeric(
+    movementGroup.additionalMovementAllowanceInByPieceKey?.[piece.pieceKey] ??
+      movementGroup.additionalMovementAllowanceIn,
+    0,
+  ));
+  if (explicit !== null) {
+    return {
+      allowanceIn: Math.max(0, explicit),
+      allowanceSource: "explicit_declared_upper_bound",
+    };
+  }
+  const actionType = String(movementGroup.actionType || "").toLowerCase();
+  const speedIn = Math.max(0, numeric(piece.speedIn));
+  if (actionType === "run") {
+    return {
+      allowanceIn: speedIn + 5 + additional,
+      allowanceSource: additional > 0
+        ? "current_speed_plus_run_constant_plus_declared_additional"
+        : "current_speed_plus_run_constant",
+    };
+  }
+  if (["advance", "normal_movement"].includes(actionType)) {
+    return {
+      allowanceIn: speedIn + additional,
+      allowanceSource: additional > 0
+        ? "current_speed_plus_declared_additional"
+        : "current_speed",
+    };
+  }
+  return {
+    allowanceIn: null,
+    allowanceSource: "unsupported_declared_movement_action_type",
+  };
+}
+
+function distanceToLegalDeploymentCenterRectangle(piece = {}, zone = {}) {
+  const radiusIn = Math.max(0, numeric(
+    piece.baseRadiusIn,
+    numeric(piece.baseSizeIn ?? piece.baseDiameterIn, 1.18) / 2,
+  ));
+  const bounds = {
+    xMin: zone.x - zone.width / 2 + radiusIn,
+    xMax: zone.x + zone.width / 2 - radiusIn,
+    yMin: zone.y - zone.height / 2 + radiusIn,
+    yMax: zone.y + zone.height / 2 - radiusIn,
+  };
+  if (bounds.xMin > bounds.xMax || bounds.yMin > bounds.yMax) {
+    return {
+      bounds,
+      nearestLegalDeploymentCenter: null,
+      minimumDistanceIn: null,
+      legalCenterRectangleExists: false,
+    };
+  }
+  const xIn = numeric(piece.position?.xIn);
+  const yIn = numeric(piece.position?.yIn);
+  const nearestLegalDeploymentCenter = {
+    xIn: Math.max(bounds.xMin, Math.min(bounds.xMax, xIn)),
+    yIn: Math.max(bounds.yMin, Math.min(bounds.yMax, yIn)),
+  };
+  return {
+    bounds,
+    nearestLegalDeploymentCenter,
+    minimumDistanceIn: Math.hypot(
+      xIn - nearestLegalDeploymentCenter.xIn,
+      yIn - nearestLegalDeploymentCenter.yIn,
+    ),
+    legalCenterRectangleExists: true,
+  };
+}
+
+function crossSideOverlapPairs(state = {}, sideKey = "") {
+  const ownPieces = (state.pieces || []).filter((piece) =>
+    piece.sideKey === sideKey && warmachinePieceInPlayV1(piece));
+  const opposingPieces = (state.pieces || []).filter((piece) =>
+    piece.sideKey !== sideKey && warmachinePieceInPlayV1(piece));
+  const overlaps = [];
+  for (const own of ownPieces) {
+    for (const opposing of opposingPieces) {
+      const centerDistanceIn = Math.hypot(
+        numeric(own.position?.xIn) - numeric(opposing.position?.xIn),
+        numeric(own.position?.yIn) - numeric(opposing.position?.yIn),
+      );
+      const requiredMinimumCenterDistanceIn =
+        numeric(own.baseSizeIn ?? own.baseDiameterIn, 1.18) / 2 +
+        numeric(opposing.baseSizeIn ?? opposing.baseDiameterIn, 1.18) / 2;
+      if (centerDistanceIn + 0.001 >= requiredMinimumCenterDistanceIn) continue;
+      overlaps.push({
+        ownPieceKey: own.pieceKey,
+        opposingPieceKey: opposing.pieceKey,
+        centerDistanceIn,
+        requiredMinimumCenterDistanceIn,
+      });
+    }
+  }
+  return overlaps;
+}
+
+export function auditWarmachineSideDeploymentGeometryV1(
+  stateInput = {},
+  rawOptions = {},
+) {
+  const state = normalizeRulesV1State(stateInput);
+  const sideKey = String(rawOptions.sideKey || "");
+  const deployments = rawOptions.deployments || {};
+  if (!["player1", "player2"].includes(sideKey)) {
+    throw new Error("side_deployment_geometry_requires_player_side");
+  }
+  if (!deployments.p1_deploy || !deployments.p2_deploy) {
+    throw new Error("side_deployment_geometry_requires_both_deployment_zones");
+  }
+  const aliveSidePieces = (state.pieces || []).filter((piece) =>
+    piece.sideKey === sideKey && warmachinePieceInPlayV1(piece));
+  const tokens = Object.fromEntries(aliveSidePieces.map((piece) => [
+    piece.pieceKey,
+    tokenForPiece(piece),
+  ]));
+  const deploymentAudit = auditDeploymentTokens({ tokens, deployments });
+  const crossSideOverlaps = crossSideOverlapPairs(state, sideKey);
+  const checks = {
+    sideHasInPlayModels: aliveSidePieces.length > 0,
+    strictSideDeploymentGeometry: deploymentAudit.ok === true,
+    noCrossSideBaseOverlap: crossSideOverlaps.length === 0,
+  };
+  const failedChecks = Object.entries(checks).filter(([, passed]) => !passed)
+    .map(([key]) => key);
+  const core = {
+    schemaVersion: "warmachine_side_deployment_geometry_v1",
+    stateHash: warmachineReverseStateSemanticHashV1(state),
+    sideKey,
+    inPlayModelCount: aliveSidePieces.length,
+    checks,
+    failedChecks,
+    deploymentAudit: stableGraphValue(deploymentAudit),
+    crossSideOverlapPairs: stableGraphValue(crossSideOverlaps),
+    claimBoundary: "This checks one side's surviving models at a declared first-activation boundary. It proves deployment-zone, internal overlap, unit-coherency, attachment-distance, and cross-side overlap geometry only; it does not assert that opponent effects could not previously move or remove models.",
+  };
+  return {
+    ...core,
+    auditHash: stableGraphHash(stableGraphValue(core)),
+    ok: failedChecks.length === 0,
+  };
+}
+
+export function
+auditWarmachineDeclaredMovementDeploymentReachabilityLowerBoundV1(
+  stateInput = {},
+  rawOptions = {},
+) {
+  const state = normalizeRulesV1State(stateInput);
+  const sideKey = String(rawOptions.sideKey || "");
+  const deployments = rawOptions.deployments || {};
+  const movementGroups = Array.isArray(rawOptions.movementGroups)
+    ? rawOptions.movementGroups
+    : [];
+  if (!["player1", "player2"].includes(sideKey)) {
+    throw new Error("declared_movement_deployment_lower_bound_requires_player_side");
+  }
+  const zone = deploymentZoneForSide(deployments, sideKey);
+  if (!zone) {
+    throw new Error("declared_movement_deployment_lower_bound_requires_side_zone");
+  }
+  const inPlaySidePieces = (state.pieces || []).filter((piece) =>
+    piece.sideKey === sideKey && warmachinePieceInPlayV1(piece));
+  const pieceAudits = [];
+  const violations = [];
+  for (const movementGroup of movementGroups.slice().sort((left, right) =>
+    String(left.groupKey || "").localeCompare(String(right.groupKey || "")))) {
+    const groupKey = String(movementGroup.groupKey || "");
+    const members = inPlaySidePieces.filter((piece) =>
+      activationGroupKey(piece) === groupKey);
+    if (!groupKey || !members.length) {
+      violations.push({
+        groupKey,
+        reason: groupKey
+          ? "declared_movement_group_has_no_in_play_models"
+          : "declared_movement_group_key_missing",
+      });
+      continue;
+    }
+    for (const piece of members) {
+      const allowance = declaredMovementAllowanceIn(piece, movementGroup);
+      const geometry = distanceToLegalDeploymentCenterRectangle(piece, zone);
+      const withinLowerBound = geometry.legalCenterRectangleExists === true &&
+        allowance.allowanceIn !== null &&
+        geometry.minimumDistanceIn <= allowance.allowanceIn + 0.001;
+      const row = stableGraphValue({
+        groupKey,
+        pieceKey: piece.pieceKey,
+        actionType: String(movementGroup.actionType || ""),
+        position: piece.position,
+        speedIn: numeric(piece.speedIn),
+        movementAllowanceIn: allowance.allowanceIn,
+        allowanceSource: allowance.allowanceSource,
+        minimumDistanceToLegalDeploymentCenterIn:
+          geometry.minimumDistanceIn,
+        nearestLegalDeploymentCenter:
+          geometry.nearestLegalDeploymentCenter,
+        legalDeploymentCenterBounds: geometry.bounds,
+        withinLowerBound,
+      });
+      pieceAudits.push(row);
+      if (withinLowerBound) continue;
+      violations.push(stableGraphValue({
+        ...row,
+        reason: !geometry.legalCenterRectangleExists
+          ? "deployment_zone_has_no_legal_center_for_base"
+          : allowance.allowanceIn === null
+            ? "declared_movement_action_type_unsupported"
+            : "deployment_distance_exceeds_declared_movement_allowance",
+      }));
+    }
+  }
+  const checks = {
+    movementGroupsDeclared: movementGroups.length > 0,
+    everyDeclaredGroupResolved: !violations.some((row) => [
+      "declared_movement_group_has_no_in_play_models",
+      "declared_movement_group_key_missing",
+    ].includes(row.reason)),
+    everyDeclaredModelWithinOptimisticMovementLowerBound:
+      violations.length === 0,
+  };
+  const failedChecks = Object.entries(checks).filter(([, passed]) => !passed)
+    .map(([key]) => key);
+  const core = stableGraphValue({
+    schemaVersion:
+      WARMACHINE_DECLARED_MOVEMENT_DEPLOYMENT_LOWER_BOUND_V1_SCHEMA,
+    stateHash: warmachineReverseStateSemanticHashV1(state),
+    sideKey,
+    deploymentZone: zone,
+    movementGroups,
+    checks,
+    failedChecks,
+    pieceAudits,
+    violations,
+    claimBoundary: "This is an optimistic necessary condition for one declared movement activation between a legal deployment center and the observed model center. It ignores terrain, bases, path length beyond straight-line distance, formation, timing, effects, and activation order. Passing does not prove reachability; failing proves the declared movement envelope cannot reach deployment unless the caller omitted a valid movement modifier or displacement effect.",
+  });
+  return {
+    ...core,
+    auditHash: stableGraphHash(core),
+    ok: failedChecks.length === 0,
   };
 }
 

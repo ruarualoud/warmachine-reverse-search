@@ -1,14 +1,18 @@
 import {
   enumerateWarmachineBenchmarkActionsV2,
-  executeScopedWarmachineBenchmarkActionV2,
 } from "../benchmark/fixed-steamroller-benchmark-v2.mjs";
 import { stableGraphHash, stableGraphValue } from "../graph/typed-facts-v2.mjs";
 import { normalizeRulesV1State } from "../warmachine-host-runtime.mjs";
-import { buildWarmachineExactActionChanceClasses } from "./chance-outcomes-v1.mjs";
+import {
+  buildWarmachineExactActionChanceClasses,
+  warmachineExactChanceClassActionPatch,
+} from "./chance-outcomes-v1.mjs";
 import {
   buildWarmachineOpponentResponseSetV1,
   canonicalWarmachineActingSideActionsV1,
 } from "./opponent-response-v1.mjs";
+import { executeWarmachineExactPostResponseChanceV1 } from
+  "./post-response-chance-execution-v1.mjs";
 
 export const WARMACHINE_STRICT_ACTION_PROBABILITY_AND_MIN_V2_SCHEMA =
   "warmachine_strict_action_probability_and_min_v2";
@@ -93,44 +97,102 @@ export function evaluateWarmachineStrictActionProbabilityAndMinV2(
           reason: "opponent_response_action_missing_from_strict_enumeration",
         };
       }
-      const result = executeScopedWarmachineBenchmarkActionV2(
+      const postResponseExecution = executeWarmachineExactPostResponseChanceV1(
         scoped,
-        response.action,
-        { actionKey: response.action.actionKey },
+        action,
+        response,
+        chanceClass,
         {
           routeKey: `${rawOptions.routeKey || "strict-action-and-min"}:${chanceClass.classKey}:${response.responseKey}`,
-          actionPatch: { strictRollOutcome: chanceClass.strictRollOutcome },
         },
       );
-      if (!result.ok) {
+      if (!postResponseExecution.exactComplete) {
         return {
           responseKey: response.responseKey,
           actionKey: response.action.actionKey,
+          choice: response.choice,
+          recipientPieceKey: response.recipientPieceKey,
           interval: outcomeInterval("unresolved"),
           transitionAccepted: false,
-          reason: result.reason || "strict_response_transition_rejected",
-          receiptHash: result.receipt?.receiptHash || "",
+          reason: (postResponseExecution.chance.reasons || []).join(",") ||
+            "post_response_chance_not_exact",
+          postResponseChance: stableGraphValue(postResponseExecution.chance),
         };
       }
-      const classification = classifyResult({
-        state: result.state,
-        events: result.transition.events || [],
-        action: response.action,
-        baseAction: action,
-        chanceClass,
-        response,
-      }) || {};
+      const postResponseOutcomes = postResponseExecution.outcomes.map((entry) => {
+        const result = entry.executed;
+        const postResponseChanceClass = entry.postResponseChanceClass;
+        if (!result.ok) {
+          return {
+            classKey: postResponseChanceClass.classKey,
+            probabilityNumerator: postResponseChanceClass.numerator,
+            probabilityDenominator: postResponseChanceClass.denominator,
+            interval: outcomeInterval("unresolved"),
+            transitionAccepted: false,
+            reason: result.reason || "strict_response_transition_rejected",
+            receiptHash: result.receipt?.receiptHash || "",
+          };
+        }
+        const classification = classifyResult({
+          state: result.state,
+          events: result.transition.events || [],
+          action: response.action,
+          baseAction: action,
+          chanceClass,
+          postResponseChanceClass,
+          response,
+        }) || {};
+        return {
+          classKey: postResponseChanceClass.classKey,
+          probabilityNumerator: postResponseChanceClass.numerator,
+          probabilityDenominator: postResponseChanceClass.denominator,
+          strictRollOutcome: stableGraphValue(postResponseChanceClass.strictRollOutcome),
+          interval: outcomeInterval(classification.outcome),
+          transitionAccepted: true,
+          reason: String(classification.reason || ""),
+          receiptHash: result.receipt?.receiptHash || "",
+          resultStateHash: stableGraphHash(result.state),
+          terminalEvents: stableGraphValue(terminalEvents(result.transition.events || [])),
+        };
+      });
+      const postDenominator = postResponseExecution.chance.massDenominator;
+      const postLowerNumerator = postResponseOutcomes.reduce((sum, entry) =>
+        sum + entry.probabilityNumerator * entry.interval.lowerBound, 0);
+      const postUpperNumerator = postResponseOutcomes.reduce((sum, entry) =>
+        sum + entry.probabilityNumerator * entry.interval.upperBound, 0);
+      const transitionAccepted = postResponseOutcomes.every((entry) =>
+        entry.transitionAccepted === true);
+      const complete = transitionAccepted &&
+        postResponseExecution.chance.massNumerator === postDenominator &&
+        postResponseOutcomes.every((entry) => entry.interval.complete === true);
+      const postOutcomeKinds = new Set(postResponseOutcomes.map((entry) =>
+        entry.interval.outcome));
       return {
         responseKey: response.responseKey,
         actionKey: response.action.actionKey,
         choice: response.choice,
         recipientPieceKey: response.recipientPieceKey,
-        interval: outcomeInterval(classification.outcome),
-        transitionAccepted: true,
-        reason: String(classification.reason || ""),
-        receiptHash: result.receipt?.receiptHash || "",
-        resultStateHash: stableGraphHash(result.state),
-        terminalEvents: stableGraphValue(terminalEvents(result.transition.events || [])),
+        interval: {
+          outcome: complete && postOutcomeKinds.size === 1
+            ? postResponseOutcomes[0].interval.outcome
+            : complete && postLowerNumerator === postUpperNumerator
+              ? "exact_post_response_chance"
+              : "unresolved",
+          lowerBound: postLowerNumerator / postDenominator,
+          upperBound: postUpperNumerator / postDenominator,
+          complete,
+        },
+        transitionAccepted,
+        reason: transitionAccepted
+          ? ""
+          : postResponseOutcomes.find((entry) => !entry.transitionAccepted)?.reason ||
+            "strict_response_transition_rejected",
+        receiptHash: postResponseOutcomes.length === 1
+          ? postResponseOutcomes[0].receiptHash
+          : "",
+        receiptHashes: postResponseOutcomes.map((entry) => entry.receiptHash).filter(Boolean),
+        postResponseChance: stableGraphValue(postResponseExecution.chance),
+        postResponseOutcomes,
       };
     });
     return {
@@ -138,6 +200,7 @@ export function evaluateWarmachineStrictActionProbabilityAndMinV2(
       probabilityNumerator: chanceClass.numerator,
       probabilityDenominator: chanceClass.denominator,
       strictRollOutcome: stableGraphValue(chanceClass.strictRollOutcome),
+      strictActionPatch: warmachineExactChanceClassActionPatch(chanceClass),
       opponentDecisionKind: responseSet.decisionKind,
       opponentDecisionOwnerSideKey: responseSet.ownerSideKey,
       responseSetComplete: responseSet.responseSetComplete,

@@ -221,24 +221,26 @@ export function buildWarmachineFixedTerminalScorePositionCorpusV1(rawOptions = {
       scoringHistoryBefore: [priorScoringRow(cell.scoringElementKey)],
     },
   ]));
-  const materialized = materializeWarmachineTerminalSpatialCellsV1(
-    stateTemplate,
-    materializationCells,
-    {
-      maximumCells: rawOptions.maximumMaterializedCells ?? 1,
-      activationEnvelopeBySide: {
-        player1: "all_alive_activated",
-        player2: "all_alive_activated",
+  const materialized = rawOptions.skipMaterialization === true
+    ? null
+    : materializeWarmachineTerminalSpatialCellsV1(
+      stateTemplate,
+      materializationCells,
+      {
+        maximumCells: rawOptions.maximumMaterializedCells ?? 1,
+        activationEnvelopeBySide: {
+          player1: "all_alive_activated",
+          player2: "all_alive_activated",
+        },
+        preTerminalActivationEnvelopeBySide: {
+          player1: "all_alive_activated",
+          player2: "all_alive_activated",
+        },
+        priorTurnSettlementSeedByCellKey,
+        terminalAction: { actionType: "end_turn" },
+        onStrictReplayProgress: rawOptions.onStrictReplayProgress,
       },
-      preTerminalActivationEnvelopeBySide: {
-        player1: "all_alive_activated",
-        player2: "all_alive_activated",
-      },
-      priorTurnSettlementSeedByCellKey,
-      terminalAction: { actionType: "end_turn" },
-      onStrictReplayProgress: rawOptions.onStrictReplayProgress,
-    },
-  );
+    );
 
   return {
     schemaVersion: WARMACHINE_FIXED_TERMINAL_SCORE_POSITION_CORPUS_V1_SCHEMA,

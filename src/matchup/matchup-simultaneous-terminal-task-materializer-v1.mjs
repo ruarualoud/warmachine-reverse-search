@@ -1,4 +1,6 @@
 import { stableGraphHash, stableGraphValue } from "../graph/typed-facts-v2.mjs";
+import { buildWarmachineCompositeExecutionReceiptV1 } from
+  "../contracts/search-execution-receipt-v1.mjs";
 import { warmachinePieceInPlayV1 } from "../reverse/piece-lifecycle-v1.mjs";
 import {
   warmachineSteamrollerTerminalScenarioSubcellKeyV1,
@@ -27,6 +29,11 @@ export const WARMACHINE_MATCHUP_SIMULTANEOUS_TERMINAL_TASK_MATERIALIZER_V1_SCHEM
 const GOAL_FAMILY = "simultaneous_leader_tiebreak";
 const TERMINAL_CLASS = "simultaneous_leader_tiebreak";
 const ACTION_CATEGORY = "single_simultaneous_resolution_window";
+const CURRENT_EXECUTION_RECEIPT = buildWarmachineCompositeExecutionReceiptV1({
+  hostReceipt: warmachineHost.receipt,
+  constructionHostReceipt: warmachineConstructionHost.receipt,
+  focusedEngineReceipt: warmachineHost.focusedSourceReceipt,
+});
 const SUPPORTED_TASK_KEYS = new Set([
   "matchup-terminal-task-d5a87e643ed695dd51046193317fb95c",
   "matchup-terminal-task-316a75bb7ece185b5458788391efe0e2",
@@ -184,6 +191,7 @@ function validateTaskReceipts(task = {}) {
     hostReceiptHash: warmachineHost.receipt.receiptHash,
     constructionHostReceiptHash:
       warmachineConstructionHost.receipt.receiptHash,
+    executionSemanticReceiptHash: CURRENT_EXECUTION_RECEIPT.executionReceiptHash,
   });
   if (stableGraphHash(behaviorSignature) !== task.behaviorSignatureHash) {
     throw new Error(

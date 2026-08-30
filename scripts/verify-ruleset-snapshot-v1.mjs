@@ -16,11 +16,25 @@ const EVIDENCE_PATH = new URL(
 );
 
 const snapshot = buildWarmachineRulesetSnapshotV1();
-assert.equal(snapshot.current, true, JSON.stringify(snapshot.failClosedReasons));
-assert.equal(snapshot.checkpointResumeAllowed, true);
-assert.equal(snapshot.priorCalibrationUsable, true);
-assert.equal(snapshot.priorTrainingMaterialCurrent, true);
+assert.equal(snapshot.current, false);
+assert.equal(snapshot.checkpointResumeAllowed, false);
+assert.equal(snapshot.priorCalibrationUsable, false);
+assert.equal(snapshot.priorTrainingMaterialCurrent, false);
+assert.equal(snapshot.ruleSemanticsAuthority.globalStrictReady, false);
+assert.equal(snapshot.ruleSemanticsAuthority.strictExecutorReady, false);
+assert.ok(snapshot.failClosedReasons.some((reason) =>
+  reason.startsWith("rule_semantics:")));
 assert.equal(snapshot.cardDataMirror.matches, true);
+assert.match(snapshot.executionSemanticReceiptHash, /^[0-9a-f]{64}$/);
+assert.equal(
+  snapshot.executionSemanticReceipt.executionReceiptHash,
+  snapshot.executionSemanticReceiptHash,
+);
+assert.equal(
+  snapshot.executionSemanticReceipt.engine.receiptHash,
+  snapshot.authorityReceiptHash,
+);
+assert.ok(snapshot.executionSemanticReceipt.search.sourceFileCount > 10);
 assert.equal(snapshot.observed.cardData.remoteVersion, "40041");
 assert.equal(
   snapshot.observed.reverseRegistry.typedObligationOnlyCount,
@@ -66,4 +80,6 @@ console.log(JSON.stringify({
   current: snapshot.current,
   atomDriftFailsClosed: !atomDrift.compatible,
   dataDriftFailsClosed: !dataDrift.compatible,
+  executionSemanticReceiptBound: true,
+  semanticAuthorityFailsClosed: !snapshot.ruleSemanticsAuthority.globalStrictReady,
 }, null, 2));

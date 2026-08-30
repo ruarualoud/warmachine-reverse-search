@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "warmachine_ruleset_update_review_v1",
+  "approved": true,
+  "approvedBy": "Codex Ticket 14/15 strict reverse-search review under the user-authorized long task",
+  "approvedAt": "2026-08-21T09:14:35Z",
+  "reviewedBaselineKey": "warmachine-ruleset-2026-08-21-remote-40041-ticket14-reclose-v1",
+  "candidateSemanticIndexHash": "ded30a37058ad8a8d359f3cb3e629a38a80c5b1e98000086d69aebedd8af19c4",
+  "impactHash": "29da87f70b50c13df0a5f4887b63ff14be14f559298c0e1d5b3368c690dd0f60",
+  "strictGatesPassed": true,
+  "strictGateEvidence": [
+    "The Ticket 14 Engine matrix executed all 263 declared verifiers under one stable 628-file source closure: 235 rule-atom verifiers and 28 strict-transition verifiers passed, with zero failed, missing, duplicate, foreign, timed-out, or source-drifted rows. Engine source receipt e27e6a6d32c7b004676b8e9ece74310cffba2c4290b906aae29b7e53d27badf3 binds manifest 78162f7de382437d876717c162747dd75f103d0744530e1c46946719ab4c16bf and aggregate 04fa55df88cadedc1fe159f6c545834523a78da0d818520a34e98d721b03c04d.",
+    "The current rule-interaction graph verifier passed with 67 nodes, 186 interactions and zero issues; all 108 hand-authored micro-battle fixtures also passed.",
+    "The Search upstream and composite execution-receipt verifiers passed with a path-independent 51-file materializer/planner/executor/recovery closure bound to the reviewed Engine receipt. Both self-generated terminal batch verifiers passed without historical scratch inputs.",
+    "The fixed 100-point Steamroller benchmark rebuilt a 103-model Sepsira-versus-Nymara Two Fronts opening from receipt-bound fixtures, then strict-certified a 140-transition score route and a 60-transition assassination route. A separate clean-fixture gate proves the default pool and room inputs come from fixtures/ruleset-baseline and use no historical build directory.",
+    "This approval invalidates resume of checkpoints bound to the previous composite execution receipt. It does not convert cooperative terminal witnesses into strategy value, opponent robustness, complete Chance mass, or global optimality."
+  ],
+  "skillGatesPassed": true,
+  "skillGateEvidence": [
+    "The reverse-search execution closure is algorithmic only: its 51 bound files contain no DeepSeek/OpenAI call, LLM prompt/model ingress, HTTP fetch, or skill-router entry point. Search candidates come only from strict Engine enumeration and transitions.",
+    "No runtime skill, Memento, ranker, or LLM output can filter legal search actions, alter Rules, or contribute a transition receipt. Therefore ctx2skill/skill2ctx recalibration is not applicable to this Search-only ruleset promotion.",
+    "This not-applicable disposition is scoped to warmachine-reverse-search. It does not certify route3, human-vs-AI, self-play, or any LLM skill manifest; those systems require their own later calibration before deployment."
+  ]
+}

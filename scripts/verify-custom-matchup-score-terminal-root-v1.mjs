@@ -8,6 +8,8 @@ import { fileURLToPath } from "node:url";
 
 import { bindWarmachineTwoFrontsOpeningV2 } from
   "../src/benchmark/fixed-steamroller-benchmark-v2.mjs";
+import { loadWarmachineMatchupTemplateRoomV1 } from
+  "./load-matchup-template-room-v1.mjs";
 import { materializeWarmachineMatchupScoreTerminalRootV1 } from
   "../src/matchup/matchup-terminal-root-materializer-v1.mjs";
 import { materializeWarmachineRepresentativeOpeningsV1 } from
@@ -21,7 +23,6 @@ import {
   auditRulesV1StaticPlacement,
   auditRulesV1StaticUnitFormation,
   auditRulesV1SteamrollerScenarioTerrainSetup,
-  resolveWarmachineHostPath,
 } from "../src/warmachine-host-runtime.mjs";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -169,14 +170,8 @@ const challengerCandidate = acceptedGroup.challengerRosterCandidates.find((candi
   acceptedGroup.challengerRosterCandidates[0];
 assert.ok(subjectCandidate);
 assert.ok(challengerCandidate);
-const baseDirectory = resolveWarmachineHostPath(
-  "build/warmachine-ai/sepsira-swarm-vs-fane-v20260805",
-);
-const roomStore = loadJson(path.join(baseDirectory, "local-layer3/state.json"));
-const templateRoom = roomStore.roomsById?.[
-  "room_f1823ced-bf71-4392-8669-c6330d237efb"
-];
-assert.ok(templateRoom);
+const { loadedRoomStore, templateRoom } =
+  loadWarmachineMatchupTemplateRoomV1();
 const routedOpenings = materializeWarmachineRepresentativeOpeningsV1({
   task,
   poolsByTaskSideKey: {
@@ -193,10 +188,12 @@ const routedOpenings = materializeWarmachineRepresentativeOpeningsV1({
   exactMapTemplatesByKey: {
     mixed_table: {
       templateRoom,
-      templateHash: createHash("sha256")
-        .update(JSON.stringify({ shapes: templateRoom.shapes,
-          deployments: templateRoom.deployments }))
-        .digest("hex"),
+      templateHash: createHash("sha256").update(JSON.stringify({
+        roomStoreContentHash: loadedRoomStore.contentHash,
+        roomId: templateRoom.id,
+        shapes: templateRoom.shapes,
+        deployments: templateRoom.deployments,
+      })).digest("hex"),
     },
   },
   scenarioBindersByKey: {

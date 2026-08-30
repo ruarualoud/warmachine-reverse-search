@@ -13,6 +13,10 @@ import {
   warmachineHost,
 } from "../warmachine-host-runtime.mjs";
 import { warmachineRulesetBaselineV1 } from "./ruleset-baseline-v1.mjs";
+import { buildWarmachineCompositeExecutionReceiptV1 } from
+  "./search-execution-receipt-v1.mjs";
+import { warmachineConstructionHost } from
+  "../warmachine-construction-host-runtime.mjs";
 
 export const WARMACHINE_RULESET_SNAPSHOT_V1_SCHEMA =
   "warmachine_ruleset_snapshot_v1";
@@ -57,6 +61,7 @@ export function compareWarmachineRulesetBaselineV1(
 ) {
   const expectedObservedShape = {
     host: expected.host,
+    focusedEngineReceipt: expected.focusedEngineReceipt,
     reverseRegistry: expected.reverseRegistry,
     interactionGraph: expected.interactionGraph,
     fixedRosterProjection: expected.fixedRosterProjection,
@@ -95,6 +100,11 @@ export function buildWarmachineRulesetSnapshotV1(rawOptions = {}) {
     fixedRosterState,
     graph,
   );
+  const executionSemanticReceipt = buildWarmachineCompositeExecutionReceiptV1({
+    hostReceipt: warmachineHost.receipt,
+    constructionHostReceipt: warmachineConstructionHost.receipt,
+    focusedEngineReceipt: warmachineHost.focusedSourceReceipt,
+  });
   const cardRemoteVersion = String(
     primary.value.source?.remoteVersion || primary.value.remoteVersion || "",
   );
@@ -105,6 +115,18 @@ export function buildWarmachineRulesetSnapshotV1(rawOptions = {}) {
       hookOperatorCount: registry.counts.hookOperatorCount,
       steamroller2026ScenarioCount: warmachineHost.steamroller
         .steamroller2026ScenarioProfiles().length,
+    },
+    focusedEngineReceipt: {
+      sourceReceiptHash: executionSemanticReceipt.focusedEngine.sourceReceiptHash,
+      manifestHash: executionSemanticReceipt.focusedEngine.manifestHash,
+      aggregateHash: executionSemanticReceipt.focusedEngine.aggregateHash,
+      executionSourceReceiptHash:
+        executionSemanticReceipt.focusedEngine.executionSourceReceiptHash,
+      verifierCount: executionSemanticReceipt.focusedEngine.verifierCount,
+      passedVerifierCount: executionSemanticReceipt.focusedEngine.passedVerifierCount,
+      failedVerifierCount: executionSemanticReceipt.focusedEngine.failedVerifierCount,
+      shardCount: executionSemanticReceipt.focusedEngine.shardCount,
+      gatePassed: executionSemanticReceipt.focusedEngine.gatePassed,
     },
     reverseRegistry: registry.counts,
     interactionGraph: Object.fromEntries(
@@ -159,19 +181,40 @@ export function buildWarmachineRulesetSnapshotV1(rawOptions = {}) {
     reverseRegistryHash: semanticCore.reverseRegistryHash,
     semanticGraphHash: semanticCore.semanticGraphHash,
     semanticRulesetHash: stableGraphHash(semanticCore),
+    executionSemanticReceipt,
+    executionSemanticReceiptHash: executionSemanticReceipt.executionReceiptHash,
+    ruleSemanticsAuthority: executionSemanticReceipt.ruleSemanticsAuthority,
     baselineComparison: comparison,
     current: comparison.compatible && mirror.contentHash === primary.contentHash &&
-      graph.validation.structuralOk,
+      graph.validation.structuralOk && executionSemanticReceipt.current,
     checkpointResumeAllowed: comparison.checkpointResumeAllowed &&
-      mirror.contentHash === primary.contentHash && graph.validation.structuralOk,
+      mirror.contentHash === primary.contentHash && graph.validation.structuralOk &&
+      executionSemanticReceipt.current,
     priorCalibrationUsable: comparison.priorCalibrationUsable &&
-      mirror.contentHash === primary.contentHash && graph.validation.structuralOk,
+      mirror.contentHash === primary.contentHash && graph.validation.structuralOk &&
+      executionSemanticReceipt.current,
     priorTrainingMaterialCurrent: comparison.priorTrainingMaterialCurrent &&
-      mirror.contentHash === primary.contentHash && graph.validation.structuralOk,
+      mirror.contentHash === primary.contentHash && graph.validation.structuralOk &&
+      executionSemanticReceipt.current,
     failClosedReasons: [
       ...comparison.differences.map((difference) => `baseline_drift:${difference.path}`),
       ...(mirror.contentHash === primary.contentHash ? [] : ["card_data_mirror_hash_mismatch"]),
       ...(graph.validation.structuralOk ? [] : ["interaction_graph_structural_validation_failed"]),
+      ...(executionSemanticReceipt.current
+        ? []
+        : [
+            ...(executionSemanticReceipt.focusedEngine.failClosedReasons.length
+              ? executionSemanticReceipt.focusedEngine.failClosedReasons
+              : executionSemanticReceipt.focusedEngine.current
+                ? []
+                : ["focused_engine_receipt_not_current"]),
+            ...(executionSemanticReceipt.ruleSemanticsAuthority.failClosedReasons.length
+              ? executionSemanticReceipt.ruleSemanticsAuthority.failClosedReasons
+                .map((reason) => `rule_semantics:${reason}`)
+              : executionSemanticReceipt.ruleSemanticsAuthority.globalStrictReady
+                ? []
+                : ["rule_semantics:not_strict_ready"]),
+          ]),
     ].sort(),
     claimBoundary: "This composite snapshot binds strict rules sources, card data, atom and reverse registries, the semantic interaction graph and the construction pool. Any mismatch invalidates checkpoint resume, prior direction calibration and current training-material claims until reviewed and re-signed.",
   };

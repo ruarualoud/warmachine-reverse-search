@@ -11,6 +11,10 @@ import { warmachineReverseStateSemanticHashV1 } from
 import { warmachinePieceInPlayV1 } from "./piece-lifecycle-v1.mjs";
 import { restoreWarmachineScenarioSettlementPreimageV1 } from
   "./scenario-settlement-preimage-v1.mjs";
+import {
+  auditWarmachineReverseStateBoundaryV1,
+  summarizeWarmachineReverseStateBoundaryAuditV1,
+} from "./reverse-state-invariants-v1.mjs";
 
 export const WARMACHINE_PREVIOUS_TURN_END_PREDECESSOR_V1_SCHEMA =
   "warmachine_previous_turn_end_predecessor_v1";
@@ -192,6 +196,43 @@ function settlementRowsForPreviousTurn(successor, endingSideKey, endingTurnNumbe
   return { rows, retained };
 }
 
+function firstKillBoxPredecessorObligations(
+  successor,
+  endingSideKey,
+  endingTurnNumber,
+  settlement,
+) {
+  if (endingTurnNumber - 1 < 2) return [];
+  const priorKillBoxLeaderKeys = new Set((settlement.retained || [])
+    .filter((row) => row.elementType === "killbox" ||
+      row.reason === "killbox_penalty")
+    .map((row) => String(row.elementKey || ""))
+    .filter(Boolean));
+  return (settlement.rows || []).filter((row) =>
+    (row.elementType === "killbox" || row.reason === "killbox_penalty") &&
+    row.elementKey && !priorKillBoxLeaderKeys.has(String(row.elementKey)))
+    .map((row) => stableGraphValue({
+      obligationKind: "leader_outside_killbox_before_first_penalty",
+      leaderPieceKey: String(row.elementKey),
+      sideKey: endingSideKey,
+      ownTableEdgeKey: String(
+        successor.deploymentBackEdgeBySide?.[endingSideKey] || "",
+      ),
+      killBoxDistanceIn: Math.max(0, Number(
+        successor.scenario?.killBoxDistanceIn || 12,
+      )),
+      firstPenaltyTurnNumber: endingTurnNumber,
+      priorSameSideTurnNumber: endingTurnNumber - 1,
+      sourceScoringLedgerKey: String(row.key || ""),
+      supportedWitnessFamily: "leader_self_movement_during_penalty_turn",
+      deferredAlternativeFamilies: [
+        "opponent_generated_movement_or_placement",
+        "out_of_activation_movement_or_placement",
+        "card_specific_position_change",
+      ],
+    }));
+}
+
 function subtractSettlementScore(successorScore = {}, rows = []) {
   const score = scoreMap(successorScore);
   for (const row of rows) {
@@ -226,6 +267,12 @@ function restorePreviousTurnEnd(
     controlStart,
     endingSideKey,
     endingTurnNumber,
+  );
+  const predecessorStateObligations = firstKillBoxPredecessorObligations(
+    controlStart,
+    endingSideKey,
+    endingTurnNumber,
+    settlement,
   );
   const state = structuredClone(controlStart);
   state.activeSideKey = endingSideKey;
@@ -292,6 +339,7 @@ function restorePreviousTurnEnd(
       completedRound,
       endingTurnNumber,
       removedScoringLedgerKeys: settlement.rows.map((row) => row.key).sort(),
+      predecessorStateObligations,
       scoreBeforeTurnEnd: state.scenario.score,
       activationRestoreMode: nextSideActivationRestoreMode,
       maintenanceResourcePreimage: stableGraphValue(maintenanceResourcePreimage),
@@ -316,6 +364,22 @@ export function generateWarmachinePreviousTurnEndPredecessorsV1(
   const candidates = [];
   const rejected = [];
   const unresolved = [];
+  const successorStateInvariantAudit = auditWarmachineReverseStateBoundaryV1(
+    successor,
+    { boundaryKind: "previous_turn_inverse_successor" },
+  );
+  if (!successorStateInvariantAudit.ok) {
+    rejected.push({
+      reason: "reverse_predecessor_state_invariant_rejected",
+      boundaryKind: "previous_turn_inverse_successor",
+      stateHash: successorSemanticHash,
+      stateInvariantAudit:
+        summarizeWarmachineReverseStateBoundaryAuditV1(
+          successorStateInvariantAudit,
+        ),
+      issues: successorStateInvariantAudit.issues,
+    });
+  }
   const runtimeDiagnostics = [];
   const restoreModes = Array.isArray(rawOptions.nextSideActivationRestoreModes)
     ? [...new Set(rawOptions.nextSideActivationRestoreModes.map(String))]
@@ -374,6 +438,27 @@ export function generateWarmachinePreviousTurnEndPredecessorsV1(
         resourcePreimage,
         settlementWitness,
       );
+      const predecessorStateInvariantAudit =
+        auditWarmachineReverseStateBoundaryV1(proposal.state, {
+          boundaryKind: "previous_turn_inverse_predecessor",
+        });
+      if (!successorStateInvariantAudit.ok ||
+          !predecessorStateInvariantAudit.ok) {
+        if (!predecessorStateInvariantAudit.ok) {
+          rejected.push({
+            predecessorStateHash:
+              warmachineReverseStateSemanticHashV1(proposal.state),
+            reason: "reverse_predecessor_state_invariant_rejected",
+            mutation: proposal.mutation,
+            stateInvariantAudit:
+              summarizeWarmachineReverseStateBoundaryAuditV1(
+                predecessorStateInvariantAudit,
+              ),
+            issues: predecessorStateInvariantAudit.issues,
+          });
+        }
+        continue;
+      }
       if (proposal.mutation.scenarioSettlementRestoration?.unresolvedReasons?.length) {
         unresolved.push({
           predecessorStateHash: warmachineReverseStateSemanticHashV1(proposal.state),
@@ -424,14 +509,18 @@ export function generateWarmachinePreviousTurnEndPredecessorsV1(
             perspectiveSideKey: successor.activeSideKey,
           },
         );
+        const unexpectedTerminalEvents = step.successor?.terminalEvents || [];
         const strictMatch = step.stepType === "deterministic" &&
           step.successor?.transitionAccepted === true && step.successor.state &&
+          unexpectedTerminalEvents.length === 0 &&
           warmachineReverseStateSemanticHashV1(step.successor.state) === successorSemanticHash;
         if (!strictMatch) {
           const row = {
             predecessorStateHash: warmachineReverseStateSemanticHashV1(proposal.state),
             actionKey: action.actionKey,
-            reason: step.stepType !== "deterministic"
+            reason: unexpectedTerminalEvents.length > 0
+              ? "previous_turn_end_emitted_unexpected_terminal"
+              : step.stepType !== "deterministic"
               ? step.reason || `previous_turn_end_step_${step.stepType}`
               : "strict_previous_turn_end_successor_does_not_match",
             executedSuccessorStateHash: step.successor?.state
@@ -439,6 +528,9 @@ export function generateWarmachinePreviousTurnEndPredecessorsV1(
               : "",
             expectedSuccessorStateHash: successorSemanticHash,
             receiptHash: String(step.successor?.receiptHash || ""),
+            unexpectedTerminalEvents: stableGraphValue(
+              unexpectedTerminalEvents,
+            ),
             mutation: proposal.mutation,
             semanticDifferences: step.successor?.state
               ? semanticDifferenceRows(step.successor.state, successor)
@@ -483,12 +575,19 @@ export function generateWarmachinePreviousTurnEndPredecessorsV1(
           }]),
           unresolvedReasons: [],
           mutation: stableGraphValue(proposal.mutation),
+          predecessorStateObligations: stableGraphValue(
+            proposal.mutation.predecessorStateObligations || [],
+          ),
           provenance: {
             upstreamReceiptHash: warmachineHost.receipt.receiptHash,
             oracleOpeningRead: false,
             oracleRouteRead: false,
             oracleIntermediateStateRead: false,
           },
+          predecessorStateInvariantAudit:
+            summarizeWarmachineReverseStateBoundaryAuditV1(
+              predecessorStateInvariantAudit,
+            ),
         };
         candidates.push({
           ...core,
@@ -519,6 +618,10 @@ export function generateWarmachinePreviousTurnEndPredecessorsV1(
     publicCandidates: stableGraphValue(publicCandidates),
     rejected: stableGraphValue(rejected),
     unresolved: stableGraphValue(unresolved),
+    successorStateInvariantAudit:
+      summarizeWarmachineReverseStateBoundaryAuditV1(
+        successorStateInvariantAudit,
+      ),
     maintenanceResourcePreimageProposalUniverse: {
       declaredModes: resourcePreimages.map((row) => row.mode),
       exactOverAllPossiblePreimages: false,

@@ -63,7 +63,7 @@ scripts/verify-matchup-gorman-experimental-warhead-filter-tasks-v1.mjs
 1. 已审阅 ruleset baseline 是 `378` 原子/`463` 钩子，当前 Engine 是 `380/466`；`verify:ruleset-snapshot` 应继续 fail-closed，直到团队完成影响报告、strict/skill 门和 review receipt 后正式提升基线。
 2. Engine `verify:micro` 当前为 `101/108`；七个漂移项已记录在 Engine `docs/HANDOFF_STATUS.md`，不能把核心 smoke 通过误述为全规则门通过。
 3. Ticket 05 最新六任务代码仍是部分验证状态。
-4. Ticket 06/07 尚无任务专属的合法部署到终局完整 strict 路线。
+4. Ticket 06 已有一条 78 模型 Two Fronts 合法部署到刺杀终局的完整 strict 路线；Ticket 07 的任务专属得分路线仍未闭合。Ticket 06 是存在性见证，不证明自然胜率或分支完备性。
 5. 初始状态值仍以区间/筛选为主，不具备自然胜率声明条件。
 6. 全阵营独有机制的搜索可调用矩阵尚未闭合。
 7. 媒体库不在 Git；控制台真实棋子需要单独配置资源根。

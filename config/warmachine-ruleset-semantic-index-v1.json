@@ -1,6 +1,6 @@
 {
   "schemaVersion": "warmachine_ruleset_semantic_index_v1",
-  "baselineKey": "warmachine-ruleset-2026-08-14-remote-40041-v5",
+  "baselineKey": "warmachine-ruleset-2026-08-22-remote-40041-ticket05-combat-sequence-v1",
   "cardData": {
     "remoteVersion": "40041",
     "rawContentHash": "892d255fdfaebbc00d697287eb859d1e04cbc05ae392971d30007471bebd5e9d",
@@ -8,14 +8,14 @@
   },
   "hostSourceHashes": {
     "scripts/function3-data-utils.mjs": "8d2166dc990e0556b307d003f6969ef54d2419f622de88144c77f2ff7ffa4882",
-    "scripts/layer3-function3-adapter.mjs": "c9f15cc00c8b4f471130ee0a9f7a43161bc199bcd33a828d5d6fa49133e53280",
+    "scripts/layer3-function3-adapter.mjs": "1b24738fc6eaf46f77638aca6dee8fe4bb6b3e11262075f6242dd646a7f729bd",
     "scripts/warmachine-exact-dice-probability-v1.mjs": "ff3f973a01c9c79d9a4866215f830f7a55787f0402e24ed2f083ad9816c6a20c",
     "scripts/warmachine-playable-ai-v0.mjs": "c5eb352e73d0706c14e51ca15bfafb0cc6bb0c1b1e35fffc53c27df6bd1b547c",
-    "scripts/warmachine-rule-atoms-v1.mjs": "a4c45223b8dd4c7973b79302c06f122f1e4f7dc4c50595985c07b918de51cf1e",
+    "scripts/warmachine-rule-atoms-v1.mjs": "4cd2bcd38646906f890c499dc748b3431393c844a73aecf3dc64a119fd769f57",
     "scripts/warmachine-rule-atoms/definitions/activation-rfp-resource-transitions-v1.mjs": "61fe5bf86592c4881c1a21803e8efc3289841e033e7a3953a596cb6c74279f46",
     "scripts/warmachine-rule-atoms/definitions/activation-sequences-v1.mjs": "5ba6422ee1e7ad4f055046edeed8919d156b33171feec0f41688fa0dbe8b12da",
-    "scripts/warmachine-rule-atoms/definitions/attack-dice-modifiers-v1.mjs": "98d5e034d82bc3a26819e0ca2cad718bce14a7f91de7a10a083c053a7a3cf696",
-    "scripts/warmachine-rule-atoms/definitions/attack-hit-transitions-v1.mjs": "34ea2d1453dcc3808a7531995f41519287f2897c681539a0158306ebfd54eb01",
+    "scripts/warmachine-rule-atoms/definitions/attack-dice-modifiers-v1.mjs": "5a12626761bf0ca0dc6a14aa0a2b981ccd6007bea10f367ac0c34b53a333e036",
+    "scripts/warmachine-rule-atoms/definitions/attack-hit-transitions-v1.mjs": "dc8b305d1d5adc0cef4fbad3a0e6194933ee08b591a57bb8105d7b13e2f3e7ff",
     "scripts/warmachine-rule-atoms/definitions/attack-modifiers-v1.mjs": "bedcdccd6eeb073a98317278ac5706d2f0a4d5cc38b5292d180e4f20544de000",
     "scripts/warmachine-rule-atoms/definitions/attack-participation-validations-v1.mjs": "d77ff5d25025f23b43bb09e7cd675af5b4ebfc86cb44ea038bd3cb2ff8788878",
     "scripts/warmachine-rule-atoms/definitions/attack-range-modifiers-v1.mjs": "70a174be8f69c08dfe4f43bf765df5b19bd331583202aef7ccc052f503cfc30a",
@@ -27,6 +27,7 @@
     "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260729.mjs": "10c2b84938731ebb6eb962d6cb258ebb77cf83beb6b3a38047e753ec7089dbb5",
     "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260802.mjs": "fc4ff49425e770f4e308362ef6e67845700da816716d38b9cdb668b827742fab",
     "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260805.mjs": "5914136edaa0f945e601393e6510190a6f99bfef09ace814d9d3adc83d5d3d27",
+    "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260814.mjs": "069f5eef9e17a769de331d33804496d10b8dfcc2e1132c68ae83b9b11c6acb32",
     "scripts/warmachine-rule-atoms/definitions/damage-applied-transitions-v1.mjs": "98353cdc52593455c75e6e1fdbfb6298615c489277846871ff7eb4d6f0be5a96",
     "scripts/warmachine-rule-atoms/definitions/damage-modifiers-v1.mjs": "88e27d2f54ea61b2b6c420bf199083e5dcc865a03809614b58377ee429d98099",
     "scripts/warmachine-rule-atoms/definitions/damage-resolution-overrides-v1.mjs": "50e2adb45ecf8e170560f53b12066da339a309d36826e324405e00c97fb1e130",
@@ -51,9 +52,9 @@
     "scripts/warmachine-rule-atoms/definitions/targeting-overrides-v1.mjs": "0065a31f39561687bfe43f5f9322dda693379a4a86f22730d91c4105a24ccd0a",
     "scripts/warmachine-rule-atoms/definitions/trapdoor-spell-transitions-v1.mjs": "0b8977405f636834b956f96778f2a294c45146a2fbd5f1ad74525811589ff844",
     "scripts/warmachine-rule-atoms/definitions/weapon-target-memory-v1.mjs": "2ab50533a3faf029e951a84fd3db3e712de7fe39d10174b0bc4937c9527cbd09",
-    "scripts/warmachine-rule-atoms/registry-v1.mjs": "aae8f77444968d52c60d46731dce56800030a491767316cf16eb413bc9d33f06",
-    "scripts/warmachine-rules-v1.mjs": "a124c3cb716b5d809e6d37789b1c1d341bcb257458ab5cc8bacd3727fbc1f768",
-    "scripts/warmachine-special-rules-v0.mjs": "7ebe930b4377ea0e9fa1d333052ba0143d1f004689ef7c87e3a4439d000f1177",
+    "scripts/warmachine-rule-atoms/registry-v1.mjs": "41adb425f20f34478976dc7fc91f6305a3d858ef94c5a1e2e26cd182705c1d58",
+    "scripts/warmachine-rules-v1.mjs": "f51eac4ab24e6ea8cafcdf3a2542c799c9ce680ec46a4977b031c9653a174db6",
+    "scripts/warmachine-special-rules-v0.mjs": "e000aa00dc3ba93ab402fd62e900263968a45d1cefeb65bf501a81531c4aab14",
     "scripts/warmachine-steamroller-2026-v1.mjs": "f141726ebbe66f6565ef23e6a7c65491d8f1cc1358bf41f70e39112afcf9c016"
   },
   "atoms": {
@@ -2417,6 +2418,8 @@
         "typed_obligation_only"
       ],
       "sourceIds": [
+        "59df3d84-08fb-495e-890b-73bc4e7ad49f",
+        "d0ffd5d8-488d-4f68-a20d-a16e4bbcf21c",
         "d37bb7a9-fabf-488e-97aa-16f670ebc138",
         "e4471b02-80a4-4951-b7c6-790474bab53c"
       ],
@@ -2447,6 +2450,7 @@
       ],
       "sourceIds": [
         "4152d18e-cf65-4924-ac43-e0a8548ae469",
+        "59df3d84-08fb-495e-890b-73bc4e7ad49f",
         "a3523abf-c850-4094-9572-6154aba6e9ec"
       ],
       "reviewConceptIds": [
@@ -6855,7 +6859,8 @@
       "sourceIds": [
         "34b9ec10-9ccb-4255-8d03-048b6717068b",
         "93aabb43-7134-447c-bb3a-e2288f43f702",
-        "cf046ece-5aef-4d32-a48e-4a34f73fa8c0"
+        "cf046ece-5aef-4d32-a48e-4a34f73fa8c0",
+        "d0ffd5d8-488d-4f68-a20d-a16e4bbcf21c"
       ],
       "reviewConceptIds": [
         "declared_concept:damage_removal",
@@ -9527,6 +9532,46 @@
       "operatorCount": 1,
       "semanticHash": "83b2db653250ec21f6e522e94c6260991b8be9ca3d73033c32400a33b81ab623"
     },
+    "rampant_fury_same_activation_second_frenzy": {
+      "atomKey": "rampant_fury_same_activation_second_frenzy",
+      "atomVersion": 1,
+      "ruleNames": [
+        "Rampant Fury"
+      ],
+      "hookKeys": [
+        "action_contribution"
+      ],
+      "primitiveKeys": [
+        "activation_sequence_contribution"
+      ],
+      "maturities": [
+        "typed_obligation_only"
+      ],
+      "sourceIds": [
+        "3b732042-b688-4033-8341-ec7dd7312ef4"
+      ],
+      "reviewConceptIds": [
+        "declared_concept:activation_complete",
+        "declared_concept:activation_end",
+        "declared_concept:attack_lifecycle",
+        "declared_concept:base_collision",
+        "declared_concept:boosted_attack_roll",
+        "declared_concept:charge",
+        "declared_concept:charge_damage_roll",
+        "declared_concept:closest_visible_model",
+        "declared_concept:control_phase",
+        "declared_concept:frenzy",
+        "declared_concept:frenzy_fury_removal",
+        "declared_concept:highest_power_melee_weapon",
+        "declared_concept:melee_attack",
+        "declared_concept:movement_path",
+        "declared_concept:once_per_turn",
+        "declared_concept:same_activation",
+        "declared_concept:strict_unmapped_rule"
+      ],
+      "operatorCount": 1,
+      "semanticHash": "bc15f3f252a4510f7e19b8e0de658e6abfd8925c5e963e45f7dd53cd84ff4a87"
+    },
     "raw_talent_all_damage_rolls_additional_die": {
       "atomKey": "raw_talent_all_damage_rolls_additional_die",
       "atomVersion": 1,
@@ -11896,6 +11941,39 @@
       "operatorCount": 1,
       "semanticHash": "19f4970d2ca9cb38b0b354f53126aedc4475c1d2237fb598be66613c35758015"
     },
+    "spontaneous_combustion_continuous_effect_damage_dice_and_expiration": {
+      "atomKey": "spontaneous_combustion_continuous_effect_damage_dice_and_expiration",
+      "atomVersion": 1,
+      "ruleNames": [
+        "Spontaneous Combustion"
+      ],
+      "hookKeys": [
+        "attack_hit",
+        "damage_modifier"
+      ],
+      "primitiveKeys": [
+        "continuous_effects_expire_on_hit",
+        "damage_die_bonus"
+      ],
+      "maturities": [
+        "conservative_bound_operator",
+        "typed_obligation_only"
+      ],
+      "sourceIds": [
+        "bbf0f24e-c033-4d9c-b989-3ce60addf504"
+      ],
+      "reviewConceptIds": [
+        "declared_concept:aoe",
+        "declared_concept:blast_damage",
+        "declared_concept:continuous_effect_corrosion",
+        "declared_concept:continuous_effect_fire",
+        "declared_concept:continuous_effect_torment",
+        "declared_concept:damage_roll",
+        "declared_concept:direct_hit"
+      ],
+      "operatorCount": 2,
+      "semanticHash": "ca386f293ab102e54d0505f3b2b16d9676bc77a46564754c6261e4b5b385bf0f"
+    },
     "starve_weapon_damage_next_activation_forfeit_choice": {
       "atomKey": "starve_weapon_damage_next_activation_forfeit_choice",
       "atomVersion": 1,
@@ -13437,6 +13515,7 @@
         "precision_strike_battle_plan_friendly_los_and_movement_aura_one_turn",
         "prey_enemy_model_unit_selection_lifecycle",
         "prime_mine_self_marker_maintenance_detonation",
+        "rampant_fury_same_activation_second_frenzy",
         "razor_wall_rotated_wall_template_upkeep_spell_action",
         "reposition_activation_end_independent_advances",
         "reveille_friendly_faction_knocked_down_stand_up_not_this_turn",
@@ -13526,8 +13605,8 @@
         "unit_special_rule_grant",
         "weapon_special_attack_option"
       ],
-      "operatorCount": 97,
-      "semanticHash": "b40b8e4ec327e9c95476efb0deaa33816c0ff45a5511cc2c9b5505a56c651e2f"
+      "operatorCount": 98,
+      "semanticHash": "4221298f710b9e46d19ac907d8afd2479af02c3ed8a959ee1c7e4ccb784de342"
     },
     "activation_end": {
       "hookKey": "activation_end",
@@ -13626,6 +13705,7 @@
         "shadow_bind_on_hit_status",
         "shadow_fire_hit_target_no_los_block",
         "smite_hit_mandatory_slam",
+        "spontaneous_combustion_continuous_effect_damage_dice_and_expiration",
         "thunderbolt_enemy_hit_d3_push_critical_knockdown",
         "tracer_rounds_first_weapon_attack_stealth_and_flare",
         "vortex_blast_direct_hit_radial_push_toward_before_damage",
@@ -13637,6 +13717,7 @@
         "batch_throw_on_hit",
         "chained_secondary_damage_on_direct_basic_attack_hit",
         "continuous_effect_on_hit",
+        "continuous_effects_expire_on_hit",
         "initial_attack_hit_sequence_placement_window",
         "initial_attack_hit_sequence_power_attack_window",
         "knockdown_optional_push_follow_on_hit",
@@ -13656,8 +13737,8 @@
         "terrain_feature_critical_explosion_trigger",
         "throw_on_hit"
       ],
-      "operatorCount": 60,
-      "semanticHash": "8eef6c0737b6b36ce2e41bbff94c979e474e19b74ad40f79bbefcfaa15b3302f"
+      "operatorCount": 61,
+      "semanticHash": "a9237cb970d3acfd742aa35f4accb59dae23a453707b71d7f0d70d6e5c2f083e"
     },
     "attack_modifier": {
       "hookKey": "attack_modifier",
@@ -13900,6 +13981,7 @@
         "siege_weapon_building_huge_damage_die_bonus",
         "sky_dropped_ignore_cover_flight_blast_suppression",
         "sniper_optional_fixed_one_damage_point",
+        "spontaneous_combustion_continuous_effect_damage_dice_and_expiration",
         "stir_the_blood_battle_plan_next_melee_damage_bonus",
         "sufferings_prayer_focus_refill_ranged_damage_lock_transfer_roll_explosion",
         "take_down_melee_disabled_no_tough_box_mandatory_rfp",
@@ -13920,8 +14002,8 @@
         "damage_roll_reroll_once",
         "target_armor_modifier"
       ],
-      "operatorCount": 64,
-      "semanticHash": "483f5ddfb1ea5fdf3a65aef54e67a1f38566a4483785c1f1baff72dde0d76780"
+      "operatorCount": 65,
+      "semanticHash": "f35c6877fad2447c444ba1b340e68d6ddf27dc9823559b778f4362b8741a332f"
     },
     "damage_removal_validation": {
       "hookKey": "damage_removal_validation",
@@ -72420,7 +72502,10 @@
       "fingerprintHashes": [
         "fb70babf4321aff3a9542b41726f42a91fad01ca356bd2965dcf9d0bfcb64721"
       ],
-      "mappedAtomKeys": [],
+      "mappedAtomKeys": [
+        "continuous_corrosion_on_hit_status",
+        "continuous_fire_on_hit_status"
+      ],
       "ambiguousSourceIdentity": false
     },
     "59e3e0cb-8c81-4de4-9812-ccdcf210cc6f": {
@@ -90442,7 +90527,9 @@
       "fingerprintHashes": [
         "85c80d6d5137720f7a1d4f446e10b1642269fd07366a1a49f904f892993f5a88"
       ],
-      "mappedAtomKeys": [],
+      "mappedAtomKeys": [
+        "spontaneous_combustion_continuous_effect_damage_dice_and_expiration"
+      ],
       "ambiguousSourceIdentity": false
     },
     "bbf677d9-72ab-4f13-a8d8-c397cd1dac6a": {
@@ -94359,7 +94446,10 @@
       "fingerprintHashes": [
         "baf5accfe5f529bad51e197288abf9fc143a9d641a00b9caad0293aa988a2475"
       ],
-      "mappedAtomKeys": [],
+      "mappedAtomKeys": [
+        "continuous_corrosion_on_hit_status",
+        "grievous_wounds_direct_hit_tough_and_damage_removal_lock"
+      ],
       "ambiguousSourceIdentity": false
     },
     "d103f5b9-eef9-4255-bd32-a39f0f6c19e6": {
@@ -108781,16 +108871,16 @@
     }
   },
   "counts": {
-    "atomCount": 378,
+    "atomCount": 380,
     "hookCount": 31,
     "cardCount": 1671,
     "ruleSourceCount": 3045,
-    "mappedRuleSourceCount": 471,
-    "unmappedRuleSourceCount": 2574,
+    "mappedRuleSourceCount": 474,
+    "unmappedRuleSourceCount": 2571,
     "distinctRuleFingerprintCount": 2956,
-    "explicitlyAtomMappedFingerprintCount": 446,
+    "explicitlyAtomMappedFingerprintCount": 449,
     "behaviorTokenCount": 56,
     "scenarioCount": 7
   },
-  "semanticIndexHash": "98f2ad5dd41cfb6d1f2df706a2bf65adaba8537e2b67b4a6e0184c184d203cd0"
+  "semanticIndexHash": "0970f22459b78199e8eddfd66470222bca98272abaa61ed5f2edeed1e6e3acde"
 }

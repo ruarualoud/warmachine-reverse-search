@@ -23,7 +23,13 @@ function cloneWithHash(index) {
 
 const reviewed = loadReviewedWarmachineRulesetSemanticIndexV1();
 const current = buildWarmachineRulesetSemanticIndexV1();
-const unchanged = compareWarmachineRulesetSemanticIndexesV1(reviewed, current);
+const reviewedImpact = compareWarmachineRulesetSemanticIndexesV1(reviewed, current);
+assert.equal(reviewedImpact.compatible, false);
+assert.equal(reviewedImpact.gates.checkpointResumeAllowed, false);
+assert.ok(reviewedImpact.hostSourcesChanged.includes(
+  "scripts/warmachine-rule-semantics-authority-v1.mjs",
+));
+const unchanged = compareWarmachineRulesetSemanticIndexesV1(current, current);
 assert.equal(unchanged.compatible, true, JSON.stringify(unchanged.changeClasses));
 assert.equal(unchanged.semanticDrift, false);
 assert.deepEqual(unchanged.requiredActions, []);
@@ -106,7 +112,8 @@ const evidence = {
   current: {
     semanticIndexHash: current.semanticIndexHash,
     counts: current.counts,
-    impact: unchanged,
+    reviewedImpact,
+    selfComparison: unchanged,
   },
   probes: {
     exactSemanticReuse: reuseImpact,
@@ -123,7 +130,8 @@ console.log(JSON.stringify({
   marker: "incremental_ruleset_change_impact_fail_closed_v20260811",
   semanticIndexHash: current.semanticIndexHash,
   counts: current.counts,
-  currentCompatible: unchanged.compatible,
+  reviewedBaselineInvalidated: !reviewedImpact.compatible,
+  deterministicSelfComparison: unchanged.compatible,
   exactReuseRequiresReview: reuseImpact.ruleSources.semanticReuseReviewSourceIds.length,
   unknownSemanticsFailClosed: !unknownImpact.gates.unknownNewSemanticsFailClosed,
   atomDriftInvalidatesWitnesses:

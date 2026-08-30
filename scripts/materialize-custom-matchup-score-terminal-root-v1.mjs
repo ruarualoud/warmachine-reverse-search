@@ -5,6 +5,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { loadWarmachineMatchupTemplateRoomV1 } from
+  "./load-matchup-template-room-v1.mjs";
+
 import { buildSepsiraSixSwarmVsFaneTaskV1 } from
   "../src/matchup/custom-matchup-task-v1.mjs";
 import { WARMACHINE_GENERIC_ROSTER_POOL_V1_SOURCE_HASH } from
@@ -21,8 +24,7 @@ import { buildWarmachineTerminalDemandRoutingEvidenceV1 } from
   "../src/matchup/terminal-demand-routing-evidence-v1.mjs";
 import { buildWarmachineTwoFrontsScoreTransitionPredecessorSeedV1 } from
   "../src/matchup/two-fronts-score-terminal-seed-v1.mjs";
-import { resolveWarmachineHostPath, warmachineHost } from
-  "../src/warmachine-host-runtime.mjs";
+import { warmachineHost } from "../src/warmachine-host-runtime.mjs";
 import { warmachineConstructionHost } from
   "../src/warmachine-construction-host-runtime.mjs";
 
@@ -131,14 +133,7 @@ const poolsByTaskSideKey = {
     pool.schemaVersion,
   ),
 };
-const baseDirectory = resolveWarmachineHostPath(
-  "build/warmachine-ai/sepsira-swarm-vs-fane-v20260805",
-);
-const roomStore = loadJson(path.join(baseDirectory, "local-layer3/state.json"));
-const templateRoom = roomStore.roomsById?.[
-  "room_f1823ced-bf71-4392-8669-c6330d237efb"
-];
-if (!templateRoom) throw new Error("matchup_score_terminal_map_template_missing");
+const { templateRoom } = loadWarmachineMatchupTemplateRoomV1();
 const baseTemplateHash = createHash("sha256").update(JSON.stringify({
   shapes: templateRoom.shapes,
   deployments: templateRoom.deployments,

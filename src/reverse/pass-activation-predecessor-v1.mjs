@@ -9,6 +9,10 @@ import { buildWarmachineReverseReachabilityCandidateSetV2 } from
 import { warmachineReverseStateSemanticHashV1 } from
   "./terminal-event-predecessor-v1.mjs";
 import { warmachinePieceInPlayV1 } from "./piece-lifecycle-v1.mjs";
+import {
+  auditWarmachineReverseStateBoundaryV1,
+  summarizeWarmachineReverseStateBoundaryAuditV1,
+} from "./reverse-state-invariants-v1.mjs";
 
 export const WARMACHINE_PASS_ACTIVATION_PREDECESSOR_V1_SCHEMA =
   "warmachine_pass_activation_predecessor_v1";
@@ -70,6 +74,21 @@ function passCompletionRoutes(
     });
     if (visited.has(visitKey)) continue;
     visited.add(visitKey);
+    const currentStateInvariantAudit = auditWarmachineReverseStateBoundaryV1(
+      current.state,
+      { boundaryKind: "pass_completion_boundary" },
+    );
+    if (!currentStateInvariantAudit.ok) {
+      unresolved.push({
+        stateHash,
+        reason: "pass_activation_completion_state_invariant_rejected",
+        stateInvariantAudit:
+          summarizeWarmachineReverseStateBoundaryAuditV1(
+            currentStateInvariantAudit,
+          ),
+      });
+      continue;
+    }
     if (stateHash === successorSemanticHash) {
       matching.push(current);
       continue;
@@ -220,13 +239,18 @@ export function generateWarmachinePassActivationPredecessorsV1(
   const successor = normalizeRulesV1State(successorStateInput);
   const successorSemanticHash = warmachineReverseStateSemanticHashV1(successor);
   const sideKey = String(rawOptions.sideKey || successor.activeSideKey || "");
+  const successorStateInvariantAudit = auditWarmachineReverseStateBoundaryV1(
+    successor,
+    { boundaryKind: "pass_inverse_successor" },
+  );
   const allActors = candidateActorKeys(successor, { ...rawOptions, sideKey });
   const maximumActorCandidates = Math.max(0, Math.floor(Number(
     rawOptions.maximumActorCandidates || 0,
   )));
-  const actors = maximumActorCandidates > 0
+  const budgetedActors = maximumActorCandidates > 0
     ? allActors.slice(0, maximumActorCandidates)
     : allActors;
+  const actors = successorStateInvariantAudit.ok ? budgetedActors : [];
   const candidates = [];
   const unresolved = (maximumActorCandidates > 0
     ? allActors.slice(maximumActorCandidates)
@@ -234,7 +258,16 @@ export function generateWarmachinePassActivationPredecessorsV1(
     actorPieceKey,
     reason: "pass_activation_actor_budget_deferred",
   }));
-  const rejected = [];
+  const rejected = successorStateInvariantAudit.ok ? [] : [{
+    reason: "reverse_predecessor_state_invariant_rejected",
+    boundaryKind: "pass_inverse_successor",
+    stateHash: successorSemanticHash,
+    stateInvariantAudit:
+      summarizeWarmachineReverseStateBoundaryAuditV1(
+        successorStateInvariantAudit,
+      ),
+    issues: successorStateInvariantAudit.issues,
+  }];
   for (const actorPieceKey of actors) {
     for (const preActivationResourcePoints of resourcePreimagePoints(
       successor,
@@ -246,6 +279,25 @@ export function generateWarmachinePassActivationPredecessorsV1(
         preActivationResourcePoints,
       );
       const predecessor = restored.state;
+      const predecessorStateInvariantAudit =
+        auditWarmachineReverseStateBoundaryV1(predecessor, {
+          boundaryKind: "pass_inverse_predecessor",
+        });
+      if (!predecessorStateInvariantAudit.ok) {
+        rejected.push({
+          actorPieceKey,
+          preActivationResourcePoints,
+          predecessorStateHash:
+            warmachineReverseStateSemanticHashV1(predecessor),
+          reason: "reverse_predecessor_state_invariant_rejected",
+          stateInvariantAudit:
+            summarizeWarmachineReverseStateBoundaryAuditV1(
+              predecessorStateInvariantAudit,
+            ),
+          issues: predecessorStateInvariantAudit.issues,
+        });
+        continue;
+      }
       const scoped = enumerateWarmachineBenchmarkActionsV2(predecessor, {
         actorPieceKeys: [actorPieceKey],
         actionFamilyKeys: ["timing"],
@@ -353,6 +405,10 @@ export function generateWarmachinePassActivationPredecessorsV1(
           oracleIntermediateStateRead: false,
           resourcePreimageSource: "preserve_successor_resource_points",
         },
+        predecessorStateInvariantAudit:
+          summarizeWarmachineReverseStateBoundaryAuditV1(
+            predecessorStateInvariantAudit,
+          ),
       };
       candidates.push({
         ...core,
@@ -383,6 +439,10 @@ export function generateWarmachinePassActivationPredecessorsV1(
     publicCandidates: stableGraphValue(publicCandidates),
     rejected: stableGraphValue(rejected),
     unresolved: stableGraphValue(unresolved),
+    successorStateInvariantAudit:
+      summarizeWarmachineReverseStateBoundaryAuditV1(
+        successorStateInvariantAudit,
+      ),
     budgets: { maximumActorCandidates },
     candidateSet,
     claimBoundary: "This inverse covers only an activation whose complete rules effect is the strict pass transition. It cannot absorb movement, attacks, resource changes, triggers, reactions or any other activation side effect.",
@@ -408,6 +468,42 @@ export function reverseWarmachinePassActivationSequenceV1(
   const sideKey = String(rawOptions.sideKey || root.activeSideKey || "");
   const maximumDepth = Math.max(0, Number(rawOptions.maximumDepth ?? root.pieces.length));
   const maximumStates = Math.max(1, Number(rawOptions.maximumStates ?? 10_000));
+  const rootStateInvariantAudit = auditWarmachineReverseStateBoundaryV1(root, {
+    boundaryKind: "pass_sequence_root",
+  });
+  if (!rootStateInvariantAudit.ok) {
+    const unresolved = stableGraphValue([{
+      stateHash: warmachineReverseStateSemanticHashV1(root),
+      depth: 0,
+      reason: "reverse_predecessor_state_invariant_rejected",
+      stateInvariantAudit:
+        summarizeWarmachineReverseStateBoundaryAuditV1(
+          rootStateInvariantAudit,
+        ),
+      issues: rootStateInvariantAudit.issues,
+    }]);
+    const core = {
+      schemaVersion: WARMACHINE_PASS_ACTIVATION_SEQUENCE_V1_SCHEMA,
+      sideKey,
+      rootStateHash: warmachineReverseStateSemanticHashV1(root),
+      visitedStateCount: 0,
+      boundaryCount: 0,
+      unresolvedCount: unresolved.length,
+      boundaries: [],
+      unresolved,
+      rootStateInvariantAudit:
+        summarizeWarmachineReverseStateBoundaryAuditV1(
+          rootStateInvariantAudit,
+        ),
+      claimBoundary: "The worklist rejects an illegal root before accepting an activation-start boundary. It reaches a boundary only when every alive model for the selected side can be reversed through an exact strict pass transition.",
+    };
+    return {
+      ...core,
+      runtimeBoundaries: [],
+      reportHash: stableGraphHash(stableGraphValue(core)),
+      ok: false,
+    };
+  }
   const queue = [{ state: root, depth: 0, reverseEdges: [] }];
   const seen = new Set([warmachineReverseStateSemanticHashV1(root)]);
   const boundaries = [];
@@ -483,6 +579,8 @@ export function reverseWarmachinePassActivationSequenceV1(
       reverseEdges: row.reverseEdges,
     })),
     unresolved: stableGraphValue(unresolved),
+    rootStateInvariantAudit:
+      summarizeWarmachineReverseStateBoundaryAuditV1(rootStateInvariantAudit),
     claimBoundary: "The worklist reaches an activation-start boundary only when every alive model for the selected side can be reversed through an exact strict pass transition. Any activation with side effects remains unresolved for a dedicated inverse operator.",
   };
   return {

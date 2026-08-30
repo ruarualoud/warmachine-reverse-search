@@ -1,4 +1,6 @@
 import { stableGraphHash, stableGraphValue } from "../graph/typed-facts-v2.mjs";
+import { buildWarmachineCompositeExecutionReceiptV1 } from
+  "../contracts/search-execution-receipt-v1.mjs";
 import { warmachineConstructionHost } from
   "../warmachine-construction-host-runtime.mjs";
 import { warmachineHost } from "../warmachine-host-runtime.mjs";
@@ -7,6 +9,8 @@ export const WARMACHINE_MATCHUP_TERMINAL_ROOT_BATCH_PLAN_V1_SCHEMA =
   "warmachine_matchup_terminal_root_batch_plan_v1";
 export const WARMACHINE_MATCHUP_TERMINAL_ROOT_BATCH_CHECKPOINT_V1_SCHEMA =
   "warmachine_matchup_terminal_root_batch_checkpoint_v1";
+export const WARMACHINE_MATCHUP_TERMINAL_TASK_SEARCH_PROGRESS_V1_SCHEMA =
+  "warmachine_matchup_terminal_task_search_progress_v1";
 
 export const WARMACHINE_MATCHUP_TERMINAL_ROOT_DISPOSITIONS_V1 = Object.freeze([
   "strict_materialized",
@@ -22,6 +26,12 @@ const FAMILY_ORDER = Object.freeze({
   scenario_score_threshold: 1,
   simultaneous_leader_tiebreak: 2,
   fixed_round_tiebreak: 3,
+});
+
+const CURRENT_EXECUTION_RECEIPT = buildWarmachineCompositeExecutionReceiptV1({
+  hostReceipt: warmachineHost.receipt,
+  constructionHostReceipt: warmachineConstructionHost.receipt,
+  focusedEngineReceipt: warmachineHost.focusedSourceReceipt,
 });
 
 function numeric(value, fallback = 0) {
@@ -269,6 +279,8 @@ function planReceipts(raw = {}) {
     hostReceiptHash: warmachineHost.receipt.receiptHash,
     constructionHostReceiptHash: warmachineConstructionHost.receipt.receiptHash,
     forceBuilderSourceHash: String(pool.source?.forceBuilderSourceHash || ""),
+    executionSemanticReceipt: CURRENT_EXECUTION_RECEIPT,
+    executionSemanticReceiptHash: CURRENT_EXECUTION_RECEIPT.executionReceiptHash,
   });
 }
 
@@ -577,6 +589,7 @@ export function buildWarmachineMatchupTerminalRootBatchPlanV1(raw = {}) {
       executionEnvelopeHash: executionEnvelope.executionEnvelopeHash,
       hostReceiptHash: warmachineHost.receipt.receiptHash,
       constructionHostReceiptHash: warmachineConstructionHost.receipt.receiptHash,
+      executionSemanticReceiptHash: CURRENT_EXECUTION_RECEIPT.executionReceiptHash,
     });
     const taskKey = `matchup-terminal-task-${stableGraphHash(identity).slice(0, 32)}`;
     if (selectedTaskKeys.has(taskKey)) {
@@ -753,6 +766,70 @@ function checkpointCore(checkpoint = {}) {
   return stableGraphValue(core);
 }
 
+export function buildWarmachineMatchupTerminalTaskSearchProgressV1(raw = {}) {
+  const materializerProgress = stableGraphValue(raw.materializerProgress || {});
+  const materializerCore = { ...materializerProgress };
+  const materializerProgressHash = String(
+    materializerCore.progressHash || "",
+  );
+  delete materializerCore.progressHash;
+  if (!materializerProgressHash ||
+      stableGraphHash(materializerCore) !== materializerProgressHash) {
+    throw new Error("matchup_terminal_task_materializer_progress_hash_invalid");
+  }
+  const core = stableGraphValue({
+    schemaVersion: WARMACHINE_MATCHUP_TERMINAL_TASK_SEARCH_PROGRESS_V1_SCHEMA,
+    taskKey: String(raw.taskKey || ""),
+    behaviorSignatureHash: String(raw.behaviorSignatureHash || ""),
+    goalFamily: String(raw.goalFamily || ""),
+    executionSemanticReceiptHash: String(
+      raw.executionSemanticReceiptHash || "",
+    ),
+    materializerProgress,
+    materializerProgressHash,
+  });
+  if (!core.taskKey || !core.behaviorSignatureHash || !core.goalFamily ||
+      !core.executionSemanticReceiptHash) {
+    throw new Error("matchup_terminal_task_search_progress_identity_missing");
+  }
+  return { ...core, searchProgressHash: stableGraphHash(core) };
+}
+
+export function auditWarmachineMatchupTerminalTaskSearchProgressV1(
+  progress = {},
+  task = {},
+  plan = {},
+) {
+  const issues = [];
+  const { searchProgressHash, ...core } = progress;
+  if (progress.schemaVersion !==
+      WARMACHINE_MATCHUP_TERMINAL_TASK_SEARCH_PROGRESS_V1_SCHEMA ||
+      !searchProgressHash || stableGraphHash(core) !== searchProgressHash) {
+    issues.push("batch_task_search_progress_hash_invalid");
+  }
+  const materializerCore = { ...(progress.materializerProgress || {}) };
+  const materializerProgressHash = String(materializerCore.progressHash || "");
+  delete materializerCore.progressHash;
+  if (!materializerProgressHash ||
+      stableGraphHash(materializerCore) !== materializerProgressHash ||
+      progress.materializerProgressHash !== materializerProgressHash) {
+    issues.push("batch_task_materializer_progress_hash_invalid");
+  }
+  if (progress.taskKey !== task.taskKey ||
+      progress.behaviorSignatureHash !== task.behaviorSignatureHash ||
+      progress.executionSemanticReceiptHash !==
+        plan.receipts?.executionSemanticReceiptHash ||
+      progress.goalFamily !== (plan.groupPlans || []).find((group) =>
+        group.groupKey === task.groupKey)?.goalFamily) {
+    issues.push("batch_task_search_progress_binding_invalid");
+  }
+  return stableGraphValue({
+    ok: issues.length === 0,
+    issues: [...new Set(issues)].sort(),
+    searchProgressHash: String(searchProgressHash || ""),
+  });
+}
+
 function checkpointCounts(tasks = []) {
   return stableGraphValue({
     queued: tasks.filter((row) => row.status === "queued").length,
@@ -804,6 +881,7 @@ export function buildWarmachineMatchupTerminalRootBatchCheckpointV1(
       status: "queued",
       lease: null,
       result: null,
+      searchProgress: null,
       takeoverCount: 0,
     })),
   });
@@ -840,6 +918,22 @@ export function auditWarmachineMatchupTerminalRootBatchCheckpointV1(
       warmachineConstructionHost.receipt.receiptHash) {
     issues.push("batch_checkpoint_construction_host_receipt_drift");
   }
+  if (plan.receipts?.executionSemanticReceiptHash !==
+      CURRENT_EXECUTION_RECEIPT.executionReceiptHash) {
+    issues.push("batch_plan_execution_semantics_drift");
+  }
+  if (stableGraphHash(plan.receipts?.executionSemanticReceipt || {}) !==
+      stableGraphHash(CURRENT_EXECUTION_RECEIPT)) {
+    issues.push("batch_plan_execution_semantic_receipt_mismatch");
+  }
+  if (checkpoint.receipts?.executionSemanticReceiptHash !==
+      CURRENT_EXECUTION_RECEIPT.executionReceiptHash) {
+    issues.push("batch_checkpoint_execution_semantics_drift");
+  }
+  if (stableGraphHash(checkpoint.receipts?.executionSemanticReceipt || {}) !==
+      stableGraphHash(CURRENT_EXECUTION_RECEIPT)) {
+    issues.push("batch_checkpoint_execution_semantic_receipt_mismatch");
+  }
   const planTasks = new Map((plan.selectedTasks || []).map((row) => [row.taskKey, row]));
   const checkpointKeys = new Set();
   for (const task of checkpoint.tasks || []) {
@@ -858,6 +952,16 @@ export function auditWarmachineMatchupTerminalRootBatchCheckpointV1(
       issues.push("batch_checkpoint_task_status_invalid");
       continue;
     }
+    if (task.searchProgress) {
+      const progressAudit = auditWarmachineMatchupTerminalTaskSearchProgressV1(
+        task.searchProgress,
+        planned,
+        plan,
+      );
+      if (!progressAudit.ok) {
+        issues.push(...progressAudit.issues);
+      }
+    }
     if (task.status === "queued" && (task.lease !== null || task.result !== null)) {
       issues.push("batch_checkpoint_queued_task_state_invalid");
     }
@@ -871,7 +975,7 @@ export function auditWarmachineMatchupTerminalRootBatchCheckpointV1(
     if (task.status === "completed") {
       const result = task.result || {};
       const { resultHash, ...resultCore } = result;
-      if (task.lease !== null || !resultHash ||
+      if (task.lease !== null || task.searchProgress !== null || !resultHash ||
           stableGraphHash(resultCore) !== resultHash ||
           result.taskKey !== task.taskKey ||
           result.representativeSubcellKey !== task.representativeSubcellKey ||
@@ -879,7 +983,9 @@ export function auditWarmachineMatchupTerminalRootBatchCheckpointV1(
           result.disposition === "budget_deferred" ||
           result.hostReceiptHash !== warmachineHost.receipt.receiptHash ||
           result.constructionHostReceiptHash !==
-            warmachineConstructionHost.receipt.receiptHash) {
+            warmachineConstructionHost.receipt.receiptHash ||
+          result.executionSemanticReceiptHash !==
+            CURRENT_EXECUTION_RECEIPT.executionReceiptHash) {
         issues.push("batch_checkpoint_completed_task_result_invalid");
       }
     }
@@ -967,7 +1073,7 @@ export function acquireWarmachineMatchupTerminalRootBatchLeaseV1(
   };
 }
 
-export function recordWarmachineMatchupTerminalRootBatchResultsV1(
+export function recordWarmachineMatchupTerminalRootBatchWorkerUpdatesV1(
   checkpoint = {},
   plan = {},
   raw = {},
@@ -978,6 +1084,7 @@ export function recordWarmachineMatchupTerminalRootBatchResultsV1(
   const workerId = String(raw.workerId || "");
   if (!workerId) throw new Error("matchup_terminal_batch_worker_id_required");
   const resultRows = raw.results || [];
+  const progressRows = raw.progressUpdates || [];
   const resultByTaskKey = new Map(resultRows.map((result) => [
     String(result.taskKey || ""),
     result,
@@ -985,17 +1092,48 @@ export function recordWarmachineMatchupTerminalRootBatchResultsV1(
   if (resultByTaskKey.size !== resultRows.length || resultByTaskKey.has("")) {
     throw new Error("matchup_terminal_batch_result_keys_invalid");
   }
+  const progressByTaskKey = new Map(progressRows.map((progress) => [
+    String(progress.taskKey || ""),
+    progress,
+  ]));
+  if (progressByTaskKey.size !== progressRows.length ||
+      progressByTaskKey.has("") || [...progressByTaskKey.keys()].some((taskKey) =>
+        resultByTaskKey.has(taskKey))) {
+    throw new Error("matchup_terminal_batch_progress_keys_invalid");
+  }
   const allowed = new Set(WARMACHINE_MATCHUP_TERMINAL_ROOT_DISPOSITIONS_V1);
   const tasks = structuredClone(checkpoint.tasks || []);
+  const plannedByTaskKey = new Map((plan.selectedTasks || []).map((task) => [
+    task.taskKey,
+    task,
+  ]));
   const nowMs = numeric(raw.nowMs);
   for (const task of tasks) {
     const result = resultByTaskKey.get(task.taskKey);
-    if (!result) continue;
+    const progress = progressByTaskKey.get(task.taskKey);
+    if (!result && !progress) continue;
     if (task.status !== "leased" || task.lease?.workerId !== workerId) {
-      throw new Error(`matchup_terminal_batch_result_lease_mismatch:${task.taskKey}`);
+      throw new Error(`matchup_terminal_batch_worker_update_lease_mismatch:${
+        task.taskKey}`);
     }
     if (numeric(task.lease?.expiresAtMs) <= nowMs) {
-      throw new Error(`matchup_terminal_batch_result_lease_expired:${task.taskKey}`);
+      throw new Error(`matchup_terminal_batch_worker_update_lease_expired:${
+        task.taskKey}`);
+    }
+    if (progress) {
+      const progressAudit = auditWarmachineMatchupTerminalTaskSearchProgressV1(
+        progress,
+        plannedByTaskKey.get(task.taskKey),
+        plan,
+      );
+      if (!progressAudit.ok) {
+        throw new Error(`matchup_terminal_batch_progress_invalid:${
+          task.taskKey}:${progressAudit.issues.join(",")}`);
+      }
+      task.status = "queued";
+      task.searchProgress = stableGraphValue(progress);
+      task.lease = null;
+      continue;
     }
     if (!allowed.has(result.disposition) || result.disposition === "budget_deferred") {
       throw new Error(`matchup_terminal_batch_result_disposition_invalid:${
@@ -1010,6 +1148,12 @@ export function recordWarmachineMatchupTerminalRootBatchResultsV1(
         `matchup_terminal_batch_result_construction_host_receipt_drift:${task.taskKey}`,
       );
     }
+    if (String(result.executionSemanticReceiptHash || "") !==
+        CURRENT_EXECUTION_RECEIPT.executionReceiptHash) {
+      throw new Error(
+        `matchup_terminal_batch_result_execution_semantics_drift:${task.taskKey}`,
+      );
+    }
     const publicResult = stableGraphValue({
       taskKey: task.taskKey,
       disposition: result.disposition,
@@ -1018,17 +1162,23 @@ export function recordWarmachineMatchupTerminalRootBatchResultsV1(
       reportHash: String(result.reportHash || ""),
       hostReceiptHash: result.hostReceiptHash,
       constructionHostReceiptHash: result.constructionHostReceiptHash,
+      executionSemanticReceiptHash: result.executionSemanticReceiptHash,
       representativeSubcellKey: task.representativeSubcellKey,
       completedByWorkerId: workerId,
       completedAtMs: nowMs,
     });
     task.status = "completed";
     task.result = { ...publicResult, resultHash: stableGraphHash(publicResult) };
+    task.searchProgress = null;
     task.lease = null;
   }
-  for (const taskKey of resultByTaskKey.keys()) {
+  for (const taskKey of [
+    ...resultByTaskKey.keys(),
+    ...progressByTaskKey.keys(),
+  ]) {
     if (!tasks.some((task) => task.taskKey === taskKey)) {
-      throw new Error(`matchup_terminal_batch_result_unknown_task:${taskKey}`);
+      throw new Error(`matchup_terminal_batch_worker_update_unknown_task:${
+        taskKey}`);
     }
   }
   return sealCheckpoint({
@@ -1037,6 +1187,30 @@ export function recordWarmachineMatchupTerminalRootBatchResultsV1(
     updatedAtMs: nowMs,
     tasks,
   });
+}
+
+export function recordWarmachineMatchupTerminalRootBatchResultsV1(
+  checkpoint = {},
+  plan = {},
+  raw = {},
+) {
+  try {
+    return recordWarmachineMatchupTerminalRootBatchWorkerUpdatesV1(
+      checkpoint,
+      plan,
+      { ...raw, progressUpdates: [] },
+    );
+  } catch (error) {
+    const message = String(error?.message || error)
+      .replace("matchup_terminal_batch_worker_update_lease_mismatch",
+        "matchup_terminal_batch_result_lease_mismatch")
+      .replace("matchup_terminal_batch_worker_update_lease_expired",
+        "matchup_terminal_batch_result_lease_expired")
+      .replace("matchup_terminal_batch_worker_update_unknown_task",
+        "matchup_terminal_batch_result_unknown_task");
+    if (message === String(error?.message || error)) throw error;
+    throw new Error(message);
+  }
 }
 
 export function refreshWarmachineMatchupTerminalRootBatchPinnedResultsV1(
@@ -1074,8 +1248,23 @@ export function refreshWarmachineMatchupTerminalRootBatchPinnedResultsV1(
         String(result.hostReceiptHash || "") !== warmachineHost.receipt.receiptHash ||
         String(result.constructionHostReceiptHash || "") !==
           warmachineConstructionHost.receipt.receiptHash ||
+        String(result.executionSemanticReceiptHash || "") !==
+          CURRENT_EXECUTION_RECEIPT.executionReceiptHash ||
         !String(result.reportHash || "")) {
       throw new Error(`matchup_terminal_batch_pinned_refresh_result_invalid:${taskKey}`);
+    }
+    const independentReplay = result.independentReplay || {};
+    const { replayHash, ...replayCore } = independentReplay;
+    if (independentReplay.passed !== true ||
+        String(independentReplay.executionSemanticReceiptHash || "") !==
+          CURRENT_EXECUTION_RECEIPT.executionReceiptHash ||
+        String(independentReplay.sourceReportHash || "") !== result.reportHash ||
+        String(independentReplay.replayedReportHash || "") !== result.reportHash ||
+        !String(independentReplay.strictReceiptHash || "") ||
+        !String(replayHash || "") || stableGraphHash(replayCore) !== replayHash) {
+      throw new Error(
+        `matchup_terminal_batch_pinned_refresh_independent_replay_invalid:${taskKey}`,
+      );
     }
     if (task.result?.reportHash === result.reportHash) continue;
     const publicResult = stableGraphValue({
@@ -1086,6 +1275,8 @@ export function refreshWarmachineMatchupTerminalRootBatchPinnedResultsV1(
       reportHash: String(result.reportHash),
       hostReceiptHash: result.hostReceiptHash,
       constructionHostReceiptHash: result.constructionHostReceiptHash,
+      executionSemanticReceiptHash: result.executionSemanticReceiptHash,
+      independentReplay,
       representativeSubcellKey: task.representativeSubcellKey,
       completedByWorkerId: String(raw.workerId || "strict-seed-reconcile"),
       completedAtMs: numeric(raw.nowMs),

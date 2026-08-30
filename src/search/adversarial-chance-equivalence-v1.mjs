@@ -10,6 +10,19 @@ function integerString(value, fieldName) {
 }
 
 function responseSemanticRow(response = {}) {
+  const postResponseOutcomes = (response.postResponseOutcomes || []).map((outcome) => ({
+    classKey: String(outcome.classKey || ""),
+    probabilityNumerator: String(outcome.probabilityNumerator ?? ""),
+    probabilityDenominator: String(outcome.probabilityDenominator ?? ""),
+    transitionAccepted: outcome.transitionAccepted === true,
+    reason: outcome.transitionAccepted === true ? "" : String(outcome.reason || ""),
+    resultStateHash: outcome.transitionAccepted === true
+      ? String(outcome.resultStateHash || "")
+      : "",
+    outcome: String(outcome.outcome || "continue"),
+    outcomeReason: String(outcome.outcomeReason || ""),
+    terminalEvents: stableGraphValue(outcome.terminalEvents || []),
+  })).sort((left, right) => left.classKey.localeCompare(right.classKey));
   return {
     responseKey: String(response.responseKey || ""),
     actionKey: String(response.actionKey || ""),
@@ -23,6 +36,8 @@ function responseSemanticRow(response = {}) {
     outcome: String(response.outcome || "continue"),
     outcomeReason: String(response.outcomeReason || ""),
     terminalEvents: stableGraphValue(response.terminalEvents || []),
+    postResponseChanceExactComplete: response.postResponseChanceExactComplete !== false,
+    postResponseOutcomes,
   };
 }
 
@@ -68,6 +83,13 @@ export function groupWarmachineAdversarialChanceClassesV1(
         transitionAccepted: response.transitionAccepted === true,
         resultStateHash: String(response.resultStateHash || ""),
         reason: String(response.reason || ""),
+        postResponseOutcomes: (response.postResponseOutcomes || []).map((outcome) => ({
+          classKey: String(outcome.classKey || ""),
+          receiptHash: String(outcome.receiptHash || ""),
+          transitionAccepted: outcome.transitionAccepted === true,
+          resultStateHash: String(outcome.resultStateHash || ""),
+          reason: String(outcome.reason || ""),
+        })),
       }))),
     };
     if (existing) {
@@ -110,7 +132,7 @@ export function groupWarmachineAdversarialChanceClassesV1(
     groupedMassNumerator: String(groupedMassNumerator),
     massConserved: inputMassNumerator === groupedMassNumerator,
     groups,
-    claimBoundary: "Chance classes merge only when their complete owner-aware response vectors have identical strict acceptance, successor state hashes, terminal classifications and terminal events. Receipt evidence and original class identities remain attached but do not prevent reuse of an identical continuation.",
+    claimBoundary: "Chance classes merge only when their complete owner-aware response vectors, including every response-owned post-response Chance distribution, have identical strict acceptance, successor state hashes, terminal classifications and terminal events. Receipt evidence and original class identities remain attached but do not prevent reuse of an identical continuation.",
   };
   return {
     ...core,

@@ -314,7 +314,7 @@ function destroyedLeaderSide(state = {}) {
 }
 
 export function evaluateWarmachineMatchupState(inputState, options = {}) {
-  const state = inputState?.schemaVersion ? inputState : normalizeRulesV1State(inputState);
+  const state = normalizeRulesV1State(inputState);
   const perspectiveSideKey = String(options.perspectiveSideKey || state.activeSideKey || "player1");
   const opponentSideKey = perspectiveSideKey === "player2" ? "player1" : "player2";
   const explicitWinnerSideKey = String(options.terminalWinnerSideKey || "");
@@ -420,7 +420,7 @@ function runtimeWindowActorPieceKeys(state = {}) {
 }
 
 export function buildWarmachineActivationGroups(inputState) {
-  const state = inputState?.schemaVersion ? inputState : normalizeRulesV1State(inputState);
+  const state = normalizeRulesV1State(inputState);
   const groups = new Map();
   for (const piece of state.pieces) {
     if (piece.sideKey !== state.activeSideKey || !alive(piece) || piece.activated === true) continue;

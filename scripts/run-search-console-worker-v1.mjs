@@ -185,6 +185,8 @@ function searchOptions(seed, prepared, config) {
     ),
     activationGroupOrderKeys,
     activationGroupOrderKeysBySide,
+    prioritizeControlResourceDependencies:
+      config.prioritizeControlResourceDependencies !== false,
     activationFrontierOrder: "best_first_to_deployment",
     includeMovement: config.includeMovement === true,
     includePass: true,

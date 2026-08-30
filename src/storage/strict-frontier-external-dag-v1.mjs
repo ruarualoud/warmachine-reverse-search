@@ -193,29 +193,36 @@ export function persistWarmachineStrictFrontierExternalDagV1(
     if (label.expansion?.expansionType !== "chance") continue;
     for (const group of label.expansion.groups || []) {
       for (const response of group.responses || []) {
-        const edge = edgeByKey.get(response.edgeKey);
-        if (!edge) {
-          throw new Error(`strict_frontier_chance_edge_missing:${response.edgeKey}`);
-        }
-        for (const classEvidence of group.classEvidence || []) {
-          const responseEvidence = (classEvidence.responseEvidence || []).find((candidate) =>
-            candidate.responseKey === response.responseKey);
-          const chanceId = persistVersionedContent("chance", {
-            schemaVersion: "warmachine_strict_frontier_chance_payload_v2",
-            eventId: `${label.labelKey}:${label.expansion.actionKey}`,
-            adversarialChanceGroupKey: group.groupKey,
-            chanceClassKey: classEvidence.chanceClassKey,
-            responseKey: response.responseKey,
-            probabilityNumerator: classEvidence.numerator,
-            probabilityDenominator: classEvidence.denominator,
-            incomingRouteLabelId: labelIdByKey.get(label.labelKey) || "",
-            outgoingEdgeId: edgeIdByKey.get(response.edgeKey) || "",
-            strictReceiptId: receiptIdByHash.get(responseEvidence?.receiptHash || "") || "",
-            strictRollOutcome: classEvidence.strictRollOutcome,
-            massSemantics: "chance_mass_is_conditional_inside_one_owner_response_context",
-          });
-          chanceIds.add(chanceId);
-          chanceContributionCount += 1;
+        for (const branch of response.branches || []) {
+          const edge = edgeByKey.get(branch.edgeKey);
+          if (!edge) {
+            throw new Error(`strict_frontier_chance_edge_missing:${branch.edgeKey}`);
+          }
+          for (const classEvidence of group.classEvidence || []) {
+            const responseEvidence = (classEvidence.responseEvidence || []).find((candidate) =>
+              candidate.responseKey === response.responseKey);
+            const postResponseEvidence = (responseEvidence?.postResponseOutcomes || []).find((candidate) =>
+              candidate.classKey === branch.postResponseChanceClassKey);
+            const chanceId = persistVersionedContent("chance", {
+              schemaVersion: "warmachine_strict_frontier_chance_payload_v3",
+              eventId: `${label.labelKey}:${label.expansion.actionKey}`,
+              adversarialChanceGroupKey: group.groupKey,
+              chanceClassKey: classEvidence.chanceClassKey,
+              responseKey: response.responseKey,
+              postResponseChanceClassKey: branch.postResponseChanceClassKey,
+              primaryProbabilityNumerator: classEvidence.numerator,
+              primaryProbabilityDenominator: classEvidence.denominator,
+              postResponseProbabilityNumerator: branch.conditionalProbability?.numerator || "1",
+              postResponseProbabilityDenominator: branch.conditionalProbability?.denominator || "1",
+              incomingRouteLabelId: labelIdByKey.get(label.labelKey) || "",
+              outgoingEdgeId: edgeIdByKey.get(branch.edgeKey) || "",
+              strictReceiptId: receiptIdByHash.get(postResponseEvidence?.receiptHash || "") || "",
+              strictRollOutcome: classEvidence.strictRollOutcome,
+              massSemantics: "primary_chance_then_owned_response_then_conditional_post_response_chance",
+            });
+            chanceIds.add(chanceId);
+            chanceContributionCount += 1;
+          }
         }
       }
     }

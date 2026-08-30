@@ -5,6 +5,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { loadWarmachineMatchupTemplateRoomV1 } from
+  "./load-matchup-template-room-v1.mjs";
+
 import { stableGraphHash } from "../src/graph/typed-facts-v2.mjs";
 import { buildSepsiraSixSwarmVsFaneTaskV1 } from
   "../src/matchup/custom-matchup-task-v1.mjs";
@@ -22,10 +25,7 @@ import { buildWarmachineTerminalDemandRoutingEvidenceV1 } from
   "../src/matchup/terminal-demand-routing-evidence-v1.mjs";
 import { compileWarmachineTaskRosterUniverseV1 } from
   "../src/matchup/task-roster-universe-v1.mjs";
-import {
-  resolveWarmachineHostPath,
-  warmachineHost,
-} from "../src/warmachine-host-runtime.mjs";
+import { warmachineHost } from "../src/warmachine-host-runtime.mjs";
 import { warmachineConstructionHost } from
   "../src/warmachine-construction-host-runtime.mjs";
 
@@ -183,15 +183,8 @@ if (!subjectRoster || !challengerRoster) {
   throw new Error("matchup_terminal_source_roster_missing");
 }
 
-const baseDirectory = resolveWarmachineHostPath(
-  "build/warmachine-ai/sepsira-swarm-vs-fane-v20260805",
-);
-const roomStorePath = path.join(baseDirectory, "local-layer3/state.json");
-const loadedRoomStore = loadJsonWithHash(roomStorePath);
-const templateRoom = loadedRoomStore.value.roomsById?.[
-  "room_f1823ced-bf71-4392-8669-c6330d237efb"
-];
-if (!templateRoom) throw new Error("matchup_terminal_opening_template_room_missing");
+const { loadedRoomStore, templateRoom } =
+  loadWarmachineMatchupTemplateRoomV1();
 const templateHash = stableGraphHash({
   roomStoreContentHash: loadedRoomStore.contentHash,
   roomId: templateRoom.id,

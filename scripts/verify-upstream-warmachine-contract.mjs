@@ -18,6 +18,7 @@ for (const relativePath of [
   "scripts/warmachine-rules-v1.mjs",
   "scripts/warmachine-special-rules-v0.mjs",
   "scripts/warmachine-rule-atoms-v1.mjs",
+  "scripts/warmachine-rule-semantics-authority-v1.mjs",
   "scripts/warmachine-steamroller-2026-v1.mjs",
 ]) {
   assert.match(host.receipt.sourceHashes[relativePath] || "", /^[0-9a-f]{64}$/,
@@ -34,6 +35,11 @@ assert.ok(hooks.length >= atoms.length);
 const atomValidation = host.atoms.validateWarmachineRuleAtomRegistry();
 assert.equal(atomValidation.ok, true);
 assert.equal(typeof host.probability.warmachineExactPrimaryAttackTerminalProbability, "function");
+assert.match(host.ruleSemanticsAuthority.authorityReceiptHash, /^[0-9a-f]{64}$/);
+assert.equal(host.ruleSemanticsAuthority.verdict.globalStrictReady, false);
+assert.equal(host.ruleSemanticsAuthority.verdict.strictExecutorReady, false);
+assert.equal(host.ruleSemanticsAuthority.quarantine.active, true);
+assert.ok(host.ruleSemanticsAuthority.failClosedReasons.length > 0);
 
 const legacy = await loadLegacyReverseSearchModules();
 assert.equal(legacy.migrationOnly, true);
@@ -59,6 +65,9 @@ console.log(JSON.stringify({
     atomCount: atoms.length,
     hookOperatorCount: hooks.length,
     steamroller2026ScenarioCount: host.steamroller.steamroller2026ScenarioProfiles().length,
+    globalStrictReady: host.ruleSemanticsAuthority.verdict.globalStrictReady,
+    ruleSemanticsAuthorityReceiptHash:
+      host.ruleSemanticsAuthority.authorityReceiptHash,
   },
   migrationBridge: {
     migrationOnly: legacy.migrationOnly,

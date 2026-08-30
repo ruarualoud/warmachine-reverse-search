@@ -31,6 +31,21 @@ function piece(overrides = {}) {
   };
 }
 
+function lifeSpiralDamage() {
+  const aspectKeys = ["mind", "body", "spirit"];
+  const lifeSpiralRows = Array.from({ length: 9 }, (_entry, rowIndex) =>
+    Array.from({ length: 3 }, () => ({
+      systemKey: aspectKeys[Math.floor(rowIndex / 3)],
+      marked: false,
+    })));
+  return {
+    boxesRemaining: 27,
+    maxBoxes: 27,
+    systems: { mind: 9, body: 9, spirit: 9 },
+    lifeSpiralRows,
+  };
+}
+
 const state = {
   stateKey: "strict-action-and-min-damage-transfer-v2",
   activeSideKey: "player2",
@@ -63,8 +78,7 @@ const state = {
       resourceMax: 4,
       controllerPieceKey: "defender-lock",
       battlegroupId: "defender-bg",
-      boxesRemaining: 100,
-      maxBoxes: 100,
+      damage: lifeSpiralDamage(),
     }),
     piece({
       pieceKey: "attacker",

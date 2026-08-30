@@ -77,6 +77,16 @@ function rangedRows(ruleState, actorPieceKey, targetPieceKey) {
   };
 }
 
+function attackRows(ruleState, actorPieceKey, targetPieceKey, actionType) {
+  const enumeration = enumerateRulesV1Actions(ruleState);
+  const matches = (row) => row.actionType === actionType &&
+    row.actorPieceKey === actorPieceKey && row.targetPieceKey === targetPieceKey;
+  return {
+    action: (enumeration.actions || []).find(matches),
+    rejected: (enumeration.rejectedActions || []).find(matches),
+  };
+}
+
 const shooter = model({
   pieceKey: "shooter",
   position: { xIn: 4, yIn: 12 },
@@ -102,6 +112,60 @@ assert.equal(stealthTransition.nextState.pieces.find((piece) =>
   piece.pieceKey === stealthTarget.pieceKey).damage.boxesRemaining, beforeBoxes);
 assert.ok(stealthTransition.events.some((event) =>
   event.eventType === "strict_automatic_miss_outcome_applied"));
+
+const stealthAtFiveTarget = {
+  ...stealthTarget,
+  pieceKey: "stealth-target-at-five",
+  position: { xIn: 10.18, yIn: 12 },
+};
+const stealthAtFiveState = state([shooter, stealthAtFiveTarget], [], "host-authority-stealth-at-five");
+const stealthAtFive = rangedRows(stealthAtFiveState, shooter.pieceKey, stealthAtFiveTarget.pieceKey);
+assert.ok(stealthAtFive.action);
+assert.equal(stealthAtFive.action.metadata?.attackResolution?.automaticMiss, false,
+  "Stealth's greater-than-five boundary is open at exactly 5 inches");
+
+const sprayShooter = model({
+  ...shooter,
+  pieceKey: "spray-shooter",
+  attackProfiles: [{ ...rifle, profileKey: "host-authority-spray", name: "Host Authority Spray", isSpray: true }],
+});
+const sprayState = state([sprayShooter, stealthTarget], [], "host-authority-spray-stealth");
+const spray = rangedRows(sprayState, sprayShooter.pieceKey, stealthTarget.pieceKey);
+assert.ok(spray.action);
+assert.equal(spray.action.metadata?.attackResolution?.automaticMiss, false);
+assert.equal(spray.action.metadata?.attackResolution?.automaticHitMissResolution?.outcome, "attack_roll");
+const sprayTransition = applyRulesV1Action(sprayState, {
+  actionKey: spray.action.actionKey,
+  strictRollOutcome: { attackDice: [6, 6], damageDice: [1, 1], damageColumn: 1 },
+});
+assert.equal(sprayTransition.ok, true, sprayTransition.reason || "Spray ignores Stealth apply");
+
+const arcaneShooter = model({
+  ...shooter,
+  pieceKey: "arcane-shooter",
+  modelRole: "warcaster",
+  modelType: "warcaster",
+  resourceKind: "focus",
+  resourcePoints: 5,
+  resourceMax: 7,
+  arc: 7,
+  attackProfiles: [{
+    profileKey: "host-authority-arcane",
+    name: "Host Authority Arcane Attack",
+    mode: "spell",
+    rangeIn: 20,
+    power: 10,
+    cost: 1,
+    attackStatKind: "ARC",
+    attackStat: 7,
+  }],
+});
+const arcaneState = state([arcaneShooter, stealthTarget], [], "host-authority-arcane-stealth");
+const arcane = attackRows(arcaneState, arcaneShooter.pieceKey, stealthTarget.pieceKey, "offensive_spell");
+assert.ok(arcane.action);
+assert.equal(arcane.action.metadata?.attackResolution?.automaticMiss, true);
+const arcaneTransition = applyRulesV1Action(arcaneState, { actionKey: arcane.action.actionKey });
+assert.equal(arcaneTransition.ok, true, arcaneTransition.reason || "Arcane Stealth automatic miss apply");
 
 const trueSightShooter = {
   ...shooter,
@@ -132,6 +196,10 @@ const terrainBlockedState = state([shooter, stealthTarget], [{
   heightIn: 4,
   blocksLineOfSight: true,
   blocksMovement: false,
+  baseElevationIn: 0,
+  baseElevationMapped: true,
+  verticalHeightIn: 4,
+  verticalHeightMapped: true,
   exactWithinScope: true,
 }], "host-authority-terrain-los");
 const terrainBlocked = rangedRows(
@@ -176,12 +244,18 @@ console.log(JSON.stringify({
   hostOwns: [
     "legal_action_enumeration",
     "stealth_resolution",
+    "stealth_distance_boundary",
+    "spray_ignores_stealth",
+    "arcane_stealth_resolution",
     "true_sight_interaction",
     "terrain_line_of_sight",
     "model_line_of_sight",
     "strict_transition",
   ],
   stealthAttackLegalAutomaticMiss: true,
+  stealthExactlyFiveUsesAttackRoll: true,
+  sprayIgnoresStealthAndExecutes: true,
+  arcaneAttackOverFiveAutomaticallyMissesAndExecutes: true,
   trueSightIgnoresStealth: true,
   terrainLosStrictRejected: true,
   modelLosStrictRejected: true,

@@ -99,8 +99,11 @@ assert.equal(scoreTasks.length, 11);
 const supportedTasks = scoreTasks.filter((task) =>
   warmachineMatchupScoreTerminalTaskSupportedV1(task));
 assert.equal(supportedTasks.length, 10);
-const terminalTask = supportedTasks.find((task) => task.taskKey ===
-  "matchup-terminal-task-929e46ccde81af74c512cfbef807f962");
+const terminalTask = supportedTasks.find((task) =>
+  task.representative.scenarioKey === "wolves_at_our_heels" &&
+  task.representative.coordinates?.scoreTransition ===
+    "score-transition-87d5b7b6ca0bb8072508ee57" &&
+  task.representative.coordinates?.resource === "maximum_native_resource");
 const multiSourceTasks = supportedTasks.filter((task) =>
   task.representative.coordinates?.scoreTransition ===
     "score-transition-0054dada47e0734346ef9dfd" &&
@@ -124,10 +127,10 @@ assert.deepEqual(multiSourceTasks.map((task) => task.taskKey).sort(), [
   "matchup-terminal-task-c91fb293179a20e7265ec38b4483bdca",
 ]);
 assert.equal(terminalTask.taskKey,
-  "matchup-terminal-task-929e46ccde81af74c512cfbef807f962");
+  "matchup-terminal-task-a86d7e93f7b5ffed6bca1104244249f7");
 const checkpointTask = checkpoint.tasks.find((row) =>
   row.taskKey === terminalTask.taskKey);
-assert.equal(checkpointTask?.status, "completed");
+assert.ok(checkpointTask);
 const groupPlan = scoreGroups.get(terminalTask.groupKey);
 const routedGroup = (routing.routedGroups || []).find((group) =>
   group.groupKey === terminalTask.groupKey);

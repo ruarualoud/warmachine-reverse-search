@@ -1,4 +1,6 @@
 import { stableGraphHash, stableGraphValue } from "../graph/typed-facts-v2.mjs";
+import { buildWarmachineCompositeExecutionReceiptV1 } from
+  "../contracts/search-execution-receipt-v1.mjs";
 import { warmachinePieceInPlayV1 } from "../reverse/piece-lifecycle-v1.mjs";
 import {
   warmachineSteamrollerTerminalScenarioSubcellKeyV1,
@@ -35,6 +37,11 @@ const SATURATED_CONTEST_TRANSITIONS = new Set([
   "score-transition-0016a1f0609f49ed6c01f60c",
   "score-transition-02525c5dcb6441533205a4db",
 ]);
+const CURRENT_EXECUTION_RECEIPT = buildWarmachineCompositeExecutionReceiptV1({
+  hostReceipt: warmachineHost.receipt,
+  constructionHostReceipt: warmachineConstructionHost.receipt,
+  focusedEngineReceipt: warmachineHost.focusedSourceReceipt,
+});
 const SIDE_KEY_BY_TASK_SIDE = Object.freeze({
   subject: "player1",
   challenger: "player2",
@@ -106,6 +113,7 @@ function validateTaskReceipts(task = {}) {
     hostReceiptHash: warmachineHost.receipt.receiptHash,
     constructionHostReceiptHash:
       warmachineConstructionHost.receipt.receiptHash,
+    executionSemanticReceiptHash: CURRENT_EXECUTION_RECEIPT.executionReceiptHash,
   });
   if (stableGraphHash(behaviorSignature) !== task.behaviorSignatureHash) {
     throw new Error("score_terminal_task_host_or_construction_receipt_drift");

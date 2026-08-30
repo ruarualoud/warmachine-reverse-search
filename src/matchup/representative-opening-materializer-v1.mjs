@@ -334,6 +334,16 @@ export function materializeWarmachineRepresentativeOpeningsV1(raw = {}) {
         exactMapTemplateHash: String(
           exactMapTemplate.templateHash || "",
         ),
+        exactMapTopologyAuditHash: String(
+          exactMapTemplate.topologyAuditHash || "",
+        ),
+        exactMapTopologyRealizationHash: String(
+          exactMapTemplate.topologyRealizationHash || "",
+        ),
+        exactMapTopologyAuditOk: exactMapTemplate.topologyAudit?.ok === true,
+        exactMapTopologyObserved: stableGraphValue(
+          exactMapTemplate.topologyAudit?.observedTopology || {},
+        ),
         modelCount: opening.modelCount,
         rosterPointLedger: opening.rosterPointLedger,
         deploymentAudit: opening.deploymentAudit,

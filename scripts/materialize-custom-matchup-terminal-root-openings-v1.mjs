@@ -5,13 +5,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { loadWarmachineMatchupTemplateRoomV1 } from
+  "./load-matchup-template-room-v1.mjs";
+
 import { buildWarmachineSteamrollerFallbackOpeningBindersV1 } from
   "../src/matchup/steamroller-opening-binders-v1.mjs";
 import { buildWarmachineSteamrollerOpeningMapTemplateV1 } from
   "../src/matchup/steamroller-opening-map-template-v1.mjs";
 import { materializeWarmachineMatchupTerminalRootOpeningBatchV1 } from
   "../src/matchup/matchup-terminal-root-opening-batch-v1.mjs";
-import { resolveWarmachineHostPath } from "../src/warmachine-host-runtime.mjs";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const reverseDirectory = path.resolve(scriptDirectory, "..");
@@ -62,16 +64,8 @@ const batchRoot = path.join(outputDirectory, "terminal-root-batch-v1");
 const current = loadJson(path.join(batchRoot, "CURRENT.json"));
 const planDirectory = path.join(batchRoot, current.relativePlanDirectory);
 const plan = loadJson(path.join(planDirectory, "plan.json"));
-const roomStorePath = resolveWarmachineHostPath(
-  "build/warmachine-ai/sepsira-swarm-vs-fane-v20260805/local-layer3/state.json",
-);
-const loadedRoomStore = loadJsonWithHash(roomStorePath);
-const templateRoom = loadedRoomStore.value.roomsById?.[
-  "room_f1823ced-bf71-4392-8669-c6330d237efb"
-];
-if (!templateRoom) {
-  throw new Error("matchup_terminal_opening_batch_map_template_missing");
-}
+const { loadedRoomStore, templateRoom } =
+  loadWarmachineMatchupTemplateRoomV1();
 const templateHash = createHash("sha256").update(JSON.stringify({
   roomStoreContentHash: loadedRoomStore.contentHash,
   roomId: templateRoom.id,

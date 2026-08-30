@@ -71,6 +71,8 @@ const checkpoint = recordWarmachineMatchupTerminalRootBatchResultsV1(
       hostReceiptHash: warmachineHost.receipt.receiptHash,
       constructionHostReceiptHash:
         warmachineConstructionHost.receipt.receiptHash,
+      executionSemanticReceiptHash:
+        plan.receipts.executionSemanticReceiptHash,
     })),
   },
 );

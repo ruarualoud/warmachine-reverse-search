@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "warmachine_reviewed_focused_engine_receipt_v1",
+  "reviewedAt": "2026-08-27T07:49:52.000Z",
+  "reviewedBy": "codex-ticket23-slice23-4-geometry-recertification-20260827",
+  "sourceReceiptRelativePath": "build/function3-data/ci-shard-matrix-ticket23-slice23-4-20260827-r2/source-receipt.json",
+  "sourceReceiptHash": "030870124e891a084eeac21f79141b4f8fa7bdceab8fd4a0a3aaa246e8e1c988",
+  "manifestHash": "a005e78b11e4d8d21a086821f04baa870af285e1b1256de590da7a4e67991a77",
+  "aggregateHash": "1e06b447af587f0d197dcec9802f4b1b378e56d59bedd4d2345cf326265d44cc",
+  "executionSourceReceiptHash": "cdf646e5c208415fc6bc12b47d938f3c0105bf2a955c03e63bb738bd8d565c90",
+  "sourceFileCount": 679,
+  "verifierCount": 288,
+  "ruleAtomVerifierCount": 235,
+  "strictTransitionVerifierCount": 53,
+  "passedVerifierCount": 288,
+  "failedVerifierCount": 0,
+  "shardCount": 8,
+  "gatePassed": true,
+  "claimBoundary": "This reviewed reference binds Search to the executed Ticket 23 Slice 23.4 Engine source receipt. The receipt certifies the declared 288-verifier focused denominator under one stable 679-file execution-source closure, including the registered geometry, movement, terrain, LOS and Falling semantics. Search recomputes that closure locally and source drift fails closed until a new all-shard receipt is reviewed. It does not prove Search cross-runtime parity, continuous-path completeness, remaining Ticket 23 slices, strategy value, skill validity or global rules completeness."
+}

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "warmachine_ruleset_update_review_v1",
+  "approved": true,
+  "approvedBy": "Codex Ticket 05 combat-sequence strict review under the user-authorized long task",
+  "approvedAt": "2026-08-21T23:28:04Z",
+  "reviewedBaselineKey": "warmachine-ruleset-2026-08-22-remote-40041-ticket05-combat-sequence-v1",
+  "candidateSemanticIndexHash": "fa88522fa65582e5ec0cef1a054ea92ae21eb3b51b71cd5797f1b9425282b661",
+  "impactHash": "a71adfc3ad2a609b3502a6f42db8abc80b617ec60d2e0f992b729073b8899eeb",
+  "strictGatesPassed": true,
+  "strictGateEvidence": [
+    "The Ticket 05 Engine matrix executed all 263 declared verifiers under one stable 628-file source closure: 235 rule-atom verifiers and 28 strict-transition verifiers passed, with zero failed, missing, duplicate, foreign, timed-out, or source-drifted rows. Engine source receipt 239d80fd55217b752e09c0970df5072400b91f0f3c4a14338f277f2911255962 binds manifest 47679e27a96061e4d691c5dbf53e5ebf4cb83183f8e650dc79c75ff0f7625a93 and aggregate d4574e4374673f261a0490229219f4a815c1cee00ccb791683bc333a5499c951.",
+    "Focused regression scenes prove that every ordinary boosted melee variant carries exact LOS evidence and that movement or charge followed by combat exposes every initial melee weapon identity before any purchased-attack window opens.",
+    "The fixed 100-point Steamroller benchmark rebuilt a legal 103-model Sepsira-versus-Nymara Two Fronts opening from reviewed fixtures, then strict-certified a 140-transition score route and a 60-transition assassination route under the repaired Engine source closure.",
+    "Search upstream receipt validation passed against the reviewed Engine receipt. Promotion invalidates checkpoints and generated search artifacts bound to the previous composite execution receipt; those artifacts must be regenerated before Ticket 05 production execution resumes.",
+    "This approval proves strict execution and concrete reachability only. It does not prove strategy value, opponent robustness, complete Chance mass, or global optimality."
+  ],
+  "skillGatesPassed": true,
+  "skillGateEvidence": [
+    "The reverse-search execution closure is algorithmic only and does not call DeepSeek, OpenAI, an LLM prompt, a skill router, Memento, or a learned ranker.",
+    "Search candidates are generated and applied through strict Engine enumeration and transitions. Therefore ctx2skill and skill2ctx recalibration are not applicable to this Search-only ruleset promotion.",
+    "This not-applicable disposition does not certify route3, human-versus-AI, self-play, or any LLM skill manifest; those systems require separate calibration before deployment."
+  ]
+}

@@ -4,13 +4,18 @@ import {
 } from "../benchmark/fixed-steamroller-benchmark-v2.mjs";
 import { stableGraphHash, stableGraphValue } from "../graph/typed-facts-v2.mjs";
 import { normalizeRulesV1State } from "../warmachine-host-runtime.mjs";
-import { buildWarmachineExactActionChanceClasses } from "./chance-outcomes-v1.mjs";
+import {
+  buildWarmachineExactActionChanceClasses,
+  warmachineExactChanceClassActionPatch,
+} from "./chance-outcomes-v1.mjs";
 import { groupWarmachineAdversarialChanceClassesV1 } from
   "./adversarial-chance-equivalence-v1.mjs";
 import {
   buildWarmachineOpponentResponseSetV1,
   canonicalWarmachineActingSideActionsV1,
 } from "./opponent-response-v1.mjs";
+import { executeWarmachineExactPostResponseChanceV1 } from
+  "./post-response-chance-execution-v1.mjs";
 
 export const WARMACHINE_STRICT_POLICY_PROBABILITY_AND_MIN_V2_SCHEMA =
   "warmachine_strict_policy_probability_and_min_v2";
@@ -565,59 +570,119 @@ export function evaluateWarmachineStrictPolicyProbabilityAndMinV2(
           });
           continue;
         }
-        const executed = executeScopedWarmachineBenchmarkActionV2(
+        const postResponseExecution = executeWarmachineExactPostResponseChanceV1(
           scoped,
-          response.action,
-          { actionKey: response.action.actionKey },
+          action,
+          response,
+          chanceClass,
           {
             routeKey: `${routeKey}:${depth}:${chanceClass.classKey}:${response.responseKey}`,
-            actionPatch: {
-              ...(decision.actionPatch || {}),
-              strictRollOutcome: chanceClass.strictRollOutcome,
-            },
+            actionPatch: decision.actionPatch || {},
           },
         );
-        if (!executed.ok) {
-          strictRejectedResponseEdgeCount += 1;
+        if (!postResponseExecution.exactComplete) {
           preparedResponses.push({
             responseKey: response.responseKey,
             actionKey: response.action.actionKey,
             choice: response.choice,
             recipientPieceKey: response.recipientPieceKey,
             transitionAccepted: false,
-            reason: executed.reason || "strict_response_transition_rejected",
+            reason: (postResponseExecution.chance.reasons || []).join(",") ||
+              "post_response_chance_not_exact",
             resultStateHash: "",
             outcome: "unresolved",
-            outcomeReason: executed.reason || "strict_response_transition_rejected",
-            receiptHash: executed.receipt?.receiptHash || "",
-            terminalEvents: stableGraphValue(terminalEvents(executed.transition.events || [])),
+            outcomeReason: "post_response_chance_not_exact",
+            receiptHash: "",
+            terminalEvents: [],
             executedState: null,
+            postResponseChanceExactComplete: false,
+            postResponseChance: stableGraphValue(postResponseExecution.chance),
+            postResponseOutcomes: [],
           });
           continue;
         }
-        const classification = classifyResult({
-          state: executed.state,
-          events: executed.transition.events || [],
-          action: response.action,
-          baseAction: action,
-          chanceClass,
-          response,
-          cursor,
-          depth,
-        }) || { outcome: "continue" };
+        const postResponseOutcomes = postResponseExecution.outcomes.map((entry) => {
+          const executed = entry.executed;
+          const postResponseChanceClass = entry.postResponseChanceClass;
+          if (!executed.ok) {
+            strictRejectedResponseEdgeCount += 1;
+            return {
+              classKey: postResponseChanceClass.classKey,
+              probabilityNumerator: postResponseChanceClass.numerator,
+              probabilityDenominator: postResponseChanceClass.denominator,
+              transitionAccepted: false,
+              reason: executed.reason || "strict_response_transition_rejected",
+              resultStateHash: "",
+              outcome: "unresolved",
+              outcomeReason: executed.reason || "strict_response_transition_rejected",
+              receiptHash: executed.receipt?.receiptHash || "",
+              terminalEvents: stableGraphValue(terminalEvents(executed.transition.events || [])),
+              executedState: null,
+              strictRollOutcome: stableGraphValue(postResponseChanceClass.strictRollOutcome),
+            };
+          }
+          const classification = classifyResult({
+            state: executed.state,
+            events: executed.transition.events || [],
+            action: response.action,
+            baseAction: action,
+            chanceClass,
+            postResponseChanceClass,
+            response,
+            cursor,
+            depth,
+          }) || { outcome: "continue" };
+          return {
+            classKey: postResponseChanceClass.classKey,
+            probabilityNumerator: postResponseChanceClass.numerator,
+            probabilityDenominator: postResponseChanceClass.denominator,
+            transitionAccepted: true,
+            reason: "",
+            resultStateHash: stableGraphHash(executed.state),
+            outcome: terminalOutcome(classification.outcome) || "continue",
+            outcomeReason: String(classification.reason || ""),
+            receiptHash: executed.receipt?.receiptHash || "",
+            terminalEvents: stableGraphValue(terminalEvents(executed.transition.events || [])),
+            executedState: executed.state,
+            strictRollOutcome: stableGraphValue(postResponseChanceClass.strictRollOutcome),
+          };
+        });
+        const transitionAccepted = postResponseOutcomes.every((entry) =>
+          entry.transitionAccepted === true);
+        const semanticVector = postResponseOutcomes.map((entry) => ({
+          classKey: entry.classKey,
+          probabilityNumerator: entry.probabilityNumerator,
+          probabilityDenominator: entry.probabilityDenominator,
+          transitionAccepted: entry.transitionAccepted,
+          reason: entry.reason,
+          resultStateHash: entry.resultStateHash,
+          outcome: entry.outcome,
+          outcomeReason: entry.outcomeReason,
+          terminalEvents: entry.terminalEvents,
+        }));
         preparedResponses.push({
           responseKey: response.responseKey,
           actionKey: response.action.actionKey,
           choice: response.choice,
           recipientPieceKey: response.recipientPieceKey,
-          transitionAccepted: true,
-          reason: "",
-          resultStateHash: stableGraphHash(executed.state),
-          outcome: terminalOutcome(classification.outcome) || "continue",
-          outcomeReason: String(classification.reason || ""),
-          receiptHash: executed.receipt?.receiptHash || "",
-          terminalEvents: stableGraphValue(terminalEvents(executed.transition.events || [])),
-          executedState: executed.state,
+          transitionAccepted,
+          reason: transitionAccepted
+            ? ""
+            : postResponseOutcomes.find((entry) => !entry.transitionAccepted)?.reason ||
+              "strict_response_transition_rejected",
+          resultStateHash: transitionAccepted ? stableGraphHash(semanticVector) : "",
+          outcome: "post_response_chance",
+          outcomeReason: "",
+          receiptHash: postResponseOutcomes.length === 1
+            ? postResponseOutcomes[0].receiptHash
+            : "",
+          terminalEvents: [],
+          executedState: postResponseOutcomes.length === 1
+            ? postResponseOutcomes[0].executedState
+            : null,
+          postResponseChanceExactComplete: true,
+          postResponseChance: stableGraphValue(postResponseExecution.chance),
+          postResponseOutcomes,
         });
       }
       preparedChanceClasses.push({ chanceClass, responses: preparedResponses });
@@ -717,6 +782,7 @@ export function evaluateWarmachineStrictPolicyProbabilityAndMinV2(
             multiply(cumulativeProbability, classConditional),
           ),
           strictRollOutcome: stableGraphValue(prepared.chanceClass.strictRollOutcome),
+          strictActionPatch: warmachineExactChanceClassActionPatch(prepared.chanceClass),
         });
       }
 
@@ -733,48 +799,42 @@ export function evaluateWarmachineStrictPolicyProbabilityAndMinV2(
             transitionAccepted: response?.transitionAccepted === true,
             resultStateHash: response?.resultStateHash || "",
             reason: response?.reason || "",
+            postResponseOutcomeEvidence: (response?.postResponseOutcomes || []).map((outcome) => ({
+              classKey: outcome.classKey,
+              receiptHash: outcome.receiptHash,
+              transitionAccepted: outcome.transitionAccepted,
+              resultStateHash: outcome.resultStateHash,
+              reason: outcome.reason,
+            })),
           };
         }).sort((left, right) => left.chanceClassKey.localeCompare(right.chanceClassKey));
-        let child = null;
-        if (!preparedResponse.transitionAccepted) {
-          child = terminalResult({
-            outcome: "unresolved",
-            reason: preparedResponse.reason || "strict_response_transition_rejected",
-            stateHash,
-            cursor: nextCursor,
-            depth: depth + 1,
-            cumulativeProbability: childCumulativeProbability,
-          });
-        } else {
-          const outcome = terminalOutcome(preparedResponse.outcome);
-          child = outcome
-            ? terminalResult({
-              outcome,
-              reason: preparedResponse.outcomeReason || "classified_transition_terminal",
-              stateHash: preparedResponse.resultStateHash,
-              cursor: nextCursor,
-              depth: depth + 1,
-              cumulativeProbability: childCumulativeProbability,
-            })
-            : solve(
-              preparedResponse.executedState,
-              nextCursor,
-              depth + 1,
-              childCumulativeProbability,
-            );
-        }
-        responseRows.push({
+        const postChanceNodeKey = graphNodeKey("post_response_chance", {
+          stateHash,
+          cursor,
+          depth,
+          actionKey: action.actionKey,
+          adversarialChanceGroupKey: group.groupKey,
           responseKey: preparedResponse.responseKey,
-          choice: preparedResponse.choice,
+        });
+        registerNode({
+          nodeKey: postChanceNodeKey,
+          nodeType: "post_response_chance",
+          stateHash,
+          cursor: nextCursor,
+          depth: depth + 1,
+          actionKey: action.actionKey,
+          adversarialChanceGroupKey: group.groupKey,
+          responseKey: preparedResponse.responseKey,
+          responseChoice: preparedResponse.choice,
           recipientPieceKey: preparedResponse.recipientPieceKey,
-          interval: child.interval,
-          transitionAccepted: preparedResponse.transitionAccepted,
-          childNodeKey: child.nodeKey,
+          classCount: preparedResponse.postResponseOutcomes?.length || 0,
+          responsePrecedesChance: true,
+          incomingChancePathProbabilities: [probabilityRecord(childCumulativeProbability)],
         });
         addEdge({
           edgeType: "owned_response",
           parentNodeKey: responseNodeKey,
-          childNodeKey: child.nodeKey,
+          childNodeKey: postChanceNodeKey,
           adversarialChanceGroupKey: group.groupKey,
           chanceClassKeys: group.chanceClassKeys,
           responseKey: preparedResponse.responseKey,
@@ -783,11 +843,111 @@ export function evaluateWarmachineStrictPolicyProbabilityAndMinV2(
           recipientPieceKey: preparedResponse.recipientPieceKey,
           transitionAccepted: preparedResponse.transitionAccepted,
           reason: preparedResponse.reason,
-          representativeReceiptHash: preparedResponse.receiptHash,
-          resultStateHash: preparedResponse.resultStateHash,
           equivalentExecutionEvidence,
           cumulativeChanceProbability: probabilityRecord(childCumulativeProbability),
-          terminalEvents: preparedResponse.terminalEvents,
+          ownedResponsePrecedesPostResponseChance: true,
+        });
+
+        let responseLower = rational(0n);
+        let responseUpper = rational(0n);
+        let postResponseMass = rational(0n);
+        let responseExact = preparedResponse.transitionAccepted &&
+          preparedResponse.postResponseChanceExactComplete !== false;
+        let representativeChildNodeKey = "";
+        const postResponseOutcomes = preparedResponse.postResponseOutcomes?.length
+          ? preparedResponse.postResponseOutcomes
+          : [{
+              classKey: "post-response-unresolved",
+              probabilityNumerator: 1,
+              probabilityDenominator: 1,
+              transitionAccepted: false,
+              reason: preparedResponse.reason || "strict_response_transition_rejected",
+              resultStateHash: stateHash,
+              outcome: "unresolved",
+              outcomeReason: preparedResponse.reason || "strict_response_transition_rejected",
+              receiptHash: preparedResponse.receiptHash,
+              terminalEvents: preparedResponse.terminalEvents,
+              executedState: null,
+            }];
+        for (const postResponseOutcome of postResponseOutcomes) {
+          const postConditional = rational(
+            postResponseOutcome.probabilityNumerator,
+            postResponseOutcome.probabilityDenominator,
+          );
+          postResponseMass = add(postResponseMass, postConditional);
+          const branchCumulativeProbability = multiply(
+            childCumulativeProbability,
+            postConditional,
+          );
+          let child;
+          if (!postResponseOutcome.transitionAccepted) {
+            child = terminalResult({
+              outcome: "unresolved",
+              reason: postResponseOutcome.reason || "strict_response_transition_rejected",
+              stateHash,
+              cursor: nextCursor,
+              depth: depth + 1,
+              cumulativeProbability: branchCumulativeProbability,
+            });
+          } else {
+            const outcome = terminalOutcome(postResponseOutcome.outcome);
+            child = outcome
+              ? terminalResult({
+                  outcome,
+                  reason: postResponseOutcome.outcomeReason || "classified_transition_terminal",
+                  stateHash: postResponseOutcome.resultStateHash,
+                  cursor: nextCursor,
+                  depth: depth + 1,
+                  cumulativeProbability: branchCumulativeProbability,
+                })
+              : solve(
+                  postResponseOutcome.executedState,
+                  nextCursor,
+                  depth + 1,
+                  branchCumulativeProbability,
+                );
+          }
+          representativeChildNodeKey ||= child.nodeKey;
+          responseLower = add(responseLower, multiply(postConditional, child.interval.lower));
+          responseUpper = add(responseUpper, multiply(postConditional, child.interval.upper));
+          if (!child.interval.exact) responseExact = false;
+          addEdge({
+            edgeType: "post_response_chance_outcome",
+            parentNodeKey: postChanceNodeKey,
+            childNodeKey: child.nodeKey,
+            responseKey: preparedResponse.responseKey,
+            actionKey: preparedResponse.actionKey,
+            postResponseChanceClassKey: postResponseOutcome.classKey,
+            conditionalProbability: probabilityRecord(postConditional),
+            cumulativeChanceProbability: probabilityRecord(branchCumulativeProbability),
+            transitionAccepted: postResponseOutcome.transitionAccepted,
+            reason: postResponseOutcome.reason,
+            receiptHash: postResponseOutcome.receiptHash,
+            resultStateHash: postResponseOutcome.resultStateHash,
+            terminalEvents: postResponseOutcome.terminalEvents,
+            strictRollOutcome: postResponseOutcome.strictRollOutcome,
+          });
+        }
+        const postResponseMassConserved = compare(postResponseMass, rational(1n)) === 0;
+        if (!postResponseMassConserved) responseExact = false;
+        const responseInterval = {
+          lower: responseLower,
+          upper: responseUpper,
+          exact: responseExact && compare(responseLower, responseUpper) === 0,
+        };
+        Object.assign(nodeMap.get(postChanceNodeKey), {
+          localChanceMass: probabilityRecord(postResponseMass),
+          localChanceMassConserved: postResponseMassConserved,
+          interval: intervalRecord(responseInterval),
+        });
+        responseRows.push({
+          responseKey: preparedResponse.responseKey,
+          choice: preparedResponse.choice,
+          recipientPieceKey: preparedResponse.recipientPieceKey,
+          interval: responseInterval,
+          transitionAccepted: preparedResponse.transitionAccepted,
+          childNodeKey: postChanceNodeKey,
+          representativeChildNodeKey,
         });
       }
 
@@ -806,6 +966,7 @@ export function evaluateWarmachineStrictPolicyProbabilityAndMinV2(
         ownerSideKey: responseSet.ownerSideKey,
         decisionKind: responseSet.decisionKind,
         responseSetComplete: responseSet.responseSetComplete,
+        postResponseChanceComplete: responseRows.every((row) => row.interval.exact),
         responseCount: responseRows.length,
         quantifier: aggregated.quantifier,
         selectedLowerResponseKey: aggregated.selectedLowerResponseKey,
@@ -847,10 +1008,10 @@ export function evaluateWarmachineStrictPolicyProbabilityAndMinV2(
   const sortedEdges = edges.slice().sort((left, right) => left.edgeKey.localeCompare(right.edgeKey));
   const chanceMassComplete = chanceAudits.every((audit) =>
     audit.exactComplete === true && audit.massNumerator === audit.massDenominator) &&
-    nodes.filter((node) => node.nodeType === "chance").every((node) =>
+    nodes.filter((node) => ["chance", "post_response_chance"].includes(node.nodeType)).every((node) =>
       node.localChanceMassConserved === true);
   const opponentResponseSetComplete = responseAudits.every((audit) =>
-    audit.responseSetComplete === true);
+    audit.responseSetComplete === true && audit.postResponseChanceComplete === true);
   const core = {
     schemaVersion: WARMACHINE_STRICT_POLICY_PROBABILITY_AND_MIN_V2_SCHEMA,
     routeKey,
@@ -883,17 +1044,19 @@ export function evaluateWarmachineStrictPolicyProbabilityAndMinV2(
       chance: "exact_conditional_probability_weighted_sum",
       ownerResponses: "owner_max",
       opponentResponses: "opponent_adversarial_and_min",
+      postResponseChance: "exact_conditional_probability_weighted_sum_after_owned_response",
     },
     capabilityBoundary: {
       multiActionPolicy: true,
       callerDeclaredDeterministicStrictActions: true,
       exactPrimaryAttackChance: true,
       opponentOwnedDamageTransfer: true,
+      exactPostTransferDamageLocationChance: true,
       sameDepthStateAndCursorMemoization: true,
       adversarialResponseVectorEquivalence: true,
       nonzeroLowProbabilityThreshold: false,
     },
-    claimBoundary: "This finite stochastic-game DAG evaluates one caller-fixed multi-action policy. Exact primary-attack Chance nodes are summed, defender-owned choices are AND/min, strict receipts bind every original executed response edge, complete identical owner-aware response vectors reuse one continuation, and same-depth equivalent state/cursor pairs reuse one conditional evaluation. Nonzero low-probability pruning remains fail-closed until an adversarial-context-aware same-depth frontier merge is implemented; no global strategy optimality is claimed.",
+    claimBoundary: "This finite stochastic-game DAG evaluates one caller-fixed multi-action policy. Exact primary-attack Chance nodes are summed, defender-owned choices are AND/min before exact post-response transferred-damage location Chance, strict receipts bind every executed nested outcome edge, complete identical owner-aware response distributions reuse one continuation, and same-depth equivalent state/cursor pairs reuse one conditional evaluation. Nonzero low-probability pruning remains fail-closed until an adversarial-context-aware same-depth frontier merge is implemented; no global strategy optimality is claimed.",
   };
   return {
     ...core,

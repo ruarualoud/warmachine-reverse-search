@@ -4,7 +4,10 @@ import {
 } from "../benchmark/fixed-steamroller-benchmark-v2.mjs";
 import { stableGraphHash, stableGraphValue } from "../graph/typed-facts-v2.mjs";
 import { normalizeRulesV1State } from "../warmachine-host-runtime.mjs";
-import { buildWarmachineExactActionChanceClasses } from "./chance-outcomes-v1.mjs";
+import {
+  buildWarmachineExactActionChanceClasses,
+  warmachineExactChanceClassActionPatch,
+} from "./chance-outcomes-v1.mjs";
 import { buildWarmachineProbabilityDagV1 } from "./probability-dag-v1.mjs";
 
 export const WARMACHINE_STRICT_POLICY_PROBABILITY_SCHEMA =
@@ -94,7 +97,7 @@ export function evaluateWarmachineStrictPolicyProbabilityV1(
               routeKey: `${rawOptions.routeKey || "strict-policy-probability"}:${depth}:${chanceClass.classKey}`,
               actionPatch: {
                 ...(decision.actionPatch || {}),
-                strictRollOutcome: chanceClass.strictRollOutcome,
+                ...warmachineExactChanceClassActionPatch(chanceClass),
               },
             },
           );
@@ -142,6 +145,7 @@ export function evaluateWarmachineStrictPolicyProbabilityV1(
               actionKey: action.actionKey,
               chanceClassKey: chanceClass.classKey,
               strictRollOutcome: stableGraphValue(chanceClass.strictRollOutcome),
+              strictActionPatch: warmachineExactChanceClassActionPatch(chanceClass),
               receiptHash: result.receipt?.receiptHash || "",
               resultStateHash,
               transitionAccepted: true,

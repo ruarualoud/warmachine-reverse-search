@@ -1,4 +1,6 @@
 import { stableGraphHash, stableGraphValue } from "../graph/typed-facts-v2.mjs";
+import { buildWarmachineCompositeExecutionReceiptV1 } from
+  "../contracts/search-execution-receipt-v1.mjs";
 import { warmachinePieceInPlayV1 } from "../reverse/piece-lifecycle-v1.mjs";
 import { warmachineReverseStateSemanticHashV1 } from
   "../reverse/terminal-event-predecessor-v1.mjs";
@@ -28,6 +30,11 @@ const FIXED_ACTION_CATEGORY = "defender_fixed_round_turn_end_settlement";
 const SIDE_KEY_BY_TASK_SIDE = Object.freeze({
   subject: "player1",
   challenger: "player2",
+});
+const CURRENT_EXECUTION_RECEIPT = buildWarmachineCompositeExecutionReceiptV1({
+  hostReceipt: warmachineHost.receipt,
+  constructionHostReceipt: warmachineConstructionHost.receipt,
+  focusedEngineReceipt: warmachineHost.focusedSourceReceipt,
 });
 
 function taskSideForCanonicalSide(sideKey = "", permutationKey = "identity") {
@@ -228,6 +235,7 @@ function validateTaskReceipts(task = {}) {
     hostReceiptHash: warmachineHost.receipt.receiptHash,
     constructionHostReceiptHash:
       warmachineConstructionHost.receipt.receiptHash,
+    executionSemanticReceiptHash: CURRENT_EXECUTION_RECEIPT.executionReceiptHash,
   });
   if (stableGraphHash(behaviorSignature) !== task.behaviorSignatureHash) {
     throw new Error("fixed_round_task_host_or_construction_receipt_drift");

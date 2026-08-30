@@ -12,11 +12,19 @@ import { buildWarmachineReverseReachabilityCandidateSetV2 } from
 import { warmachinePieceInPlayV1 } from "./piece-lifecycle-v1.mjs";
 import { restoreWarmachineScenarioSettlementPreimageV1 } from
   "./scenario-settlement-preimage-v1.mjs";
+import { warmachineReverseStateSemanticHashV1 } from
+  "../state/semantic-hash-v1.mjs";
 import { WARMACHINE_TERMINAL_HYPOTHESIS_CELL_V1_SCHEMA } from
   "./terminal-hypothesis-v1.mjs";
+import {
+  auditWarmachineReverseStateBoundaryV1,
+  summarizeWarmachineReverseStateBoundaryAuditV1,
+} from "./reverse-state-invariants-v1.mjs";
 
 export const WARMACHINE_TERMINAL_EVENT_PREDECESSOR_V1_SCHEMA =
   "warmachine_terminal_event_predecessor_v1";
+export { warmachineReverseStateSemanticHashV1 } from
+  "../state/semantic-hash-v1.mjs";
 
 function gcd(left, right) {
   let a = left < 0n ? -left : left;
@@ -43,26 +51,6 @@ function probabilityRecord(value) {
     denominator: String(value.denominator),
     decimal: Number(value.numerator) / Number(value.denominator),
   };
-}
-
-function semanticProjection(value, key = "") {
-  if (Array.isArray(value)) {
-    const projected = value.map((entry) => semanticProjection(entry));
-    if (key === "terrain") {
-      return projected.sort((left, right) =>
-        String(left?.terrainKey || "").localeCompare(String(right?.terrainKey || "")));
-    }
-    return projected;
-  }
-  if (!value || typeof value !== "object") return value;
-  return Object.fromEntries(Object.entries(value)
-    .filter(([childKey]) => childKey !== "stateKey")
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([childKey, child]) => [childKey, semanticProjection(child, childKey || key)]));
-}
-
-export function warmachineReverseStateSemanticHashV1(stateInput = {}) {
-  return stableGraphHash(semanticProjection(normalizeRulesV1State(stateInput)));
 }
 
 function restoreLeaderTarget(targetInput = {}, boxesRemaining = 1) {
@@ -706,10 +694,26 @@ export function generateWarmachineTerminalEventPredecessorsV1(
   }
   const successor = normalizeRulesV1State(successorStateInput);
   const successorSemanticHash = warmachineReverseStateSemanticHashV1(successor);
+  const successorStateInvariantAudit = auditWarmachineReverseStateBoundaryV1(
+    successor,
+    { boundaryKind: "terminal_inverse_successor" },
+  );
   const proposals = candidatePredecessorStates(successor, terminalCell, rawOptions);
   const candidates = [];
   const rejected = [];
   const unresolved = [];
+  if (!successorStateInvariantAudit.ok) {
+    rejected.push({
+      reason: "reverse_predecessor_state_invariant_rejected",
+      boundaryKind: "terminal_inverse_successor",
+      stateHash: successorSemanticHash,
+      stateInvariantAudit:
+        summarizeWarmachineReverseStateBoundaryAuditV1(
+          successorStateInvariantAudit,
+        ),
+      issues: successorStateInvariantAudit.issues,
+    });
+  }
   for (const proposal of proposals) {
     const proposalUnresolvedReasons = proposal.mutation?.unresolvedReasons || [];
     unresolved.push(...proposalUnresolvedReasons.map((reason) => ({
@@ -724,6 +728,27 @@ export function generateWarmachineTerminalEventPredecessorsV1(
       rawOptions,
     );
     const preparedProposalState = scoped.state || proposal.state;
+    const predecessorStateInvariantAudit =
+      auditWarmachineReverseStateBoundaryV1(preparedProposalState, {
+        boundaryKind: "terminal_inverse_predecessor",
+      });
+    if (!successorStateInvariantAudit.ok ||
+        !predecessorStateInvariantAudit.ok) {
+      if (!predecessorStateInvariantAudit.ok) {
+        rejected.push({
+          predecessorStateHash:
+            warmachineReverseStateSemanticHashV1(preparedProposalState),
+          reason: "reverse_predecessor_state_invariant_rejected",
+          mutation: proposal.mutation,
+          stateInvariantAudit:
+            summarizeWarmachineReverseStateBoundaryAuditV1(
+              predecessorStateInvariantAudit,
+            ),
+          issues: predecessorStateInvariantAudit.issues,
+        });
+      }
+      continue;
+    }
     unresolved.push(...deferredActions.map((action) => ({
       predecessorStateHash: warmachineReverseStateSemanticHashV1(proposal.state),
       actionKey: action.actionKey,
@@ -842,6 +867,10 @@ export function generateWarmachineTerminalEventPredecessorsV1(
               strictRollProposalSource: "canonical_maximum_dice_existence_witness",
               predecessorStateForm: "strict_enumeration_prepared_state",
             },
+            predecessorStateInvariantAudit:
+              summarizeWarmachineReverseStateBoundaryAuditV1(
+                predecessorStateInvariantAudit,
+              ),
           };
           candidates.push({
             ...core,
@@ -1019,6 +1048,10 @@ export function generateWarmachineTerminalEventPredecessorsV1(
             : "preserve_terminal_successor_resource_points",
           predecessorStateForm: "strict_enumeration_prepared_state",
         },
+        predecessorStateInvariantAudit:
+          summarizeWarmachineReverseStateBoundaryAuditV1(
+            predecessorStateInvariantAudit,
+          ),
       };
       candidates.push({
         ...core,
@@ -1045,6 +1078,10 @@ export function generateWarmachineTerminalEventPredecessorsV1(
     publicCandidates: stableGraphValue(publicCandidates),
     rejected: stableGraphValue(rejected),
     unresolved: stableGraphValue(unresolved),
+    successorStateInvariantAudit:
+      summarizeWarmachineReverseStateBoundaryAuditV1(
+        successorStateInvariantAudit,
+      ),
     candidateSet,
     oracleIsolationAudit: {
       inputKinds: ["terminal_state", "terminal_hypothesis_cell"],

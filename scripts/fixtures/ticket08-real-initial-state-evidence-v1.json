@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "warmachine_ticket08_real_initial_state_evidence_v1",
+  "hostReceiptHash": "3bf551f7668136d4b659b2f0c5c987bb7cb7fa9aa0dd0641276d654f14e10848",
+  "ticket19": {
+    "reportHash": "93bce515dd0ce296c031c4f25966996adad364c7468a325bba00487e686b5ba9",
+    "ticket06BindingHash": "7028bd1d869d29ada414e7ca7bbb7da5d3da66832340b11570fb4fb3d06510a7",
+    "ticket07BindingHash": "c641d32b3a92880a9dcddfcd246223c700ba76a6f407470d02e8a6e088fa89b5"
+  },
+  "ticket06": {
+    "sourceWitnessHash": "3ff37269d186fcc6e37780c7ad380620494abbcad1b02272887a7232b2d263e5",
+    "sourceMaterializationHash": "e59ea2e2cfdde36011ca39ea1c56113d72aaa30d2de6faefde75e4f24796bcad",
+    "injectedOpeningStateHash": "20d6625c822a5028a0307153ab77310f84101c614ff1a5c5af8837322e357531",
+    "strictOpeningStateHash": "f89fd4b8d30c87e5a927d5a1b3d89d65c5878df04981a20842100178e43e26fa",
+    "openingEvidenceHash": "128211dfd3961e21bd6181fac1758c27263c6d29e19141dbb723bb03a2bd3b24",
+    "scenarioKey": "two_fronts",
+    "mapKey": "two-fronts-official-map-2",
+    "firstPlayerSideKey": "player2",
+    "deploymentSeedKey": "balanced",
+    "physicalModelCount": 78,
+    "routeKey": "terminal-deployment-route-d757e7e66af4fd226acf106d8d01773c",
+    "terminalFamilyKey": "assassination",
+    "terminalSourceKey": "vordak-strict-leader-removal",
+    "routeCostKnown": true,
+    "reverseEdgeCount": 40,
+    "unresolvedBranchCount": 623,
+    "rejectedBranchCount": 31,
+    "strictReplayComplete": true,
+    "strictReplayDisposition": "compact_full_route_replay_certified",
+    "strictReplayEvidenceHash": "9813e960349a8b94ea6e97744542c6459fa6389bbd168ec86344c695c36bcfaf",
+    "fullRouteReplayHash": "ffe152398038def40ab6190f3055486cff943902be7de4ebc989185a80c641fa"
+  },
+  "ticket07": {
+    "sourceFixtureHash": "e641f8bfebcce5ad226c24e084004f584e7475d35cca52c78c547e66bef1a20e",
+    "sourceFixtureHostReceiptHash": "539dabd1710cd151ddb8a85c1107c81982be202584f834393d82adc7b79faa44",
+    "sourceReportHash": "b8f58c77e1551502a81cd3d7ede1f56f66acbb21ccb5a6dc7b3a847cf722cf42",
+    "strictOpeningStateHash": "5c32dbc81c065e1d95fd812d62fe61777139d0c73ffadd2e0f5622507347ef41",
+    "openingEvidenceHash": "410915330c15674ddfdf973f65f5280e11f04c30ba4bdc5094b08860530bd9a5",
+    "scenarioKey": "two_fronts",
+    "mapKey": "mixed_table",
+    "firstPlayerSideKey": "player2",
+    "deploymentSeedKey": "ticket07-score_reverse_discovered",
+    "physicalModelCount": 113,
+    "routeKey": "terminal-deployment-route-d53bf425f1ee2f32e6e14473b3f16dfb",
+    "terminalFamilyKey": "score",
+    "terminalSourceKey": "terminal-hypothesis-47b7b4cb9a896872da9c285fef4a4071",
+    "semanticOutcomeHash": "b35f22291f8640a472270cd077a22766e1d3e527c3ce2685c32d4c35c6b13440",
+    "reverseEdgeCount": 96,
+    "unresolvedBranchCount": 1042,
+    "rejectedBranchCount": 8,
+    "strictReplayComplete": true
+  },
+  "claimBoundary": "This compact fixture binds current Ticket 06/07 strict opening-to-terminal replay receipts and route labels to Ticket 19 history evidence. Neither route has complete candidate, opponent-response or Chance closure."
+}

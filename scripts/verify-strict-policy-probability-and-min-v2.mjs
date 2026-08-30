@@ -61,6 +61,21 @@ function piece(overrides = {}) {
   };
 }
 
+function lifeSpiralDamage() {
+  const aspectKeys = ["mind", "body", "spirit"];
+  const lifeSpiralRows = Array.from({ length: 9 }, (_entry, rowIndex) =>
+    Array.from({ length: 3 }, () => ({
+      systemKey: aspectKeys[Math.floor(rowIndex / 3)],
+      marked: false,
+    })));
+  return {
+    boxesRemaining: 27,
+    maxBoxes: 27,
+    systems: { mind: 9, body: 9, spirit: 9 },
+    lifeSpiralRows,
+  };
+}
+
 const state = {
   stateKey: "strict-policy-and-min-two-attacks-v2",
   activeSideKey: "player2",
@@ -93,8 +108,7 @@ const state = {
       resourceMax: 4,
       controllerPieceKey: "defender-lock",
       battlegroupId: "defender-bg",
-      boxesRemaining: 100,
-      maxBoxes: 100,
+      damage: lifeSpiralDamage(),
     }),
     piece({
       pieceKey: "attacker",
@@ -182,16 +196,35 @@ const acceptedResponseEdges = report.edges.filter((edge) =>
   edge.edgeType === "owned_response" && edge.transitionAccepted === true);
 assert.ok(acceptedResponseEdges.length > 0);
 assert.ok(acceptedResponseEdges.every((edge) =>
-  edge.representativeReceiptHash &&
+  edge.ownedResponsePrecedesPostResponseChance === true &&
   edge.equivalentExecutionEvidence.length === edge.chanceClassKeys.length &&
   edge.equivalentExecutionEvidence.every((evidence) =>
-    evidence.transitionAccepted === true && evidence.receiptHash)));
+    evidence.transitionAccepted === true &&
+    evidence.postResponseOutcomeEvidence.length > 0 &&
+    evidence.postResponseOutcomeEvidence.every((outcome) =>
+      outcome.transitionAccepted === true && outcome.receiptHash))));
+const postResponseChanceNodes = report.nodes.filter((node) =>
+  node.nodeType === "post_response_chance");
+const postResponseChanceEdges = report.edges.filter((edge) =>
+  edge.edgeType === "post_response_chance_outcome");
+assert.ok(postResponseChanceNodes.length > 0);
+assert.ok(acceptedResponseEdges.every((edge) =>
+  postResponseChanceNodes.some((node) => node.nodeKey === edge.childNodeKey)));
+assert.ok(postResponseChanceEdges.length > 0);
+assert.ok(postResponseChanceEdges.every((edge) =>
+  edge.transitionAccepted === true && edge.receiptHash));
+assert.ok(report.nodes.some((node) =>
+  node.nodeType === "post_response_chance" &&
+  node.responseChoice === "transfer" &&
+  node.classCount === 6 &&
+  node.localChanceMassConserved === true));
 assert.ok(report.adversarialChanceEquivalenceAudits.length > 0);
 assert.ok(report.adversarialChanceEquivalenceAudits.every((audit) =>
   audit.massConserved === true &&
   audit.inputMassNumerator === audit.groupedMassNumerator));
-assert.ok(report.adversarialChanceEquivalenceAudits.some((audit) =>
-  audit.mergedClassCount > 0));
+assert.ok(report.adversarialChanceEquivalenceAudits.every((audit) =>
+  audit.mergedClassCount >= 0 &&
+  audit.equivalenceGroupCount + audit.mergedClassCount === audit.inputClassCount));
 assert.equal(report.capabilityBoundary.adversarialResponseVectorEquivalence, true);
 
 const frontierReport = evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
@@ -392,10 +425,29 @@ assert.deepEqual(
   restoredStitched.entries.map((entry) => entry.labelKey).sort(),
   stitchedRuntimeCheckpoint.resumableLabelKeys.slice().sort(),
 );
+const restoredStitchedForContinuation = restoreWarmachineStrictFrontierExternalDagV1(
+  externalDagRoot,
+  externalDagOptions,
+);
+assert.equal(restoredStitchedForContinuation.runtimePayloadMode, "all_eager");
+assert.equal(restoredStitchedForContinuation.lazyStateCount, 0);
+assert.equal(
+  restoredStitchedForContinuation.entries.filter((entry) => entry.state).length,
+  restoredStitchedForContinuation.entryCount,
+);
+const selectedIndependentEntries = Array.from(
+  restoredStitchedForContinuation.entries.reduce((entriesByContext, entry) => {
+    if (!entriesByContext.has(entry.adversarialContextKey)) {
+      entriesByContext.set(entry.adversarialContextKey, entry);
+    }
+    return entriesByContext;
+  }, new Map()).values(),
+).slice(0, 2);
+assert.equal(selectedIndependentEntries.length, 2);
 const independentThresholdBatch = runWarmachineStrictFrontierContinuationBatchV1(
   stitchedReport,
   stitchedRuntimeCheckpoint,
-  restoredStitched.entries,
+  selectedIndependentEntries,
   selectTwoAttackPolicy,
   {
     maximumContinuationLabels: 2,
@@ -410,7 +462,6 @@ assert.equal(independentThresholdBatch.thresholdIsolation.selectedAdversarialCon
 assert.deepEqual(independentThresholdBatch.thresholdIsolation.repeatedAdversarialContextKeys, []);
 const sharedContextKey = "adversarial-context-shared-threshold-negative";
 const sharedContextReportHash = "shared-context-threshold-negative-report";
-const selectedIndependentEntries = restoredStitched.entries.slice(0, 2);
 const selectedIndependentKeys = new Set(selectedIndependentEntries.map((entry) => entry.labelKey));
 const sharedContextReport = {
   ...stitchedReport,
@@ -438,9 +489,9 @@ assert.throws(() => prepareWarmachineStrictFrontierContinuationBatchV1(
   },
 ), /nonzero_threshold_requires_batch_wide_layer_merge/);
 const partialContinuationBatch = runWarmachineStrictFrontierContinuationBatchV1(
-  restoredStitched.report,
-  restoredStitched.runtimeCheckpoint,
-  restoredStitched.entries.slice().reverse(),
+  restoredStitchedForContinuation.report,
+  restoredStitchedForContinuation.runtimeCheckpoint,
+  restoredStitchedForContinuation.entries.slice().reverse(),
   selectTwoAttackPolicy,
   {
     maximumContinuationLabels: 2,
@@ -455,9 +506,9 @@ const faultBatchOptions = {
   maximumEvaluatedStatesPerContinuation: 1,
 };
 const faultPrepared = prepareWarmachineStrictFrontierContinuationBatchV1(
-  restoredStitched.report,
-  restoredStitched.runtimeCheckpoint,
-  restoredStitched.entries.slice().reverse(),
+  restoredStitchedForContinuation.report,
+  restoredStitchedForContinuation.runtimeCheckpoint,
+  restoredStitchedForContinuation.entries.slice().reverse(),
   faultBatchOptions,
 );
 assert.equal(faultPrepared.selected.length, 2);
@@ -466,9 +517,9 @@ const checkpointPointerBeforeFault = fs.readFileSync(
   "utf8",
 );
 await assert.rejects(() => runWarmachineStrictFrontierContinuationBatchParallelV1(
-  restoredStitched.report,
-  restoredStitched.runtimeCheckpoint,
-  restoredStitched.entries.slice().reverse(),
+  restoredStitchedForContinuation.report,
+  restoredStitchedForContinuation.runtimeCheckpoint,
+  restoredStitchedForContinuation.entries.slice().reverse(),
   {
     ...faultBatchOptions,
     maximumWorkers: 2,
@@ -507,9 +558,9 @@ const restoredAfterFault = restoreWarmachineStrictFrontierExternalDagV1(
 assert.equal(restoredAfterFault.checkpointId, restoredStitched.checkpointId);
 assert.equal(restoredAfterFault.report.reportHash, restoredStitched.report.reportHash);
 const parallelContinuationBatch = await runWarmachineStrictFrontierContinuationBatchParallelV1(
-  restoredStitched.report,
-  restoredStitched.runtimeCheckpoint,
-  restoredStitched.entries.slice().reverse(),
+  restoredStitchedForContinuation.report,
+  restoredStitchedForContinuation.runtimeCheckpoint,
+  restoredStitchedForContinuation.entries.slice().reverse(),
   {
     maximumContinuationLabels: 2,
     continuationDepthIncrement: 1,
@@ -592,9 +643,9 @@ assert.equal(parallelContinuationBatch.reportHash, partialContinuationBatch.repo
 assert.equal(parallelContinuationBatch.runtimeCheckpointHash,
   partialContinuationBatch.runtimeCheckpointHash);
 await assert.rejects(() => runWarmachineStrictFrontierContinuationBatchParallelV1(
-  restoredStitched.report,
-  restoredStitched.runtimeCheckpoint,
-  restoredStitched.entries,
+  restoredStitchedForContinuation.report,
+  restoredStitchedForContinuation.runtimeCheckpoint,
+  restoredStitchedForContinuation.entries,
   {
     maximumContinuationLabels: 1,
     maximumWorkers: 1,

@@ -208,6 +208,11 @@ assert.ok(duskAllArmies.selectedArmies.every((row) => row.selectedLeaderCount > 
 
 const weaponAttachmentFixedCards = [
   {
+    cardId: "095fc5dd-dead-4530-8ae1-291e200420a3",
+    minimumCount: 1,
+    maximumCount: 1,
+  },
+  {
     cardId: "3496140b-253c-4f0c-a501-12541a248f64",
     minimumCount: 1,
     maximumCount: 1,
@@ -225,7 +230,7 @@ const weaponAttachmentPool = generateWarmachineGenericRosterPoolV1({
   forceBuilder,
   armyName: "Storm of the North",
   leaderNames: ["Grim Angus"],
-  pointLimit: 8,
+  pointLimit: 15,
   fixedCards: weaponAttachmentFixedCards,
   fixedComplete: true,
   searchBudget: {
@@ -237,7 +242,7 @@ const weaponAttachmentPool = generateWarmachineGenericRosterPoolV1({
 });
 assert.equal(weaponAttachmentPool.rosters.length, 1);
 const weaponAttachmentRoster = weaponAttachmentPool.rosters[0];
-assert.equal(weaponAttachmentRoster.physicalModels, 6);
+assert.equal(weaponAttachmentRoster.physicalModels, 7);
 assert.equal(weaponAttachmentRoster.entries.find((entry) =>
   entry.cardId === "3496140b-253c-4f0c-a501-12541a248f64").physicalModels, 2);
 assert.equal(weaponAttachmentRoster.entries.filter((entry) =>
@@ -247,11 +252,12 @@ const fourthWeaponAttachmentPool = generateWarmachineGenericRosterPoolV1({
   forceBuilder,
   armyName: "Storm of the North",
   leaderNames: ["Grim Angus"],
-  pointLimit: 9,
+  pointLimit: 16,
   fixedCards: [
     weaponAttachmentFixedCards[0],
+    weaponAttachmentFixedCards[1],
     {
-      ...weaponAttachmentFixedCards[1],
+      ...weaponAttachmentFixedCards[2],
       minimumCount: 4,
       maximumCount: 4,
       attachmentTargetCopyNumbers: [1, 1, 1, 1],

@@ -160,6 +160,8 @@ OfficialRuleSource
 
 ### Slice 23.5: 重认证攻击、骰子、伤害和模型系统
 
+状态：已完成（2026-08-28）。当前 Ticket 23 为 `6/12` 纵切完成；全局 Strict 仍为 false。
+
 - 统一攻击声明、合法目标、攻击类型、攻击/伤害骰、boost、reroll、critical、自动命中/未命中和额外攻击窗口。
 - 正确处理零骰、保留骰、全 1/全 6、爆炸/喷射、blast、damage type、Resistance、Blessed、Weapon Master、Shield/Buckler 和符号 POW/RNG。
 - 完整执行 warjack grid、warbeast spiral、Monstrosity、Horror Web、Colossal、Dragoon、结构和多生命模型。
@@ -167,7 +169,11 @@ OfficialRuleSource
 
 完成证据：攻击到最终模型状态的端到端 transition oracle、性质测试和关键 mutation 全部通过。
 
+实际证据：Engine 对 `29` 条核心攻击/伤害语义、`32` 个原语、`90` 个独立 literal oracle、`36` 个执行证据和 `97` 个 mutation obligation 完成动态核对；`14` 组 focused verifier 全绿，来源收据为 `d08f2225261b91e4973be4da843058cbd8f8fa8bb99a0b499c9daca5a4d2b8fb`。伤害转移的防守方选择发生在新受伤模型的系统位置 Chance 之前，Search 对 `12` 个主 Chance、`2` 个转移响应和 `6` 个转移后 life-spiral 分支守恒；当前 Host 收据为 `9bcbd810b76b8848bb301d6b7a314290b233f3f162dd86318ff4aa1fc556202b`，parity 报告为 `555d460b6d577c5325cda7d015436ae133d3d1cf4d667f14493002dcd118f5f5`。Dragoon 现在保留原始受伤量、实际记录量和 excess damage，并能严格执行任意合法、整底盘可放置的 dismount 坐标。当前卡牌特有攻击模板和缺失的卡牌 life-spiral 拓扑归 23.8，连续替换位置商归 Ticket 20，完整运行时发布一致性归 23.10；这些债务不在本纵切中重复实现。
+
 ### Slice 23.6: 重认证 Focus/Fury/Essence、法术、animus 与控制阶段
+
+状态：已完成（2026-08-29）。23.6a 普通 Maintenance/Focus、23.6b 普通核心 Fury、23.6c 普通法术与 23.6d Essence/特殊资源均完成有界重认证，父级普通资源交互和 Search Host 消费 parity 已闭合。当前 Ticket 23 为 `7/12` 父纵切完成；全局 Strict 仍为 false。
 
 - 建立控制阶段标准顺序，覆盖 upkeep、allocation、leach、threshold/frenzy、shake、reave、Spirit Bond、Provoke 和外部资源提供者。
 - 资源身份、容量、控制范围、支付顺序、强制/非强制获得和超限行为必须来自明确语义。
@@ -176,7 +182,19 @@ OfficialRuleSource
 
 完成证据：至少一个 warcaster、warlock、Infernal Master/Essence 和特殊资源场景跨完整控制阶段 strict replay。
 
+首轮盘点证据：`15` 个规则/执行链 focused 检查已覆盖 Focus/Fury 分配与操纵、leach/threshold/frenzy、资源消耗、warbeast aspects、spell buff/debuff、target-token upkeep、soul/corpse 和完整双方控制阶段。盘点发现一个真实 Layer3 bridge 缺口：`tokenCombatStats()` 未传递 token/card 的 ARC，导致 ARC 7 被 Engine 默认值 6 替代；修复后 warcaster 在下一次 Control Replenishment 从 Focus `5 -> 7`，warlock Fury 对照保持 `5 -> 5`，token patch 和重建状态一致。另外两个失败属于历史 verifier 夹具漂移：自动命中现在允许明确放弃自动命中后选择攻击掷骰，伤害转移/reave/heal 夹具需要当前 life spiral、damage column 和移除格选择。Playwright 法术数值显示测试因本机没有 Chromium 未执行，它是 UI 证据，不计入本轮规则认证。Search 在冻结当前 Host `9bcbd810...202b` 后重跑概率/恢复全链，报告 `f4634cec...2603` 对 `1,927` 节点、`2,674` 边、`68` 个 Chance 审计和 `816` 个 owned response 审计通过，顺序/并行续跑等价；此前失败确认是运行中修改 Engine 导致的收据漂移。上述结果只证明历史实现可作为复核候选，不能替代 23.6 的来源语义、独立 oracle、interaction 和 mutation 分母。
+
+23.6a 实际证据：普通 Maintenance/Focus 路径已经建立 `5` 条官方来源语义、`6` 个共享原语、`22` 个独立 literal oracle 和 `12/12` killed mutation；旧控制周期回归为 `42` 项，Layer3 ARC/target-token bridge 为 `200` 项，micro 为 `108/108`。审计同时发现并修复旧执行缺陷：外部状态把 warjack `resourceMax` 声明为 `4` 时，Power Up/分配曾可沿用该值；现在两条路径统一消费官方固定上限 `3`，分配的原语结论也进入动作元数据和回放事件。23.6a 收据为 `7b6b5d0630e580d33e5f295f90879c705185f8d7ad1c991ba8f39f560376c934`。这只认证普通 Focus 子域，不包含 Fury、法术、Essence 或完整跨运行时发布。
+
+23.6b 实际证据：普通核心 Fury 复用历史 leech、Spirit Bond、forcing、threshold/frenzy、transfer、reave、heal 和 aspect 执行器，并以 `8` 条来源语义、`9` 个共享原语、`35` 个独立 literal oracle、`13/13` killed mutation、七条历史 focused 链、Layer3 防守方转移续接和 micro `108/108` 重新认证；修正报告门后的收据为 `47e7422b74d244c439f642f0c298a89980a1df63711479551d41cbe2bffdef5e`，权威收据为 `54ab5d64a0482e2e320031f3ad517dd8953626844f1eae13c26efff32503e394`。实际修复包括容量使用当前 ARC、threshold 严格输入 2d6、普通 Construct 战兽治疗拒绝、转移后为所选战兽生成系统位置 Chance，以及 Wild 战兽不能经非 force 来源获得 Fury。Provoke 完整施法/再次 frenzy/每回合一次、Elemental Mastery 的 Construct 治疗例外和特殊 reaver 仍是待分配到 23.6d/23.8 精确来源所有者的交互债；这些不冒充已完成。
+
+23.6c 实际证据：普通 spell/upkeep/animus/feat/channeling 以 `7` 条来源语义、`8` 个共享纯原语、`26` 个独立 literal oracle 和 `9/9` killed mutation 重认证；聚合复放新核心执行 `15` 例、command/channel `36` 例、card-text `172` 例及 micro `108/108`，Engine 收据为 `f7f7ab871f61479dc6074b940686c65619283029499f415a51cea6624f6da2f4`，权威收据为 `54ab5d64a0482e2e320031f3ad517dd8953626844f1eae13c26efff32503e394`。实际修复包括 upkeep 固定维护费 1、当前数据战兽法术按 animus 识别、战兽自身与 warlock 战斗群借用权限、战兽每次激活一次、同 caster/同侧/整个 Unit 的 upkeep/animus 替换、替换和到期时反转数值效果，以及结构化 leader 身份优先于误导名称。Search 只从 Host 消费同一组 rules/primitives/adapter 哈希，专项 parity 报告为 `dda66ab1a320b0466af4ea20325490111ad4d775b492afd928e76983402ee182`，Search 自有法术规则为 0。
+
+23.6d 与父级实际证据：Essence/Infernal 核心以 `13` 条来源语义、`13` 个共享纯原语、`30` 个 literal oracle、`16/16` killed mutation、`9/9` Engine/Layer3 执行例和 micro `108/108` 重认证；实际修复包括 current ARC/ESS 权威、单一补充方式及后续菜单不可重开、life-force leech/sacrifice、无 LOS 要求的战斗群分配、Maintenance 超限清理、治疗、向满 ESS Horror 的伤害转移、Infernal Master 离场后的 Horror RFP、Layer3 身份/计数器/回滚，以及恢复 strict Rage Fueled 候选。23.6d Engine source receipt 为 `eaa0b03fae6454c8351428a8ef8d2ef91bd10d7a07eb0112ef37949ec9fcc98a`，Search 专项报告为 `a980d3c6c2d4daca92165299d969da914fa27d6a37217cbf89e89d796be0252a`。父级绑定四个当前子凭据，共 `33` 条语义、`36` 个原语、`113` 个 oracle、`50/50` mutation 和 `9` 个跨资源 Engine 场景，报告 `f38cb8aa39fba16f8f1a536bacbe7c0cb2c06a68155415840e06174f721ae07f`；Search Host `98ba424d9d9a8654a9eaebb96f4832e9554abe8853baa77c587c3d33dcaed6af` 以零条自有规则通过 `7` 个 Focus/Fury/Essence 交互场景，报告 `756e25be7e25442ad8754e4fcba0dd39cfa8ff12891821c8059c239d7ade7e6d`。Provoke、Elemental Mastery、特殊 reaver、卡牌特定 COST/目标/资源替换和 Magic Ability 时机明确归 23.8，未被父级普通资源认证覆盖。
+
 ### Slice 23.7: 重认证军表、部署、场景和胜利条件
+
+状态：已完成（2026-08-29）。23.7a 普通军表构筑与模型身份、23.7b 核心 setup/deployment、23.7c Steamroller 2026 及父级连续生命周期均完成重认证。当前 Ticket 23 为 `8/12` 父纵切完成；全局 Strict 仍为 false。
 
 - Force Builder 与运行状态共享模型身份、点数、FA、Character、附件、战斗群、可选配装、companions 和模型数量语义。
 - setup 覆盖先后手、Attacker/Defender、部署区、Advance Deployment、Ambush、reserves、Scenario Terrain 和合法 Unit 部署。
@@ -185,7 +203,11 @@ OfficialRuleSource
 
 完成证据：七场景的构筑到部署、至少一条刺杀和一条得分纵切，在不同先手角色下独立重放。
 
+实际证据：父级绑定当前 23.7a-c，共 `36` 条来源语义、`23` 个共享原语、`109` 个独立 oracle、`67/67` killed mutation 和 micro `108/108`；Engine 报告为 `ee8857ce2315f4bc6ff96d3196636052c1b4063fd5d1a185f10a0304afd3e767`。Search Host `ec575f868fe5cfbfe1ddbf6e4c2e05d2b21d4dd37cc3d57e22219430b5c516c0` 以零条自有最终规则执行得分开放/关闭窗口、重复账本拒绝、精确场景设置、Wolves 短移动拒绝、Payload 接触停止、High Stakes 缺 Chance 拒绝，以及 force-entry -> scenario setup -> first deployment 连续链，父 parity 报告为 `e4f8200a1cf3bc8fd54983d96aac75e096d3635e1df8623ebe039f11c4e58f33`。本轮真实修复包括 Layer3 先手推断和场景地形设置证据、Payload Made To Haul 接触停止、建筑内模型不计 Scenario Presence。
+
 ### Slice 23.8: 重认证全势力和当前卡牌规则来源
+
+状态：进行中（2026-08-31）。23.8a 已建立当前来源动态分母，后续有界子纵切持续闭合精确复用、共享 Host、参与者来源和当前数据规则；父纵切尚未完成，Ticket 23 仍为 `8/12`。
 
 - 对当前数据全部规则来源进行语义去重，区分共享规则、参数化变体、纯展示文本和真正独有行为；不按文本数量机械创建重复原子。
 - 每条来源必须唯一处置为：绑定已认证语义、明确非运行内容或 unresolved。
@@ -193,6 +215,8 @@ OfficialRuleSource
 - 每种独有机制至少有一个自然前态到后继状态的真实场景，并证明规则原子确实被动作枚举和执行消费。
 
 完成证据：当前来源 ownership 为动态 `100%`，且任意新增/修改来源会自动生成未决债务并定向使依赖证据失效。
+
+当前证据：当前数据版本为 `40049`，动态来源分母 `3159`。截至 23.8w，精确闭环 `554`、未闭环 `2605`；规则注册表为 `528` 个原子定义 / `631` 个钩子声明，全部当前声明 proof role 闭合。23.8w 新增参与者来源合同，证明 Heavy Weapon Hardpoint 只作为 Weapon Crate 资格前置而不生成重复触发；两条 True Sight 身份和 Guided 复用现有 targeting/automatic-hit Host。Engine/Layer3/Route3/LLM/Search Host-only 通过 `16` 条结构化证明、`14/14` mutation 和 micro `108/108`，聚合报告 `16a9c26f...355a`，Search 侧规则重复实现为零。父纵切、全局 Strict、Skill/training、`Q_rule`、值与线上实验均未晋级。当前调度固定重放 `1274` 条人工审阅来源，扣除 `17` 条已闭环审阅来源后剩 `1257` 条、`2306` 个义务和 `2228` 个实现片；下一批按共享 Host/动作族批量处理，不再把调度片数量冒充完整规则闭环数。
 
 ### Slice 23.9: 自动关联闭包、性质测试与变异门
 
@@ -222,6 +246,27 @@ OfficialRuleSource
 - skill、ctx2skill/skill2ctx、线上实验和策略报告继续保持隔离，直到各自下游门另行通过。
 
 完成证据：Ticket 23 completion report 的所有严格项为真、未决分母为零、故意注入每类历史错误都会使聚合门失败，且真实 canary 只能消费该收据。
+
+## 纵切重复工作防护矩阵
+
+本矩阵是进入任一纵切前的强制检查点。`历史已实现` 只表示执行代码或旧 focused 场景存在，不等于本轮独立语义重认证完成；`复核` 不得重写已有执行器，除非最小反例证明执行行为错误。
+
+| 纵切 | 当前状态 | 已有实现/证据 | 后续只做什么 | 已确认真实缺陷 |
+| --- | --- | --- | --- | --- |
+| 23.0 | 已完成 | 来源绑定、quarantine、下游失效和 fail-closed 基线 | 保持收据随来源变化失效 | 无 |
+| 23.1 | 已完成 | Stealth、True Sight、Witch Mark、自动命中/失手优先级 | 后续只做受影响回归 | 无 |
+| 23.2 | 已完成 | 双方角色回合推进、持续时间、攻击生命周期、反应/Free Strike | 后续只做受影响回归 | 无 |
+| 23.3 | 已完成 | Unit 移动/冲锋/攻击槽、CMA/CRA、随机 ROF、Dual Shot、Rapid Strike、Guns Blazing、Combo/Smite 等旧执行与新语义证明 | Whole-Unit 对手响应和 Chance 分区移交 23.9/23.10；不得重写这些动作族 | 无当前执行缺陷；完整分区仍是证明债务 |
+| 23.4 | 已完成 | 连续移动、地形、LOS、底盘碰撞、place/push/slam/throw/trample/reposition 等共享几何权威 | 不支持的连续并集保留给 Ticket 20；跨运行时总 parity 归 23.10 | 无 |
+| 23.5 | 已完成 | 29 条语义、32 个原语、90 个 oracle、36 个执行证据、97 个 mutation；14 组 focused 及 Search Host parity 通过 | 后续只做受影响回归；card-specific 归 23.8，连续替换几何归 Ticket 20，全运行时 parity 归 23.10 | 两个最小反例均已修复并复证 |
+| 23.6 | 已完成 | 23.6a-d 合计 33 条语义、36 个原语、113 个 oracle、50/50 mutation；Focus/Fury/Spell/Essence、Engine/Layer3 与 Search Host 普通资源交互通过 | 后续只做受影响回归；Provoke、Elemental Mastery、特殊 reaver、Magic Ability 和卡牌特定替换归 23.8 | 已修容量/时序/身份/分配/转移/治疗/回滚与 Rage Fueled 候选缺口；无当前普通资源缺陷 |
+| 23.7 | 已完成 | 23.7a-c 已认证 36 条语义、23 个原语、109 个 oracle、67/67 mutation、七场景和构筑到首轮部署连续链 | 后续只做受影响回归；卡牌特定场景替换归 23.8，全运行时总 parity 归 23.10 | 已修 Layer3 先手/设置证据、Payload 接触停止和建筑 Presence；无当前普通场景缺陷 |
+| 23.8 | 进行中，23.8a/b 已完成 | 当前 385 个原子、474 个钩子；3128 条来源动态分母与 25 条精确同文本复用已闭合 | 先补 18 个证明待闭合原子，再按合同漂移/未归属语义簇复用或补最小执行 | 当前仍有 155 条已声明证明待补、338 条合同不一致、2244 条未归属 |
+| 23.9 | 待完成，基础已存在 | 现有 interaction graph 为 67 个节点、186 条嵌套 interaction，已有部分 mutation/性质测试 | 从语义读写/钩子/优先级自动派生全分母，补 survived/unresolved 降级 | 旧图不是当前全部来源的自动闭包 |
+| 23.10 | 待完成，基础已存在 | Host 单一入口、Engine/Search 内容哈希收据和多个局部 parity 已有；公共 helper 已强制归一化，独立仓库 Engine root 已 fail closed | 补 Root/App/Layer3/Search 同 action key 全 parity 与漂移矩阵 | 全运行时复合收据尚未闭合 |
+| 23.11 | 待完成，门禁已有雏形 | 动态语义 authority 和 project completion report 已有 | 清点全部 verifier，重跑受影响历史证据和 canary，未决分母归零后才签发 | 当前发现 157 个 verifier、声明 82 个，75 个仍待分类，聚合 inventory 必然失败 |
+
+2026-08-29 审计执行规则：每次开始一个纵切，先查本矩阵、`TASKS.md`、历史 verifier 和 `git log -- <执行器>`；默认 disposition 为“历史实现候选，等待重认证”，不能默认“未实现”。23.5、23.6 和父级 23.7 已通过各自来源、oracle、mutation、Engine、Layer3/Search 与 micro 证据；文档必须分开记录历史复用、夹具漂移和实际执行修复。下一步进入 23.8，先动态盘点全部当前卡牌来源 ownership/disposition、历史 verifier 和最小 unresolved，不重复开发已经有严格执行证据的动作。详细代码审计见 `docs/SEARCH_CODE_AUDIT_2026-08-28.md`。
 
 ## Dependency Order
 

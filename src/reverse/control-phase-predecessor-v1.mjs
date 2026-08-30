@@ -8,9 +8,60 @@ import { buildWarmachineReverseReachabilityCandidateSetV2 } from
   "./reachability-contract-v2.mjs";
 import { warmachineReverseStateSemanticHashV1 } from
   "./terminal-event-predecessor-v1.mjs";
+import {
+  auditWarmachineReverseStateBoundaryV1,
+  summarizeWarmachineReverseStateBoundaryAuditV1,
+} from "./reverse-state-invariants-v1.mjs";
 
 export const WARMACHINE_CONTROL_PHASE_PREDECESSOR_V1_SCHEMA =
   "warmachine_control_phase_predecessor_v1";
+
+function numeric(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function pieceDistance(left = {}, right = {}) {
+  return Math.hypot(
+    numeric(left.position?.xIn) - numeric(right.position?.xIn),
+    numeric(left.position?.yIn) - numeric(right.position?.yIn),
+  );
+}
+
+function setResourcePoints(piece = {}, points = 0) {
+  const value = Math.max(0, Math.floor(numeric(points)));
+  piece.resourcePoints = value;
+  piece.resource2 = value;
+  if (piece.resourceKind === "focus" || "focus" in piece) piece.focus = value;
+  if (piece.resourceKind === "fury" || "fury" in piece) piece.fury = value;
+}
+
+function singleFuryLeechPreimagePair(state = {}, activeSideKey = "") {
+  const controllers = (state.pieces || []).filter((piece) =>
+    piece.sideKey === activeSideKey && piece.isWarlock === true &&
+    String(piece.resourceKind || "") === "fury" &&
+    numeric(piece.resourcePoints) > 0).sort((left, right) =>
+    left.pieceKey.localeCompare(right.pieceKey));
+  const pairs = [];
+  for (const controller of controllers) {
+    const controllerKey = String(controller.pieceKey || "");
+    for (const source of state.pieces || []) {
+      if (source.sideKey !== activeSideKey || source.isWarbeast !== true ||
+          String(source.resourceKind || "") !== "fury") continue;
+      const ownerKey = String(source.controllerPieceKey ||
+        source.battlegroupControllerPieceKey || source.metadata?.controllerPieceKey || "");
+      if (ownerKey && ownerKey !== controllerKey) continue;
+      const sourceCap = Math.max(0, Math.floor(numeric(
+        source.resourceMax ?? source.furyThreshold,
+      )));
+      if (numeric(source.resourcePoints) >= sourceCap) continue;
+      pairs.push({ controller, source, distanceIn: pieceDistance(controller, source) });
+    }
+  }
+  return pairs.sort((left, right) => left.distanceIn - right.distanceIn ||
+    left.source.pieceKey.localeCompare(right.source.pieceKey) ||
+    left.controller.pieceKey.localeCompare(right.controller.pieceKey))[0] || null;
+}
 
 function semanticDifferenceRows(left, right, path = "", rows = [], limit = 64) {
   if (rows.length >= limit || Object.is(left, right)) return rows;
@@ -42,6 +93,10 @@ function restoreControlPhaseStart(
 ) {
   const state = structuredClone(activationStart);
   const activeSideKey = String(state.activeSideKey || "");
+  const furyLeechPair = resourceEnvelopeMode ===
+      "reverse_single_fury_leech_baseline"
+    ? singleFuryLeechPreimagePair(state, activeSideKey)
+    : null;
   state.phaseKey = "control";
   state.controlPhaseStepKey = String(rawOptions.controlPhaseStepKey || "maintenance");
   state.controlPhaseProgressed = false;
@@ -64,18 +119,31 @@ function restoreControlPhaseStart(
     if ([
       "reverse_focus_control_baseline",
       "reverse_focus_control_pass_baseline",
+      "reverse_focus_allocation_baseline",
     ].includes(resourceEnvelopeMode) &&
         String(piece.resourceKind || "") === "focus") {
       const targetPoints = Math.max(0, Number(piece.resourcePoints || 0));
-      const predecessorPoints = piece.isWarcaster === true &&
+      const predecessorPoints = resourceEnvelopeMode ===
+          "reverse_focus_allocation_baseline" && piece.isWarcaster === true
+        ? Math.max(0, Number(piece.resourceMax ?? piece.arc ?? targetPoints))
+        : resourceEnvelopeMode === "reverse_focus_allocation_baseline" &&
+            piece.isWarjack === true
+          ? 0
+          : piece.isWarcaster === true &&
           resourceEnvelopeMode === "reverse_focus_control_baseline"
-        ? 0
-        : piece.isWarjack === true
-          ? Math.max(0, targetPoints - 1)
-          : targetPoints;
+            ? 0
+            : piece.isWarjack === true
+              ? Math.max(0, targetPoints - 1)
+              : targetPoints;
       piece.resourcePoints = predecessorPoints;
       piece.resource2 = predecessorPoints;
       if ("focus" in piece) piece.focus = predecessorPoints;
+    }
+    if (furyLeechPair && piece.pieceKey === furyLeechPair.controller.pieceKey) {
+      setResourcePoints(piece, numeric(piece.resourcePoints) - 1);
+    }
+    if (furyLeechPair && piece.pieceKey === furyLeechPair.source.pieceKey) {
+      setResourcePoints(piece, numeric(piece.resourcePoints) + 1);
     }
     if (controlResidueMode === "empty_previous_control") {
       piece.metadata = {
@@ -95,6 +163,8 @@ function restoreControlPhaseStart(
     resourceEnvelopeKey: String(rawOptions.resourceEnvelopeKey || "unchanged"),
     controlResidueMode,
     resourceEnvelopeMode,
+    furyLeechControllerPieceKey: furyLeechPair?.controller.pieceKey || "",
+    furyLeechSourcePieceKey: furyLeechPair?.source.pieceKey || "",
   }, 24)}`;
   return normalizeRulesV1State(state);
 }
@@ -121,6 +191,17 @@ function targetGuidedControlAction(successor, { state, scoped }) {
     return rightGap - leftGap || left.actionKey.localeCompare(right.actionKey);
   });
   if (needed.length) return needed[0];
+  const leeches = (scoped.enumeration.actions || []).filter((action) => {
+    if (action.actionType !== "leech_fury" || !action.targetPieceKey) return false;
+    const controller = currentByKey.get(action.actorPieceKey);
+    const targetController = targetByKey.get(action.actorPieceKey);
+    const source = currentByKey.get(action.targetPieceKey);
+    const targetSource = targetByKey.get(action.targetPieceKey);
+    return controller && targetController && source && targetSource &&
+      numeric(controller.resourcePoints) < numeric(targetController.resourcePoints) &&
+      numeric(source.resourcePoints) > numeric(targetSource.resourcePoints);
+  }).sort((left, right) => left.actionKey.localeCompare(right.actionKey));
+  if (leeches.length) return leeches[0];
   const close = (scoped.enumeration.actions || []).filter((action) =>
     /end_maintenance|end_control_replenishment|end_control_phase|advance_to_activation/.test(
       String(action.actionType || ""),
@@ -140,6 +221,22 @@ export function generateWarmachineControlPhasePredecessorsV1(
   const candidates = [];
   const unresolved = [];
   const rejected = [];
+  const successorStateInvariantAudit = auditWarmachineReverseStateBoundaryV1(
+    successor,
+    { boundaryKind: "control_inverse_successor" },
+  );
+  if (!successorStateInvariantAudit.ok) {
+    rejected.push({
+      reason: "reverse_predecessor_state_invariant_rejected",
+      boundaryKind: "control_inverse_successor",
+      stateHash: successorSemanticHash,
+      stateInvariantAudit:
+        summarizeWarmachineReverseStateBoundaryAuditV1(
+          successorStateInvariantAudit,
+        ),
+      issues: successorStateInvariantAudit.issues,
+    });
+  }
   const runtimeDiagnostics = [];
   const controlResidueModes = Array.isArray(rawOptions.controlResidueModes)
     ? [...new Set(rawOptions.controlResidueModes.map(String))]
@@ -157,6 +254,8 @@ export function generateWarmachineControlPhasePredecessorsV1(
         "zero_active_focus",
         "reverse_focus_control_baseline",
         "reverse_focus_control_pass_baseline",
+        "reverse_focus_allocation_baseline",
+        "reverse_single_fury_leech_baseline",
       ].includes(mode)).sort()) {
     const proposal = restoreControlPhaseStart(
       successor,
@@ -164,6 +263,27 @@ export function generateWarmachineControlPhasePredecessorsV1(
       resourceEnvelopeMode,
       rawOptions,
     );
+    const predecessorStateInvariantAudit =
+      auditWarmachineReverseStateBoundaryV1(proposal, {
+        boundaryKind: "control_inverse_predecessor",
+      });
+    if (!successorStateInvariantAudit.ok ||
+        !predecessorStateInvariantAudit.ok) {
+      if (!predecessorStateInvariantAudit.ok) {
+        rejected.push({
+          predecessorStateHash: warmachineReverseStateSemanticHashV1(proposal),
+          controlResidueMode,
+          resourceEnvelopeMode,
+          reason: "reverse_predecessor_state_invariant_rejected",
+          stateInvariantAudit:
+            summarizeWarmachineReverseStateBoundaryAuditV1(
+              predecessorStateInvariantAudit,
+            ),
+          issues: predecessorStateInvariantAudit.issues,
+        });
+      }
+      continue;
+    }
     const executed = executeWarmachineBenchmarkControlPhaseV2(proposal, {
       routeKey: String(rawOptions.routeKey ||
         `control-phase-predecessor:${successorSemanticHash}:${controlResidueMode}`),
@@ -222,6 +342,10 @@ export function generateWarmachineControlPhasePredecessorsV1(
           oracleRouteRead: false,
           oracleIntermediateStateRead: false,
         },
+        predecessorStateInvariantAudit:
+          summarizeWarmachineReverseStateBoundaryAuditV1(
+            predecessorStateInvariantAudit,
+          ),
       };
       candidates.push({
         ...core,
@@ -284,6 +408,10 @@ export function generateWarmachineControlPhasePredecessorsV1(
     publicCandidates: stableGraphValue(publicCandidates),
     rejected: stableGraphValue(rejected),
     unresolved: stableGraphValue(unresolved),
+    successorStateInvariantAudit:
+      summarizeWarmachineReverseStateBoundaryAuditV1(
+        successorStateInvariantAudit,
+      ),
     candidateSet,
     oracleIsolationAudit: {
       inputKinds: ["activation_start_state", "resource_envelope"],

@@ -1,24 +1,24 @@
 {
   "schemaVersion": "warmachine_ruleset_snapshot_v1_verification",
-  "generatedAt": "2026-08-14T03:51:53.490Z",
+  "generatedAt": "2026-08-26T10:58:31.573Z",
   "snapshot": {
     "schemaVersion": "warmachine_ruleset_snapshot_v1",
-    "baselineKey": "warmachine-ruleset-2026-08-14-remote-40041-v5",
-    "authorityReceiptHash": "80ce324eb55d360e09f7c0a4e66c9e9c4b491fe358112adaeb5503a7bb8dd14e",
-    "authorityGitRevision": "de88f85fb2579a937bc5bddf246e5794fdfdd7da",
+    "baselineKey": "warmachine-ruleset-2026-08-22-remote-40041-ticket05-combat-sequence-v1",
+    "authorityReceiptHash": "6de629396428cfd2beba5462ad99b767556e9ff6269bad2839b3514cafb6cb80",
+    "authorityGitRevision": "c87c08ca514c401605a3ba88c7b2a3fd1250172f",
     "authorityTrackedWorktreeDirty": true,
     "observed": {
       "host": {
         "sourceHashes": {
           "scripts/function3-data-utils.mjs": "8d2166dc990e0556b307d003f6969ef54d2419f622de88144c77f2ff7ffa4882",
-          "scripts/layer3-function3-adapter.mjs": "c9f15cc00c8b4f471130ee0a9f7a43161bc199bcd33a828d5d6fa49133e53280",
+          "scripts/layer3-function3-adapter.mjs": "1b24738fc6eaf46f77638aca6dee8fe4bb6b3e11262075f6242dd646a7f729bd",
           "scripts/warmachine-exact-dice-probability-v1.mjs": "ff3f973a01c9c79d9a4866215f830f7a55787f0402e24ed2f083ad9816c6a20c",
           "scripts/warmachine-playable-ai-v0.mjs": "c5eb352e73d0706c14e51ca15bfafb0cc6bb0c1b1e35fffc53c27df6bd1b547c",
-          "scripts/warmachine-rule-atoms-v1.mjs": "a4c45223b8dd4c7973b79302c06f122f1e4f7dc4c50595985c07b918de51cf1e",
+          "scripts/warmachine-rule-atoms-v1.mjs": "4cd2bcd38646906f890c499dc748b3431393c844a73aecf3dc64a119fd769f57",
           "scripts/warmachine-rule-atoms/definitions/activation-rfp-resource-transitions-v1.mjs": "61fe5bf86592c4881c1a21803e8efc3289841e033e7a3953a596cb6c74279f46",
-          "scripts/warmachine-rule-atoms/definitions/activation-sequences-v1.mjs": "5ba6422ee1e7ad4f055046edeed8919d156b33171feec0f41688fa0dbe8b12da",
-          "scripts/warmachine-rule-atoms/definitions/attack-dice-modifiers-v1.mjs": "98d5e034d82bc3a26819e0ca2cad718bce14a7f91de7a10a083c053a7a3cf696",
-          "scripts/warmachine-rule-atoms/definitions/attack-hit-transitions-v1.mjs": "34ea2d1453dcc3808a7531995f41519287f2897c681539a0158306ebfd54eb01",
+          "scripts/warmachine-rule-atoms/definitions/activation-sequences-v1.mjs": "e2134449102d59445c0f05a26577774923b9ad6ac9b9c4ed0bd975e23fa778f6",
+          "scripts/warmachine-rule-atoms/definitions/attack-dice-modifiers-v1.mjs": "5a12626761bf0ca0dc6a14aa0a2b981ccd6007bea10f367ac0c34b53a333e036",
+          "scripts/warmachine-rule-atoms/definitions/attack-hit-transitions-v1.mjs": "dc8b305d1d5adc0cef4fbad3a0e6194933ee08b591a57bb8105d7b13e2f3e7ff",
           "scripts/warmachine-rule-atoms/definitions/attack-modifiers-v1.mjs": "bedcdccd6eeb073a98317278ac5706d2f0a4d5cc38b5292d180e4f20544de000",
           "scripts/warmachine-rule-atoms/definitions/attack-participation-validations-v1.mjs": "d77ff5d25025f23b43bb09e7cd675af5b4ebfc86cb44ea038bd3cb2ff8788878",
           "scripts/warmachine-rule-atoms/definitions/attack-range-modifiers-v1.mjs": "70a174be8f69c08dfe4f43bf765df5b19bd331583202aef7ccc052f503cfc30a",
@@ -30,6 +30,7 @@
           "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260729.mjs": "10c2b84938731ebb6eb962d6cb258ebb77cf83beb6b3a38047e753ec7089dbb5",
           "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260802.mjs": "fc4ff49425e770f4e308362ef6e67845700da816716d38b9cdb668b827742fab",
           "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260805.mjs": "5914136edaa0f945e601393e6510190a6f99bfef09ace814d9d3adc83d5d3d27",
+          "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260814.mjs": "069f5eef9e17a769de331d33804496d10b8dfcc2e1132c68ae83b9b11c6acb32",
           "scripts/warmachine-rule-atoms/definitions/damage-applied-transitions-v1.mjs": "98353cdc52593455c75e6e1fdbfb6298615c489277846871ff7eb4d6f0be5a96",
           "scripts/warmachine-rule-atoms/definitions/damage-modifiers-v1.mjs": "88e27d2f54ea61b2b6c420bf199083e5dcc865a03809614b58377ee429d98099",
           "scripts/warmachine-rule-atoms/definitions/damage-resolution-overrides-v1.mjs": "50e2adb45ecf8e170560f53b12066da339a309d36826e324405e00c97fb1e130",
@@ -54,35 +55,47 @@
           "scripts/warmachine-rule-atoms/definitions/targeting-overrides-v1.mjs": "0065a31f39561687bfe43f5f9322dda693379a4a86f22730d91c4105a24ccd0a",
           "scripts/warmachine-rule-atoms/definitions/trapdoor-spell-transitions-v1.mjs": "0b8977405f636834b956f96778f2a294c45146a2fbd5f1ad74525811589ff844",
           "scripts/warmachine-rule-atoms/definitions/weapon-target-memory-v1.mjs": "2ab50533a3faf029e951a84fd3db3e712de7fe39d10174b0bc4937c9527cbd09",
-          "scripts/warmachine-rule-atoms/registry-v1.mjs": "aae8f77444968d52c60d46731dce56800030a491767316cf16eb413bc9d33f06",
-          "scripts/warmachine-rules-v1.mjs": "a124c3cb716b5d809e6d37789b1c1d341bcb257458ab5cc8bacd3727fbc1f768",
-          "scripts/warmachine-special-rules-v0.mjs": "7ebe930b4377ea0e9fa1d333052ba0143d1f004689ef7c87e3a4439d000f1177",
+          "scripts/warmachine-rule-atoms/registry-v1.mjs": "41adb425f20f34478976dc7fc91f6305a3d858ef94c5a1e2e26cd182705c1d58",
+          "scripts/warmachine-rule-semantics-authority-v1.mjs": "6766f3adc67f6b47b0bd4a46a66d7cb1911dcd39b43802a03ad5c8f1716c45f7",
+          "scripts/warmachine-rules-v1.mjs": "d95c86aaaf35542f43ab7d57ade93e7ee1f4c6f0836cc8fd9273ebee6808e0ef",
+          "scripts/warmachine-special-rules-v0.mjs": "e000aa00dc3ba93ab402fd62e900263968a45d1cefeb65bf501a81531c4aab14",
           "scripts/warmachine-steamroller-2026-v1.mjs": "f141726ebbe66f6565ef23e6a7c65491d8f1cc1358bf41f70e39112afcf9c016"
         },
-        "atomCount": 378,
-        "hookOperatorCount": 463,
+        "atomCount": 380,
+        "hookOperatorCount": 466,
         "steamroller2026ScenarioCount": 7
       },
+      "focusedEngineReceipt": {
+        "sourceReceiptHash": "269e2f2b358f015059fd1bc4acc4f6ce68048ae97691e480fb09f4ae114fd2c2",
+        "manifestHash": "356ad4f8cb0a213e63e51634fb70e04ae01bf33968e097a7e8148efd475d2da5",
+        "aggregateHash": "cb83ecf03e7c1a028377f20276e323ea4bf5513f5f07be5b1bfdf4de7aa7c521",
+        "executionSourceReceiptHash": "ef5d3703cb2eac97e4e20a84456d429a661852e3ec97814d7ce42e89b6f883c1",
+        "verifierCount": 269,
+        "passedVerifierCount": 269,
+        "failedVerifierCount": 0,
+        "shardCount": 8,
+        "gatePassed": true
+      },
       "reverseRegistry": {
-        "atomCount": 378,
-        "hookOperatorCount": 463,
-        "primitiveCount": 195,
+        "atomCount": 380,
+        "hookOperatorCount": 466,
+        "primitiveCount": 196,
         "hookKeyCount": 31,
-        "typedHookOperatorCount": 463,
+        "typedHookOperatorCount": 466,
         "explicitSymbolicOperatorCount": 1,
         "genericSymbolicOperatorCount": 75,
         "terminalConstraintOperatorCount": 15,
-        "conservativeBoundOperatorCount": 99,
-        "typedObligationOnlyCount": 273,
+        "conservativeBoundOperatorCount": 100,
+        "typedObligationOnlyCount": 275,
         "unknownFailClosedCount": 0
       },
       "interactionGraph": {
-        "atomCount": 378,
-        "hookOperatorCount": 463,
-        "primitiveCount": 195,
-        "declaredInteractionCount": 497,
+        "atomCount": 380,
+        "hookOperatorCount": 466,
+        "primitiveCount": 196,
+        "declaredInteractionCount": 502,
         "quarantinedInteractionCount": 0,
-        "genericOperatorConstraintCount": 461,
+        "genericOperatorConstraintCount": 466,
         "evidenceInteractionCount": 186,
         "scenarioProfileCount": 7
       },
@@ -112,7 +125,7 @@
         "factionCount": 18
       },
       "constructionPool": {
-        "relativePath": "build/warmachine-ai/sepsira-swarm-vs-fane-v20260805/strict-construction-pool-v1/report.json",
+        "relativePath": "fixtures/ruleset-baseline/construction-pool-report.json",
         "contentHash": "b9e424df007a55d89cc97083e16afbd2868835c3416fcaad6baf1c7fc0f010f9",
         "schemaVersion": "warmachine_sepsira_fane_construction_pool_v1",
         "remoteVersion": "40041",
@@ -124,54 +137,823 @@
       "mirrorContentHash": "4b961775f498e72a9574ba16cccd45d13037c64dfab120055e9c22162ccee332",
       "matches": true
     },
-    "reverseRegistryHash": "76377d3edb5b2b8f12d200163f3e4a5c93f91cac3cf379103f7ae925188bb3cd",
-    "semanticGraphHash": "249e75df4cc4dac86985e4c5e87fd72b6deb6fae31db7d94094d0847ce6ae081",
-    "semanticRulesetHash": "fb80dc51d1d282d13b233d7aff66294164308189a7273a4c09d9728c5411251f",
+    "reverseRegistryHash": "bb7209345cd0801f94a68007a7857949a1402af5a8657c01f6ceff95b78c9959",
+    "semanticGraphHash": "2067d361cb3f03baf317e1591278b7da7e7146d90147783ee070ed0d3f6cb758",
+    "semanticRulesetHash": "3259f624188ec880fd92ab157d4fb1de16bfbdd2eaa339e61fefc2cc905cb0f9",
+    "executionSemanticReceipt": {
+      "schemaVersion": "warmachine_search_execution_receipt_v1",
+      "engine": {
+        "schemaVersion": "warmachine_host_dependency_receipt_v2",
+        "gitRevision": "c87c08ca514c401605a3ba88c7b2a3fd1250172f",
+        "trackedWorktreeDirty": true,
+        "trackedDirtyPathCount": 84,
+        "sourceHashes": {
+          "scripts/function3-data-utils.mjs": "8d2166dc990e0556b307d003f6969ef54d2419f622de88144c77f2ff7ffa4882",
+          "scripts/layer3-function3-adapter.mjs": "1b24738fc6eaf46f77638aca6dee8fe4bb6b3e11262075f6242dd646a7f729bd",
+          "scripts/warmachine-exact-dice-probability-v1.mjs": "ff3f973a01c9c79d9a4866215f830f7a55787f0402e24ed2f083ad9816c6a20c",
+          "scripts/warmachine-playable-ai-v0.mjs": "c5eb352e73d0706c14e51ca15bfafb0cc6bb0c1b1e35fffc53c27df6bd1b547c",
+          "scripts/warmachine-rule-atoms-v1.mjs": "4cd2bcd38646906f890c499dc748b3431393c844a73aecf3dc64a119fd769f57",
+          "scripts/warmachine-rule-atoms/definitions/activation-rfp-resource-transitions-v1.mjs": "61fe5bf86592c4881c1a21803e8efc3289841e033e7a3953a596cb6c74279f46",
+          "scripts/warmachine-rule-atoms/definitions/activation-sequences-v1.mjs": "e2134449102d59445c0f05a26577774923b9ad6ac9b9c4ed0bd975e23fa778f6",
+          "scripts/warmachine-rule-atoms/definitions/attack-dice-modifiers-v1.mjs": "5a12626761bf0ca0dc6a14aa0a2b981ccd6007bea10f367ac0c34b53a333e036",
+          "scripts/warmachine-rule-atoms/definitions/attack-hit-transitions-v1.mjs": "dc8b305d1d5adc0cef4fbad3a0e6194933ee08b591a57bb8105d7b13e2f3e7ff",
+          "scripts/warmachine-rule-atoms/definitions/attack-modifiers-v1.mjs": "bedcdccd6eeb073a98317278ac5706d2f0a4d5cc38b5292d180e4f20544de000",
+          "scripts/warmachine-rule-atoms/definitions/attack-participation-validations-v1.mjs": "d77ff5d25025f23b43bb09e7cd675af5b4ebfc86cb44ea038bd3cb2ff8788878",
+          "scripts/warmachine-rule-atoms/definitions/attack-range-modifiers-v1.mjs": "70a174be8f69c08dfe4f43bf765df5b19bd331583202aef7ccc052f503cfc30a",
+          "scripts/warmachine-rule-atoms/definitions/attack-resolved-transitions-v1.mjs": "e1259ee2011e65d8947484497b39610b6234fd292ff78504dbdcb1a45baa0c6b",
+          "scripts/warmachine-rule-atoms/definitions/attack-sequence-validations-v1.mjs": "ab43221414135d05d846d9fe69aa74c18dcf7c84644c457b49e995ebb6c4d53b",
+          "scripts/warmachine-rule-atoms/definitions/candidate-choice-protocols-v1.mjs": "bdbf5cb4a24c42b263568b0ba1bc4d770ff62c56d7824d8ece9b1aaac5ebb06b",
+          "scripts/warmachine-rule-atoms/definitions/channeling-transitions-v1.mjs": "6674e1cd3779f99d7f1d5d89a201be94aff24d5fe57b1ab30f2e799eaacf70e7",
+          "scripts/warmachine-rule-atoms/definitions/corpse-thresholds-v1.mjs": "e72aaed6bcbdc13a0d2fb954746932b77b6012441dcfbad48fc2ed289c32358c",
+          "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260729.mjs": "10c2b84938731ebb6eb962d6cb258ebb77cf83beb6b3a38047e753ec7089dbb5",
+          "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260802.mjs": "fc4ff49425e770f4e308362ef6e67845700da816716d38b9cdb668b827742fab",
+          "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260805.mjs": "5914136edaa0f945e601393e6510190a6f99bfef09ace814d9d3adc83d5d3d27",
+          "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260814.mjs": "069f5eef9e17a769de331d33804496d10b8dfcc2e1132c68ae83b9b11c6acb32",
+          "scripts/warmachine-rule-atoms/definitions/damage-applied-transitions-v1.mjs": "98353cdc52593455c75e6e1fdbfb6298615c489277846871ff7eb4d6f0be5a96",
+          "scripts/warmachine-rule-atoms/definitions/damage-modifiers-v1.mjs": "88e27d2f54ea61b2b6c420bf199083e5dcc865a03809614b58377ee429d98099",
+          "scripts/warmachine-rule-atoms/definitions/damage-resolution-overrides-v1.mjs": "50e2adb45ecf8e170560f53b12066da339a309d36826e324405e00c97fb1e130",
+          "scripts/warmachine-rule-atoms/definitions/defense-terrain-transitions-v1.mjs": "02b2be34cd5d8b37764b596598733048df127423dd3a2f7c5888ecef219f2a7b",
+          "scripts/warmachine-rule-atoms/definitions/deployment-transitions-v1.mjs": "e8cd639681f23cbd34671ca3118a46b471f145065d9a8207d57c8b5009c829d7",
+          "scripts/warmachine-rule-atoms/definitions/knockdown-preventions-v1.mjs": "6c498d932671fe4fca3423303be90b58200352335ba36c0efcb447a6c9e9bc23",
+          "scripts/warmachine-rule-atoms/definitions/model-boxed-transitions-v1.mjs": "e8d579b2332bc0c513a899e05901541104dc1221438395fd3e6cbd09f423dccd",
+          "scripts/warmachine-rule-atoms/definitions/model-destroyed-transitions-v1.mjs": "b535f549a15086f95ec87a1d14fb82645f683f4bb79689d98f05f1cad20df7ea",
+          "scripts/warmachine-rule-atoms/definitions/model-disabled-transitions-v1.mjs": "50c7e0a3f5330d3ce131cfe05dad64caa42c19337bace705efdf45a06e9cc6c3",
+          "scripts/warmachine-rule-atoms/definitions/model-exploded-transitions-v1.mjs": "64899a270341e737468a3421af32ff0fc66136938a6fad9d15108ee31040d1b4",
+          "scripts/warmachine-rule-atoms/definitions/movement-allowance-v1.mjs": "70218842e6b65e39f5f247ead30f45a49c8af6b56eeed100666e931a89c995d8",
+          "scripts/warmachine-rule-atoms/definitions/movement-contact-transitions-v1.mjs": "16aa39d33fbb42bcb66aa88973c7bdf875d42cf6a601b0e7676854b1956a6364",
+          "scripts/warmachine-rule-atoms/definitions/movement-cost-v1.mjs": "785a009e503e091347ce765a72f819a4be52aa8102f182f3019c824c01963846",
+          "scripts/warmachine-rule-atoms/definitions/movement-transitions-v1.mjs": "4f1aac75f2223c8f3d5f9ccf78592640767c8250c6a187a60b84be7a50e858f4",
+          "scripts/warmachine-rule-atoms/definitions/movement-validation-v1.mjs": "0ce554308d7673bb992e24eebb8b7af331743c82b8bb004af9fd0bd3164ec4f7",
+          "scripts/warmachine-rule-atoms/definitions/permutation-servitor-transitions-v1.mjs": "68a26c4f8ebffcc4542a45afe345890c11777f956fcf59a3426ee9e7b9ce2b20",
+          "scripts/warmachine-rule-atoms/definitions/resource-transitions-v1.mjs": "fee329286b1a30452a7ad37f16bec2bcf52ae2aec209883130425321556f02d9",
+          "scripts/warmachine-rule-atoms/definitions/roster-construction-validations-v1.mjs": "c7599e33d06db04b050d9ace63a22eabea8d334972f332b8683384bf8f1476dc",
+          "scripts/warmachine-rule-atoms/definitions/source-leave-play-transitions-v1.mjs": "ae507ad99d5048c3ec49e61eaeb176b1824926f2d9eb66a83cbff52bcecc4cf6",
+          "scripts/warmachine-rule-atoms/definitions/status-aura-validations-v1.mjs": "1ed4eb8cbd84487f030603dcdd2711493e7244b4a8dc5a1953b90c537eed19d8",
+          "scripts/warmachine-rule-atoms/definitions/target-choice-transitions-v1.mjs": "234c8c10233b6f5e0839ed41bd4df32a1b1a2df8d4005ed95458edba66ca570b",
+          "scripts/warmachine-rule-atoms/definitions/targeting-overrides-v1.mjs": "0065a31f39561687bfe43f5f9322dda693379a4a86f22730d91c4105a24ccd0a",
+          "scripts/warmachine-rule-atoms/definitions/trapdoor-spell-transitions-v1.mjs": "0b8977405f636834b956f96778f2a294c45146a2fbd5f1ad74525811589ff844",
+          "scripts/warmachine-rule-atoms/definitions/weapon-target-memory-v1.mjs": "2ab50533a3faf029e951a84fd3db3e712de7fe39d10174b0bc4937c9527cbd09",
+          "scripts/warmachine-rule-atoms/registry-v1.mjs": "41adb425f20f34478976dc7fc91f6305a3d858ef94c5a1e2e26cd182705c1d58",
+          "scripts/warmachine-rule-semantics-authority-v1.mjs": "6766f3adc67f6b47b0bd4a46a66d7cb1911dcd39b43802a03ad5c8f1716c45f7",
+          "scripts/warmachine-rules-v1.mjs": "d95c86aaaf35542f43ab7d57ade93e7ee1f4c6f0836cc8fd9273ebee6808e0ef",
+          "scripts/warmachine-special-rules-v0.mjs": "e000aa00dc3ba93ab402fd62e900263968a45d1cefeb65bf501a81531c4aab14",
+          "scripts/warmachine-steamroller-2026-v1.mjs": "f141726ebbe66f6565ef23e6a7c65491d8f1cc1358bf41f70e39112afcf9c016"
+        },
+        "receiptHash": "6de629396428cfd2beba5462ad99b767556e9ff6269bad2839b3514cafb6cb80"
+      },
+      "constructionEngine": {
+        "schemaVersion": "warmachine_construction_host_dependency_receipt_v1",
+        "gitRevision": "c87c08ca514c401605a3ba88c7b2a3fd1250172f",
+        "trackedWorktreeDirty": true,
+        "trackedDirtyPathCount": 84,
+        "sourceHashes": {
+          "android-shell/assets/companion/force-builder.js": "b980b0a5f3eada0122279d73c615abce1ed53d4a5deb30a00cd8f147e5b47ebc",
+          "scripts/function3-data-utils.mjs": "8d2166dc990e0556b307d003f6969ef54d2419f622de88144c77f2ff7ffa4882",
+          "scripts/layer3-function3-adapter.mjs": "1b24738fc6eaf46f77638aca6dee8fe4bb6b3e11262075f6242dd646a7f729bd",
+          "scripts/run-warmachine-ai-one-round-live-experiments-v20260609.mjs": "c6c30bcf176cbb8c086ab3d7764bc2f9300c080576297c2c3385a6cd9b6aee94",
+          "scripts/warmachine-card-damage-grid-reference-v20260708.mjs": "a16c72f4bcfb627313b11fe5fde093f81b19675b97b54c058d2eba6c81fc189f",
+          "scripts/warmachine-exact-dice-probability-v1.mjs": "ff3f973a01c9c79d9a4866215f830f7a55787f0402e24ed2f083ad9816c6a20c",
+          "scripts/warmachine-formation-library-v1.mjs": "37fb0b2a1de6b4e2b466dc4daa812d13349d6ed47c29cf7377ab2b97bbeec606",
+          "scripts/warmachine-playable-ai-v0.mjs": "c5eb352e73d0706c14e51ca15bfafb0cc6bb0c1b1e35fffc53c27df6bd1b547c",
+          "scripts/warmachine-rule-atoms-v1.mjs": "4cd2bcd38646906f890c499dc748b3431393c844a73aecf3dc64a119fd769f57",
+          "scripts/warmachine-rule-atoms/definitions/activation-rfp-resource-transitions-v1.mjs": "61fe5bf86592c4881c1a21803e8efc3289841e033e7a3953a596cb6c74279f46",
+          "scripts/warmachine-rule-atoms/definitions/activation-sequences-v1.mjs": "e2134449102d59445c0f05a26577774923b9ad6ac9b9c4ed0bd975e23fa778f6",
+          "scripts/warmachine-rule-atoms/definitions/attack-dice-modifiers-v1.mjs": "5a12626761bf0ca0dc6a14aa0a2b981ccd6007bea10f367ac0c34b53a333e036",
+          "scripts/warmachine-rule-atoms/definitions/attack-hit-transitions-v1.mjs": "dc8b305d1d5adc0cef4fbad3a0e6194933ee08b591a57bb8105d7b13e2f3e7ff",
+          "scripts/warmachine-rule-atoms/definitions/attack-modifiers-v1.mjs": "bedcdccd6eeb073a98317278ac5706d2f0a4d5cc38b5292d180e4f20544de000",
+          "scripts/warmachine-rule-atoms/definitions/attack-participation-validations-v1.mjs": "d77ff5d25025f23b43bb09e7cd675af5b4ebfc86cb44ea038bd3cb2ff8788878",
+          "scripts/warmachine-rule-atoms/definitions/attack-range-modifiers-v1.mjs": "70a174be8f69c08dfe4f43bf765df5b19bd331583202aef7ccc052f503cfc30a",
+          "scripts/warmachine-rule-atoms/definitions/attack-resolved-transitions-v1.mjs": "e1259ee2011e65d8947484497b39610b6234fd292ff78504dbdcb1a45baa0c6b",
+          "scripts/warmachine-rule-atoms/definitions/attack-sequence-validations-v1.mjs": "ab43221414135d05d846d9fe69aa74c18dcf7c84644c457b49e995ebb6c4d53b",
+          "scripts/warmachine-rule-atoms/definitions/candidate-choice-protocols-v1.mjs": "bdbf5cb4a24c42b263568b0ba1bc4d770ff62c56d7824d8ece9b1aaac5ebb06b",
+          "scripts/warmachine-rule-atoms/definitions/channeling-transitions-v1.mjs": "6674e1cd3779f99d7f1d5d89a201be94aff24d5fe57b1ab30f2e799eaacf70e7",
+          "scripts/warmachine-rule-atoms/definitions/corpse-thresholds-v1.mjs": "e72aaed6bcbdc13a0d2fb954746932b77b6012441dcfbad48fc2ed289c32358c",
+          "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260729.mjs": "10c2b84938731ebb6eb962d6cb258ebb77cf83beb6b3a38047e753ec7089dbb5",
+          "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260802.mjs": "fc4ff49425e770f4e308362ef6e67845700da816716d38b9cdb668b827742fab",
+          "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260805.mjs": "5914136edaa0f945e601393e6510190a6f99bfef09ace814d9d3adc83d5d3d27",
+          "scripts/warmachine-rule-atoms/definitions/current-data-update-v20260814.mjs": "069f5eef9e17a769de331d33804496d10b8dfcc2e1132c68ae83b9b11c6acb32",
+          "scripts/warmachine-rule-atoms/definitions/damage-applied-transitions-v1.mjs": "98353cdc52593455c75e6e1fdbfb6298615c489277846871ff7eb4d6f0be5a96",
+          "scripts/warmachine-rule-atoms/definitions/damage-modifiers-v1.mjs": "88e27d2f54ea61b2b6c420bf199083e5dcc865a03809614b58377ee429d98099",
+          "scripts/warmachine-rule-atoms/definitions/damage-resolution-overrides-v1.mjs": "50e2adb45ecf8e170560f53b12066da339a309d36826e324405e00c97fb1e130",
+          "scripts/warmachine-rule-atoms/definitions/defense-terrain-transitions-v1.mjs": "02b2be34cd5d8b37764b596598733048df127423dd3a2f7c5888ecef219f2a7b",
+          "scripts/warmachine-rule-atoms/definitions/deployment-transitions-v1.mjs": "e8cd639681f23cbd34671ca3118a46b471f145065d9a8207d57c8b5009c829d7",
+          "scripts/warmachine-rule-atoms/definitions/knockdown-preventions-v1.mjs": "6c498d932671fe4fca3423303be90b58200352335ba36c0efcb447a6c9e9bc23",
+          "scripts/warmachine-rule-atoms/definitions/model-boxed-transitions-v1.mjs": "e8d579b2332bc0c513a899e05901541104dc1221438395fd3e6cbd09f423dccd",
+          "scripts/warmachine-rule-atoms/definitions/model-destroyed-transitions-v1.mjs": "b535f549a15086f95ec87a1d14fb82645f683f4bb79689d98f05f1cad20df7ea",
+          "scripts/warmachine-rule-atoms/definitions/model-disabled-transitions-v1.mjs": "50c7e0a3f5330d3ce131cfe05dad64caa42c19337bace705efdf45a06e9cc6c3",
+          "scripts/warmachine-rule-atoms/definitions/model-exploded-transitions-v1.mjs": "64899a270341e737468a3421af32ff0fc66136938a6fad9d15108ee31040d1b4",
+          "scripts/warmachine-rule-atoms/definitions/movement-allowance-v1.mjs": "70218842e6b65e39f5f247ead30f45a49c8af6b56eeed100666e931a89c995d8",
+          "scripts/warmachine-rule-atoms/definitions/movement-contact-transitions-v1.mjs": "16aa39d33fbb42bcb66aa88973c7bdf875d42cf6a601b0e7676854b1956a6364",
+          "scripts/warmachine-rule-atoms/definitions/movement-cost-v1.mjs": "785a009e503e091347ce765a72f819a4be52aa8102f182f3019c824c01963846",
+          "scripts/warmachine-rule-atoms/definitions/movement-transitions-v1.mjs": "4f1aac75f2223c8f3d5f9ccf78592640767c8250c6a187a60b84be7a50e858f4",
+          "scripts/warmachine-rule-atoms/definitions/movement-validation-v1.mjs": "0ce554308d7673bb992e24eebb8b7af331743c82b8bb004af9fd0bd3164ec4f7",
+          "scripts/warmachine-rule-atoms/definitions/permutation-servitor-transitions-v1.mjs": "68a26c4f8ebffcc4542a45afe345890c11777f956fcf59a3426ee9e7b9ce2b20",
+          "scripts/warmachine-rule-atoms/definitions/resource-transitions-v1.mjs": "fee329286b1a30452a7ad37f16bec2bcf52ae2aec209883130425321556f02d9",
+          "scripts/warmachine-rule-atoms/definitions/roster-construction-validations-v1.mjs": "c7599e33d06db04b050d9ace63a22eabea8d334972f332b8683384bf8f1476dc",
+          "scripts/warmachine-rule-atoms/definitions/source-leave-play-transitions-v1.mjs": "ae507ad99d5048c3ec49e61eaeb176b1824926f2d9eb66a83cbff52bcecc4cf6",
+          "scripts/warmachine-rule-atoms/definitions/status-aura-validations-v1.mjs": "1ed4eb8cbd84487f030603dcdd2711493e7244b4a8dc5a1953b90c537eed19d8",
+          "scripts/warmachine-rule-atoms/definitions/target-choice-transitions-v1.mjs": "234c8c10233b6f5e0839ed41bd4df32a1b1a2df8d4005ed95458edba66ca570b",
+          "scripts/warmachine-rule-atoms/definitions/targeting-overrides-v1.mjs": "0065a31f39561687bfe43f5f9322dda693379a4a86f22730d91c4105a24ccd0a",
+          "scripts/warmachine-rule-atoms/definitions/trapdoor-spell-transitions-v1.mjs": "0b8977405f636834b956f96778f2a294c45146a2fbd5f1ad74525811589ff844",
+          "scripts/warmachine-rule-atoms/definitions/weapon-target-memory-v1.mjs": "2ab50533a3faf029e951a84fd3db3e712de7fe39d10174b0bc4937c9527cbd09",
+          "scripts/warmachine-rule-atoms/registry-v1.mjs": "41adb425f20f34478976dc7fc91f6305a3d858ef94c5a1e2e26cd182705c1d58",
+          "scripts/warmachine-rule-semantics-authority-v1.mjs": "6766f3adc67f6b47b0bd4a46a66d7cb1911dcd39b43802a03ad5c8f1716c45f7",
+          "scripts/warmachine-rules-v1.mjs": "d95c86aaaf35542f43ab7d57ade93e7ee1f4c6f0836cc8fd9273ebee6808e0ef",
+          "scripts/warmachine-special-rules-v0.mjs": "e000aa00dc3ba93ab402fd62e900263968a45d1cefeb65bf501a81531c4aab14",
+          "scripts/warmachine-steamroller-2026-v1.mjs": "f141726ebbe66f6565ef23e6a7c65491d8f1cc1358bf41f70e39112afcf9c016",
+          "scripts/warmachine-strict-skill-runtime-policy-v20260801.mjs": "c1e1557fd80e45ee523041ce885947855a5adbd8a7a2d9b51d088e1342e0715a"
+        },
+        "receiptHash": "d7492490da69a51518431cf44110496381835abfd66ad191bd2f9fdd9d547b12"
+      },
+      "focusedEngine": {
+        "schemaVersion": "warmachine_focused_engine_receipt_binding_v1",
+        "reviewedReceiptSchemaVersion": "warmachine_reviewed_focused_engine_receipt_v1",
+        "sourceReceiptHash": "269e2f2b358f015059fd1bc4acc4f6ce68048ae97691e480fb09f4ae114fd2c2",
+        "manifestHash": "356ad4f8cb0a213e63e51634fb70e04ae01bf33968e097a7e8148efd475d2da5",
+        "aggregateHash": "cb83ecf03e7c1a028377f20276e323ea4bf5513f5f07be5b1bfdf4de7aa7c521",
+        "executionSourceReceiptHash": "ef5d3703cb2eac97e4e20a84456d429a661852e3ec97814d7ce42e89b6f883c1",
+        "observedExecutionSourceReceiptHash": "301b1f075ff06a570fcd8b8105f000a6ec9d8b3ec70bab9819be522faf3488ba",
+        "sourceFileCount": 634,
+        "verifierCount": 269,
+        "passedVerifierCount": 269,
+        "failedVerifierCount": 0,
+        "shardCount": 8,
+        "gatePassed": true,
+        "current": false,
+        "failClosedReasons": [
+          "focused_engine_execution_source_receipt_mismatch",
+          "focused_engine_source_file_count_mismatch"
+        ]
+      },
+      "ruleSemanticsAuthority": {
+        "schemaVersion": "warmachine_rule_semantics_authority_v1",
+        "authorityReceiptHash": "8b374731fe750dc0f548f4e286775c675caa5068eb49285d896167644238e437",
+        "disposition": "rules_semantics_unreviewed",
+        "sourceAuthorityCurrent": false,
+        "globalStrictReady": false,
+        "strictExecutorReady": false,
+        "strictSearchReady": false,
+        "trainingTruthAllowed": false,
+        "quarantineActive": true,
+        "failClosedReasons": [
+          "interaction_graph_uses_stale_rulebook",
+          "legacy_self_certification_detected",
+          "official_keywords_not_recertified",
+          "official_rule_families_not_recertified",
+          "required_source_missing:crossRuntimeParityReport",
+          "required_source_missing:independentOracleManifest",
+          "required_source_missing:primitiveCatalog",
+          "required_source_missing:semanticMutationReport",
+          "required_source_missing:semanticRuleRegistry",
+          "required_source_missing:timingDag",
+          "semantic_artifact_not_ready:crossRuntimeParityReport",
+          "semantic_artifact_not_ready:independentOracleManifest",
+          "semantic_artifact_not_ready:primitiveCatalog",
+          "semantic_artifact_not_ready:semanticMutationReport",
+          "semantic_artifact_not_ready:semanticRuleRegistry",
+          "semantic_artifact_not_ready:timingDag"
+        ]
+      },
+      "search": {
+        "schemaVersion": "warmachine_search_source_receipt_v1",
+        "gitRevision": "65e87e7e01a640c4b1ad23f62b72f63b5a353c2e",
+        "sourceWorktreeDirty": true,
+        "sourceDirtyPathCount": 47,
+        "sourceFileCount": 77,
+        "sourceRecords": [
+          {
+            "relativePath": "config/warmachine-focused-engine-receipt-v1.json",
+            "byteCount": 1632,
+            "contentHash": "77d7f27fa47a9702060bb4a8634548acf34ad2bd55eaac1635cce829ddc5fc5a"
+          },
+          {
+            "relativePath": "scripts/execute-custom-matchup-terminal-root-batch-v1.mjs",
+            "byteCount": 8364,
+            "contentHash": "cfea77cebfc1200297a2db0d3cb93f23f18d0f013a222607dbcb94749ababdbd"
+          },
+          {
+            "relativePath": "src/benchmark/benchmark-game-state-hash-v2.mjs",
+            "byteCount": 891,
+            "contentHash": "048a1afec367abf41f6521596ebba086df2855e1f0a18508d3740d867617ab57"
+          },
+          {
+            "relativePath": "src/benchmark/fixed-steamroller-benchmark-v2.mjs",
+            "byteCount": 76797,
+            "contentHash": "aa8f516e9ea1f6310cd6ac6a8273a9969d69ead16fe334092877abcd471935d4"
+          },
+          {
+            "relativePath": "src/construction/formation-candidates-v1.mjs",
+            "byteCount": 21946,
+            "contentHash": "10720fe43cb1b3cf2dfc835e7723bed49263da5b3a9a762b57dc1bf7ec40c668"
+          },
+          {
+            "relativePath": "src/construction/nested-roster-deployment-v2.mjs",
+            "byteCount": 40508,
+            "contentHash": "0ec63e9d5e50f2e3890e15c0e5a645ec4a40f5ae87be0c959bcf2acad9d92388"
+          },
+          {
+            "relativePath": "src/construction/roster-investment-v1.mjs",
+            "byteCount": 9801,
+            "contentHash": "d523ada95fb35ee973bd8509a0b79fba91b81b356802e0d95e22ac83efb4d3f8"
+          },
+          {
+            "relativePath": "src/contracts/ruleset-baseline-v1.mjs",
+            "byteCount": 358,
+            "contentHash": "34996075728d13447c4cb10afe2dd49d400c1beefe0f753c53fabb1d4f6d9919"
+          },
+          {
+            "relativePath": "src/contracts/search-execution-receipt-v1.mjs",
+            "byteCount": 9665,
+            "contentHash": "f9cbe80e900b33e6505e8759d1e218e3c7de480d6583b8bc0efd2d6dbcb6f1d4"
+          },
+          {
+            "relativePath": "src/contracts/steamroller-2026-official-scenario-layout-v1.mjs",
+            "byteCount": 13717,
+            "contentHash": "8c87bf06666a8f11560cf49ad38178599610987a27cb62af79cc1c0692d34dcf"
+          },
+          {
+            "relativePath": "src/geometry/cell-connectivity-v1.mjs",
+            "byteCount": 40897,
+            "contentHash": "e4619be28ef0c5c5ce8a37029b20bf312711f6df15c3de6e1ad12ad586541955"
+          },
+          {
+            "relativePath": "src/geometry/cell-partition-v1.mjs",
+            "byteCount": 6685,
+            "contentHash": "0d74085861fc10ad12c333439135e93598b022cbb1377b9cab115a3358467e85"
+          },
+          {
+            "relativePath": "src/geometry/fixed-endpoint-obstacle-path-classes-v1.mjs",
+            "byteCount": 19296,
+            "contentHash": "5d2ff1d0034ce8f05e5119d2669abd7072c5def4b5a8fbc0e6b57528d2621843"
+          },
+          {
+            "relativePath": "src/geometry/movement-event-automaton-v1.mjs",
+            "byteCount": 18156,
+            "contentHash": "0267f2bb9976cb359773078b5362bc00f757256e4e7d30aab9fd89e69fceda94"
+          },
+          {
+            "relativePath": "src/geometry/movement-event-word-language-v1.mjs",
+            "byteCount": 10529,
+            "contentHash": "5e70ce34126be4832c23f7a19ccf07dec042f4893a9627792e4ef915a9ed438c"
+          },
+          {
+            "relativePath": "src/geometry/path-topology-v1.mjs",
+            "byteCount": 19665,
+            "contentHash": "7e73c5acb0fed7984e1fb37f0b08c969e4e76bdba22acc9de2639ffe3d6811ba"
+          },
+          {
+            "relativePath": "src/geometry/predicate-plan-v1.mjs",
+            "byteCount": 12013,
+            "contentHash": "24529f4d64a57a3d838d4a9e132c697bc1093682d9ea00e3938558c3b9d71a7c"
+          },
+          {
+            "relativePath": "src/geometry/quantized-movement-event-word-worklist-v1.mjs",
+            "byteCount": 27014,
+            "contentHash": "407f36d42165fc1f7655c32f498f7dffa6cabc8d52976d89d2a43a748ac28dda"
+          },
+          {
+            "relativePath": "src/geometry/strict-representative-v1.mjs",
+            "byteCount": 33558,
+            "contentHash": "7679a49758e8a88b3e31e4a42a57483b47662aec89ea35ee95072db2df714936"
+          },
+          {
+            "relativePath": "src/graph/capability-query-v2.mjs",
+            "byteCount": 26103,
+            "contentHash": "08b3e6a953d36287b148ed5fce01b3022e7f37cf7675c82f94a6db664963039e"
+          },
+          {
+            "relativePath": "src/graph/typed-facts-v2.mjs",
+            "byteCount": 15139,
+            "contentHash": "5fd65e89ecf42f01e5996d392241425d809849d86d84a437b8a2e1c3f5980e64"
+          },
+          {
+            "relativePath": "src/graph/typed-interaction-graph-v2.mjs",
+            "byteCount": 34618,
+            "contentHash": "837020dd28d2f9bece2ae7ac3739b9ede33989e29cbe2e331e1593d6a08a56e5"
+          },
+          {
+            "relativePath": "src/matchup/matchup-assassination-terminal-task-materializer-v1.mjs",
+            "byteCount": 101750,
+            "contentHash": "883d918e0189531952972801ecef9d7d709b01289c0d8c45ea152947a34a2ca5"
+          },
+          {
+            "relativePath": "src/matchup/matchup-assassination-transition-progress-v1.mjs",
+            "byteCount": 5121,
+            "contentHash": "5c2086fa396a0e8a70f2226d6623cad76d37616ab6a539ce011d4d224f5ac0c0"
+          },
+          {
+            "relativePath": "src/matchup/matchup-fixed-round-terminal-task-materializer-v1.mjs",
+            "byteCount": 90523,
+            "contentHash": "fde77bff20598339a2816bbd1302682d6d7787ef478bcb7b9073db20310a6e18"
+          },
+          {
+            "relativePath": "src/matchup/matchup-score-terminal-task-materializer-v1.mjs",
+            "byteCount": 60680,
+            "contentHash": "8b1dc5706716b52da505bcca41a8fe7acecd7772b38398b8c8dc3a98c7fa83ce"
+          },
+          {
+            "relativePath": "src/matchup/matchup-simultaneous-terminal-task-materializer-v1.mjs",
+            "byteCount": 127387,
+            "contentHash": "d510478bfa9b988cf31d4d4c09762c970083ec98fdf46e3660a04b7b6665803f"
+          },
+          {
+            "relativePath": "src/matchup/matchup-terminal-candidate-ledger-v1.mjs",
+            "byteCount": 21880,
+            "contentHash": "3e4b6857ad842a229e63f4a22a1b1000705c82ae094741e23981bc969407d742"
+          },
+          {
+            "relativePath": "src/matchup/matchup-terminal-partition-capability-audit-v1.mjs",
+            "byteCount": 22350,
+            "contentHash": "4cbece36d4f42ae8319eb302e22a295a5ae25faa2aba2e8237708cad9a6f8c2d"
+          },
+          {
+            "relativePath": "src/matchup/matchup-terminal-root-batch-checkpoint-store-v1.mjs",
+            "byteCount": 4475,
+            "contentHash": "3b52ce3a7d4eb2853416cdebabfe732c00777aa38b562d75dce6d102f116c3b1"
+          },
+          {
+            "relativePath": "src/matchup/matchup-terminal-root-batch-v1.mjs",
+            "byteCount": 56603,
+            "contentHash": "9988a49b5ead4f56e4062bf676ab3c46210c03d50909403d07010eca90048ffb"
+          },
+          {
+            "relativePath": "src/matchup/matchup-terminal-root-materializer-v1.mjs",
+            "byteCount": 34973,
+            "contentHash": "5ff7c1398a40e1fff8c8df76c535335143dcb514c226e55080f150e033572a74"
+          },
+          {
+            "relativePath": "src/matchup/matchup-terminal-root-opening-batch-v1.mjs",
+            "byteCount": 8128,
+            "contentHash": "1cbb3131065ac53584ebc76b1e980503915236102eddd85652ec2c34ac25fccb"
+          },
+          {
+            "relativePath": "src/matchup/matchup-terminal-source-resolution-materializer-v1.mjs",
+            "byteCount": 4456,
+            "contentHash": "2de320caa83281e479449d87ee45f196c494cf2e4444164c7fe6bbeb4c8f4937"
+          },
+          {
+            "relativePath": "src/matchup/matchup-terminal-task-execution-batch-v1.mjs",
+            "byteCount": 17223,
+            "contentHash": "748a701a5308bc267d48951b5134075ffb923d0ea2d83971409f2acf3457d601"
+          },
+          {
+            "relativePath": "src/matchup/matchup-terminal-transition-recovery-v1.mjs",
+            "byteCount": 10080,
+            "contentHash": "e8361beddfba1b1bb804d85ee84fbc7a1199292fac2ae8701a1959250368fb74"
+          },
+          {
+            "relativePath": "src/matchup/representative-opening-materializer-v1.mjs",
+            "byteCount": 16127,
+            "contentHash": "e6c2c10a01bdd6392b0e7557bfae341747f251789ef95e47a2387b480b4a7a7b"
+          },
+          {
+            "relativePath": "src/matchup/two-fronts-score-terminal-seed-v1.mjs",
+            "byteCount": 14669,
+            "contentHash": "893f5a21370f70fe6bd8573ee37fe73085e26ad3497c496dd85ec225a1d8670f"
+          },
+          {
+            "relativePath": "src/matchup/unit-ring-trajectory-v1.mjs",
+            "byteCount": 6389,
+            "contentHash": "0b42c838cc4d52b68132382debdd3a44ad54793d3179011e3f3eac20b850e518"
+          },
+          {
+            "relativePath": "src/reverse/activation-sequence-predecessor-v2.mjs",
+            "byteCount": 47109,
+            "contentHash": "ecb1b70e94660789491c99fc1a4ab8831074f7588a0af7fce7b7a1c55710137e"
+          },
+          {
+            "relativePath": "src/reverse/charge-combat-activation-predecessor-v1.mjs",
+            "byteCount": 25672,
+            "contentHash": "1f7d5fbde14d0e7ba5eb0c533601def6b026cb80d713bb93312afb8b8cc828c9"
+          },
+          {
+            "relativePath": "src/reverse/control-phase-predecessor-v1.mjs",
+            "byteCount": 18941,
+            "contentHash": "2ca621216b654df19fd54d61345fdee47122482116f858930d20ba121ef55edb"
+          },
+          {
+            "relativePath": "src/reverse/deployment-reachability-v1.mjs",
+            "byteCount": 15838,
+            "contentHash": "f7ee53dac6bb3659d4ddc577f66bde0f6773d558af5f842af588fa5f9c7607e5"
+          },
+          {
+            "relativePath": "src/reverse/movement-activation-predecessor-v1.mjs",
+            "byteCount": 110272,
+            "contentHash": "95ed9dcc391a80d94be86a53b2965c9cf25c86f824ce90c8bfc1a0dc4197b9cd"
+          },
+          {
+            "relativePath": "src/reverse/pass-activation-predecessor-v1.mjs",
+            "byteCount": 22925,
+            "contentHash": "4d875e8f93bffab646ac39d32c19c2460d0da7f6c70d662d08a399bc415b7c5e"
+          },
+          {
+            "relativePath": "src/reverse/piece-lifecycle-v1.mjs",
+            "byteCount": 1350,
+            "contentHash": "0ac062332a57373b77d03df26b39e9418d35a1ca9596b18a7d0cf2b9ca638179"
+          },
+          {
+            "relativePath": "src/reverse/predecessor-algebra-v2.mjs",
+            "byteCount": 32940,
+            "contentHash": "7ef5babc6a49b1b8f2adea9da09a9ac2f5ab34285b4f535df6eddb696d92fb90"
+          },
+          {
+            "relativePath": "src/reverse/previous-turn-end-predecessor-v1.mjs",
+            "byteCount": 26041,
+            "contentHash": "e38186124233a1a0a07b66bf4b23fc23967855b123c012a89bc55ca5668517d1"
+          },
+          {
+            "relativePath": "src/reverse/primitive-contracts-v1.mjs",
+            "byteCount": 18880,
+            "contentHash": "e2309deea3e438772b24831eb5905ec0ade46e1e446dc936ba89af166b01dcfd"
+          },
+          {
+            "relativePath": "src/reverse/reachability-contract-v2.mjs",
+            "byteCount": 7689,
+            "contentHash": "c88babbff29fb279a712b8182a913a6aeb8110dc452d359e8fbc8d45805c6952"
+          },
+          {
+            "relativePath": "src/reverse/replay-terminal-reverse-route-v1.mjs",
+            "byteCount": 45126,
+            "contentHash": "7096825090d4b1ff461b837105a63c219e55f2ce94be04a1c347a98b93fada7a"
+          },
+          {
+            "relativePath": "src/reverse/reverse-state-invariants-v1.mjs",
+            "byteCount": 7400,
+            "contentHash": "77ded616a09c8ab426d02acb6ba02dde6dea7bfa903846db610b78652059d38f"
+          },
+          {
+            "relativePath": "src/reverse/scenario-settlement-preimage-v1.mjs",
+            "byteCount": 18566,
+            "contentHash": "fe35d2124dd9f5e6841802e5209672343c386a394c883cb501f4456e18a70087"
+          },
+          {
+            "relativePath": "src/reverse/steamroller-score-terminal-materialization-batch-v1.mjs",
+            "byteCount": 41549,
+            "contentHash": "389ca08d486901e11c8e06c27d820a46bb0d23f6860274ed5fc89e87b03b6f58"
+          },
+          {
+            "relativePath": "src/reverse/steamroller-terminal-scenario-corpus-v1.mjs",
+            "byteCount": 34747,
+            "contentHash": "da8539fdf168d527732d7c97731d8ba735184fff17373337941f5384f072c095"
+          },
+          {
+            "relativePath": "src/reverse/strict-route-witness-v2.mjs",
+            "byteCount": 20178,
+            "contentHash": "db003e010d08a9f8cd48b6adce1fba6cf647af7f58d58494a08c4af62a48c5d5"
+          },
+          {
+            "relativePath": "src/reverse/terminal-event-predecessor-v1.mjs",
+            "byteCount": 45150,
+            "contentHash": "c4e09d8f75bda6b34c34634742ea327c35834ce329071900112e03ba7d6074f8"
+          },
+          {
+            "relativePath": "src/reverse/terminal-geometry-reduction-v1.mjs",
+            "byteCount": 21209,
+            "contentHash": "e57119abf2ddc1e3edfd3b44fa907312b465201f1290dd12523b8907f632f7f4"
+          },
+          {
+            "relativePath": "src/reverse/terminal-hypothesis-v1.mjs",
+            "byteCount": 17474,
+            "contentHash": "8b7ff1067f9bda8b3484beb5bcc4371156fbe175ae45311506e584bedabb8131"
+          },
+          {
+            "relativePath": "src/reverse/terminal-position-domain-v1.mjs",
+            "byteCount": 53296,
+            "contentHash": "ddc81ae1db4eed6fee5c99fa25976a50cfd994d102390f56c405a55bea9c8c5f"
+          },
+          {
+            "relativePath": "src/reverse/terminal-proof-v2.mjs",
+            "byteCount": 27444,
+            "contentHash": "fcd139596efba6603d0134af8c91b3f653d8867083a824dea81113315743c427"
+          },
+          {
+            "relativePath": "src/reverse/terminal-rooted-to-deployment-v1.mjs",
+            "byteCount": 66724,
+            "contentHash": "9cb6346b4e938c9c5915a5112d0c7424e3666d8826ff33a6f3f05c39aedf7252"
+          },
+          {
+            "relativePath": "src/reverse/terminal-spatial-materializer-v1.mjs",
+            "byteCount": 31306,
+            "contentHash": "fa073223e48702f4cafd6372b3a8b20227040876d5844c5ec6c8c089141e436b"
+          },
+          {
+            "relativePath": "src/reverse/unit-deployment-formation-predecessor-v1.mjs",
+            "byteCount": 11102,
+            "contentHash": "42a8efab55db414faae746cdd1fb8a7b294498039f8c3364b2b52f2aee946e2a"
+          },
+          {
+            "relativePath": "src/search/adversarial-chance-equivalence-v1.mjs",
+            "byteCount": 5435,
+            "contentHash": "fe6d89f89093645b57fb98a474392eaca43c590665bd5a55a043544324c14379"
+          },
+          {
+            "relativePath": "src/search/chance-outcomes-v1.mjs",
+            "byteCount": 23117,
+            "contentHash": "8e9bf4c8689b2809d3e9888d59696f3aebae55597f17376fd189d0c82cf7a9c4"
+          },
+          {
+            "relativePath": "src/search/complete-activation-domain-v2.mjs",
+            "byteCount": 23991,
+            "contentHash": "0974edecdf6f9eba46fdcc9df6e7f4b504744941033bcca238d85ec00dc3d317"
+          },
+          {
+            "relativePath": "src/search/lazy-action-cursor-v1.mjs",
+            "byteCount": 63565,
+            "contentHash": "be476998f1dbdbbe92dda411dcbd866871986af582ca6362c518f585f0db5119"
+          },
+          {
+            "relativePath": "src/search/matchup-search-v1.mjs",
+            "byteCount": 79917,
+            "contentHash": "c6e3fa10d4ddf1e43dd7247e135596ff07b907c75d98a0d754d4a32652b5ffed"
+          },
+          {
+            "relativePath": "src/search/opponent-response-v1.mjs",
+            "byteCount": 3015,
+            "contentHash": "9675ea71c554c6e11c9edf59213098a62fd06fe6bc67ae887fbbe971268736d1"
+          },
+          {
+            "relativePath": "src/search/strict-policy-step-v1.mjs",
+            "byteCount": 13368,
+            "contentHash": "c732cc018712fb573a9f7eccfca031d3a7fde29c1c6f1c5208c2b7559fe5229b"
+          },
+          {
+            "relativePath": "src/search/unit-combat-action-attack-slot-domain-v1.mjs",
+            "byteCount": 5263,
+            "contentHash": "d0a958771e55a5b6891f7e5a4c96f1510c1265804e52cc95f9a4c685c0cd5bf5"
+          },
+          {
+            "relativePath": "src/state/semantic-hash-v1.mjs",
+            "byteCount": 2717,
+            "contentHash": "febf1e0ad88889481239673f97ee3a6a55fe212ea8034e3deef6ec3f2e2a8878"
+          },
+          {
+            "relativePath": "src/storage/content-address-v1.mjs",
+            "byteCount": 7803,
+            "contentHash": "ba3b19cec722c668c31c07e434cffc0284b7764ad6ef8129ef12176b3ead9480"
+          },
+          {
+            "relativePath": "src/upstream-project-d.mjs",
+            "byteCount": 17065,
+            "contentHash": "15bea57111b6fe1565eb436ba96a5d1ed214c72b1f883c298054d672efaab128"
+          },
+          {
+            "relativePath": "src/warmachine-construction-host-runtime.mjs",
+            "byteCount": 598,
+            "contentHash": "180f663fd97db761930a8c6ae19816ca20b67c4de801f16108e0b4f2d7b645f4"
+          },
+          {
+            "relativePath": "src/warmachine-host-runtime.mjs",
+            "byteCount": 1804,
+            "contentHash": "77a1749bbd0f451e0e8d32b7bd801928a3466ded14048695d4eb86cdd69fded3"
+          }
+        ],
+        "sourceClosureHash": "dc5cd4e28f2266405882547a261691a1c6fd53415525d08a3e9adb8e729051d8",
+        "sourceReceiptHash": "8e39d86cc310c88f49a0c120930a7c88e5c0564c82daa574e5ae36430f73e77d"
+      },
+      "current": false,
+      "claimBoundary": "This receipt binds the current Engine rules and construction dependency closures, the source-bound rule-semantics authority, and the Search terminal materializer, planner and recovery dependency closure. Any mismatch or semantic quarantine invalidates checkpoint resume and current report claims until independently replayed under a newly sealed receipt.",
+      "executionReceiptHash": "ee95173294259e37ed032819cbe499151fbd107d7039d8166671d0319cb3313b"
+    },
+    "executionSemanticReceiptHash": "ee95173294259e37ed032819cbe499151fbd107d7039d8166671d0319cb3313b",
+    "ruleSemanticsAuthority": {
+      "schemaVersion": "warmachine_rule_semantics_authority_v1",
+      "authorityReceiptHash": "8b374731fe750dc0f548f4e286775c675caa5068eb49285d896167644238e437",
+      "disposition": "rules_semantics_unreviewed",
+      "sourceAuthorityCurrent": false,
+      "globalStrictReady": false,
+      "strictExecutorReady": false,
+      "strictSearchReady": false,
+      "trainingTruthAllowed": false,
+      "quarantineActive": true,
+      "failClosedReasons": [
+        "interaction_graph_uses_stale_rulebook",
+        "legacy_self_certification_detected",
+        "official_keywords_not_recertified",
+        "official_rule_families_not_recertified",
+        "required_source_missing:crossRuntimeParityReport",
+        "required_source_missing:independentOracleManifest",
+        "required_source_missing:primitiveCatalog",
+        "required_source_missing:semanticMutationReport",
+        "required_source_missing:semanticRuleRegistry",
+        "required_source_missing:timingDag",
+        "semantic_artifact_not_ready:crossRuntimeParityReport",
+        "semantic_artifact_not_ready:independentOracleManifest",
+        "semantic_artifact_not_ready:primitiveCatalog",
+        "semantic_artifact_not_ready:semanticMutationReport",
+        "semantic_artifact_not_ready:semanticRuleRegistry",
+        "semantic_artifact_not_ready:timingDag"
+      ]
+    },
     "baselineComparison": {
       "schemaVersion": "warmachine_ruleset_baseline_comparison_v1",
-      "baselineKey": "warmachine-ruleset-2026-08-14-remote-40041-v5",
-      "compatible": true,
-      "differenceCount": 0,
-      "differences": [],
-      "reviewRequired": false,
-      "checkpointResumeAllowed": true,
-      "priorCalibrationUsable": true,
-      "priorTrainingMaterialCurrent": true,
-      "comparisonHash": "7b1a14fafabc7dfba1aa2588aa8165a274839afd1373a350fd7983e100937bb9"
-    },
-    "current": true,
-    "checkpointResumeAllowed": true,
-    "priorCalibrationUsable": true,
-    "priorTrainingMaterialCurrent": true,
-    "failClosedReasons": [],
-    "claimBoundary": "This composite snapshot binds strict rules sources, card data, atom and reverse registries, the semantic interaction graph and the construction pool. Any mismatch invalidates checkpoint resume, prior direction calibration and current training-material claims until reviewed and re-signed.",
-    "snapshotHash": "8d29d04e838631230525a6f08a590eae327525207e4362bfcf980995264f57d0"
-  },
-  "driftProbes": {
-    "atomDrift": {
-      "schemaVersion": "warmachine_ruleset_baseline_comparison_v1",
-      "baselineKey": "warmachine-ruleset-2026-08-14-remote-40041-v5",
+      "baselineKey": "warmachine-ruleset-2026-08-22-remote-40041-ticket05-combat-sequence-v1",
       "compatible": false,
-      "differenceCount": 1,
+      "differenceCount": 9,
       "differences": [
         {
-          "expected": 379,
-          "observed": 378,
-          "path": "host.atomCount"
+          "expected": "5ba6422ee1e7ad4f055046edeed8919d156b33171feec0f41688fa0dbe8b12da",
+          "observed": "e2134449102d59445c0f05a26577774923b9ad6ac9b9c4ed0bd975e23fa778f6",
+          "path": "host.sourceHashes.scripts/warmachine-rule-atoms/definitions/activation-sequences-v1.mjs"
+        },
+        {
+          "expected": "f51eac4ab24e6ea8cafcdf3a2542c799c9ce680ec46a4977b031c9653a174db6",
+          "observed": "d95c86aaaf35542f43ab7d57ade93e7ee1f4c6f0836cc8fd9273ebee6808e0ef",
+          "path": "host.sourceHashes.scripts/warmachine-rules-v1.mjs"
+        },
+        {
+          "expected": "239d80fd55217b752e09c0970df5072400b91f0f3c4a14338f277f2911255962",
+          "observed": "269e2f2b358f015059fd1bc4acc4f6ce68048ae97691e480fb09f4ae114fd2c2",
+          "path": "focusedEngineReceipt.sourceReceiptHash"
+        },
+        {
+          "expected": "47679e27a96061e4d691c5dbf53e5ebf4cb83183f8e650dc79c75ff0f7625a93",
+          "observed": "356ad4f8cb0a213e63e51634fb70e04ae01bf33968e097a7e8148efd475d2da5",
+          "path": "focusedEngineReceipt.manifestHash"
+        },
+        {
+          "expected": "d4574e4374673f261a0490229219f4a815c1cee00ccb791683bc333a5499c951",
+          "observed": "cb83ecf03e7c1a028377f20276e323ea4bf5513f5f07be5b1bfdf4de7aa7c521",
+          "path": "focusedEngineReceipt.aggregateHash"
+        },
+        {
+          "expected": "8c3afb91b327a0759d9797dab33880939c1dfe1946a99d9e499a08f161d97864",
+          "observed": "ef5d3703cb2eac97e4e20a84456d429a661852e3ec97814d7ce42e89b6f883c1",
+          "path": "focusedEngineReceipt.executionSourceReceiptHash"
+        },
+        {
+          "expected": 263,
+          "observed": 269,
+          "path": "focusedEngineReceipt.verifierCount"
+        },
+        {
+          "expected": 263,
+          "observed": 269,
+          "path": "focusedEngineReceipt.passedVerifierCount"
+        },
+        {
+          "expected": 501,
+          "observed": 502,
+          "path": "interactionGraph.declaredInteractionCount"
         }
       ],
       "reviewRequired": true,
       "checkpointResumeAllowed": false,
       "priorCalibrationUsable": false,
       "priorTrainingMaterialCurrent": false,
-      "comparisonHash": "f99021a3b21de526d8f1e282c35e759011eec6a024d14e33c420876af7e18fef"
+      "comparisonHash": "9de9eca53ea161dd3c104eb19eed3e68bd016d231d62a7f580ae1bdf18854ca1"
+    },
+    "current": false,
+    "checkpointResumeAllowed": false,
+    "priorCalibrationUsable": false,
+    "priorTrainingMaterialCurrent": false,
+    "failClosedReasons": [
+      "baseline_drift:focusedEngineReceipt.aggregateHash",
+      "baseline_drift:focusedEngineReceipt.executionSourceReceiptHash",
+      "baseline_drift:focusedEngineReceipt.manifestHash",
+      "baseline_drift:focusedEngineReceipt.passedVerifierCount",
+      "baseline_drift:focusedEngineReceipt.sourceReceiptHash",
+      "baseline_drift:focusedEngineReceipt.verifierCount",
+      "baseline_drift:host.sourceHashes.scripts/warmachine-rule-atoms/definitions/activation-sequences-v1.mjs",
+      "baseline_drift:host.sourceHashes.scripts/warmachine-rules-v1.mjs",
+      "baseline_drift:interactionGraph.declaredInteractionCount",
+      "focused_engine_execution_source_receipt_mismatch",
+      "focused_engine_source_file_count_mismatch",
+      "interaction_graph_structural_validation_failed",
+      "rule_semantics:interaction_graph_uses_stale_rulebook",
+      "rule_semantics:legacy_self_certification_detected",
+      "rule_semantics:official_keywords_not_recertified",
+      "rule_semantics:official_rule_families_not_recertified",
+      "rule_semantics:required_source_missing:crossRuntimeParityReport",
+      "rule_semantics:required_source_missing:independentOracleManifest",
+      "rule_semantics:required_source_missing:primitiveCatalog",
+      "rule_semantics:required_source_missing:semanticMutationReport",
+      "rule_semantics:required_source_missing:semanticRuleRegistry",
+      "rule_semantics:required_source_missing:timingDag",
+      "rule_semantics:semantic_artifact_not_ready:crossRuntimeParityReport",
+      "rule_semantics:semantic_artifact_not_ready:independentOracleManifest",
+      "rule_semantics:semantic_artifact_not_ready:primitiveCatalog",
+      "rule_semantics:semantic_artifact_not_ready:semanticMutationReport",
+      "rule_semantics:semantic_artifact_not_ready:semanticRuleRegistry",
+      "rule_semantics:semantic_artifact_not_ready:timingDag"
+    ],
+    "claimBoundary": "This composite snapshot binds strict rules sources, card data, atom and reverse registries, the semantic interaction graph and the construction pool. Any mismatch invalidates checkpoint resume, prior direction calibration and current training-material claims until reviewed and re-signed.",
+    "snapshotHash": "2fc6179c286a57cc87738b3cc1049abe5af2017aaf95a8502e2f2bd75cbf9534"
+  },
+  "driftProbes": {
+    "atomDrift": {
+      "schemaVersion": "warmachine_ruleset_baseline_comparison_v1",
+      "baselineKey": "warmachine-ruleset-2026-08-22-remote-40041-ticket05-combat-sequence-v1",
+      "compatible": false,
+      "differenceCount": 10,
+      "differences": [
+        {
+          "expected": "5ba6422ee1e7ad4f055046edeed8919d156b33171feec0f41688fa0dbe8b12da",
+          "observed": "e2134449102d59445c0f05a26577774923b9ad6ac9b9c4ed0bd975e23fa778f6",
+          "path": "host.sourceHashes.scripts/warmachine-rule-atoms/definitions/activation-sequences-v1.mjs"
+        },
+        {
+          "expected": "f51eac4ab24e6ea8cafcdf3a2542c799c9ce680ec46a4977b031c9653a174db6",
+          "observed": "d95c86aaaf35542f43ab7d57ade93e7ee1f4c6f0836cc8fd9273ebee6808e0ef",
+          "path": "host.sourceHashes.scripts/warmachine-rules-v1.mjs"
+        },
+        {
+          "expected": 381,
+          "observed": 380,
+          "path": "host.atomCount"
+        },
+        {
+          "expected": "239d80fd55217b752e09c0970df5072400b91f0f3c4a14338f277f2911255962",
+          "observed": "269e2f2b358f015059fd1bc4acc4f6ce68048ae97691e480fb09f4ae114fd2c2",
+          "path": "focusedEngineReceipt.sourceReceiptHash"
+        },
+        {
+          "expected": "47679e27a96061e4d691c5dbf53e5ebf4cb83183f8e650dc79c75ff0f7625a93",
+          "observed": "356ad4f8cb0a213e63e51634fb70e04ae01bf33968e097a7e8148efd475d2da5",
+          "path": "focusedEngineReceipt.manifestHash"
+        },
+        {
+          "expected": "d4574e4374673f261a0490229219f4a815c1cee00ccb791683bc333a5499c951",
+          "observed": "cb83ecf03e7c1a028377f20276e323ea4bf5513f5f07be5b1bfdf4de7aa7c521",
+          "path": "focusedEngineReceipt.aggregateHash"
+        },
+        {
+          "expected": "8c3afb91b327a0759d9797dab33880939c1dfe1946a99d9e499a08f161d97864",
+          "observed": "ef5d3703cb2eac97e4e20a84456d429a661852e3ec97814d7ce42e89b6f883c1",
+          "path": "focusedEngineReceipt.executionSourceReceiptHash"
+        },
+        {
+          "expected": 263,
+          "observed": 269,
+          "path": "focusedEngineReceipt.verifierCount"
+        },
+        {
+          "expected": 263,
+          "observed": 269,
+          "path": "focusedEngineReceipt.passedVerifierCount"
+        },
+        {
+          "expected": 501,
+          "observed": 502,
+          "path": "interactionGraph.declaredInteractionCount"
+        }
+      ],
+      "reviewRequired": true,
+      "checkpointResumeAllowed": false,
+      "priorCalibrationUsable": false,
+      "priorTrainingMaterialCurrent": false,
+      "comparisonHash": "7fac98c9a7f70be982578290ff2ddd6e295f70d85de52aa93170afb52c2c4cb3"
     },
     "dataDrift": {
       "schemaVersion": "warmachine_ruleset_baseline_comparison_v1",
-      "baselineKey": "warmachine-ruleset-2026-08-14-remote-40041-v5",
+      "baselineKey": "warmachine-ruleset-2026-08-22-remote-40041-ticket05-combat-sequence-v1",
       "compatible": false,
-      "differenceCount": 1,
+      "differenceCount": 10,
       "differences": [
+        {
+          "expected": "5ba6422ee1e7ad4f055046edeed8919d156b33171feec0f41688fa0dbe8b12da",
+          "observed": "e2134449102d59445c0f05a26577774923b9ad6ac9b9c4ed0bd975e23fa778f6",
+          "path": "host.sourceHashes.scripts/warmachine-rule-atoms/definitions/activation-sequences-v1.mjs"
+        },
+        {
+          "expected": "f51eac4ab24e6ea8cafcdf3a2542c799c9ce680ec46a4977b031c9653a174db6",
+          "observed": "d95c86aaaf35542f43ab7d57ade93e7ee1f4c6f0836cc8fd9273ebee6808e0ef",
+          "path": "host.sourceHashes.scripts/warmachine-rules-v1.mjs"
+        },
+        {
+          "expected": "239d80fd55217b752e09c0970df5072400b91f0f3c4a14338f277f2911255962",
+          "observed": "269e2f2b358f015059fd1bc4acc4f6ce68048ae97691e480fb09f4ae114fd2c2",
+          "path": "focusedEngineReceipt.sourceReceiptHash"
+        },
+        {
+          "expected": "47679e27a96061e4d691c5dbf53e5ebf4cb83183f8e650dc79c75ff0f7625a93",
+          "observed": "356ad4f8cb0a213e63e51634fb70e04ae01bf33968e097a7e8148efd475d2da5",
+          "path": "focusedEngineReceipt.manifestHash"
+        },
+        {
+          "expected": "d4574e4374673f261a0490229219f4a815c1cee00ccb791683bc333a5499c951",
+          "observed": "cb83ecf03e7c1a028377f20276e323ea4bf5513f5f07be5b1bfdf4de7aa7c521",
+          "path": "focusedEngineReceipt.aggregateHash"
+        },
+        {
+          "expected": "8c3afb91b327a0759d9797dab33880939c1dfe1946a99d9e499a08f161d97864",
+          "observed": "ef5d3703cb2eac97e4e20a84456d429a661852e3ec97814d7ce42e89b6f883c1",
+          "path": "focusedEngineReceipt.executionSourceReceiptHash"
+        },
+        {
+          "expected": 263,
+          "observed": 269,
+          "path": "focusedEngineReceipt.verifierCount"
+        },
+        {
+          "expected": 263,
+          "observed": 269,
+          "path": "focusedEngineReceipt.passedVerifierCount"
+        },
+        {
+          "expected": 501,
+          "observed": 502,
+          "path": "interactionGraph.declaredInteractionCount"
+        },
         {
           "expected": "0000000000000000000000000000000000000000000000000000000000000000",
           "observed": "4b961775f498e72a9574ba16cccd45d13037c64dfab120055e9c22162ccee332",
@@ -182,7 +964,7 @@
       "checkpointResumeAllowed": false,
       "priorCalibrationUsable": false,
       "priorTrainingMaterialCurrent": false,
-      "comparisonHash": "8e5f4c3dacfc46195802e2619ef61d87ab3c839c5d9b6d47a4dc0c5fb61ee255"
+      "comparisonHash": "5fb97a34ea021d727bfdc3b6580d60032f7b4b9f1fc8fdd2f599bf6e9376b180"
     }
   }
 }

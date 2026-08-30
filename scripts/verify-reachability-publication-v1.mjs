@@ -43,16 +43,24 @@ const publication = publishWarmachineReverseReachabilityV1({
 });
 
 assert.equal(publication.ok, true);
-assert.equal(publication.trainingGate.eligible, true,
-  JSON.stringify(publication.trainingGate.failedChecks));
-assert.equal(publication.humanReport.trainingGate.eligible, true);
+assert.equal(publication.trainingGate.eligible, false);
+assert.ok(publication.trainingGate.failedChecks.includes(
+  "ruleSemanticsAuthorityCurrent",
+));
+assert.equal(publication.humanReport.trainingGate.eligible, false);
+assert.equal(
+  publication.humanReport.rulesAuthority.ruleSemanticsDisposition,
+  "rules_semantics_unreviewed",
+);
+assert.ok(publication.humanReport.markdown.includes("rules_semantics_unreviewed"));
 assert.ok(publication.humanReport.markdown.includes("反推层"));
 assert.ok(publication.humanReport.routeLayers.length > 0);
 assert.ok(publication.humanReport.roster.length >= 3);
-assert.equal(publication.trainingTrajectory.candidateCount, 1);
-assert.equal(publication.trainingTrajectory.trainingTruth, true);
-assert.ok(publication.trainingTrajectory.candidates[0].decisions.length > 0);
-assert.ok(Object.keys(publication.trainingTrajectory.candidates[0].states).length > 0);
+assert.equal(publication.trainingTrajectory.candidateCount, 0);
+assert.equal(publication.trainingTrajectory.trainingTruth, false);
+assert.ok(publication.trainingTrajectory.deniedReasons.includes(
+  "ruleSemanticsAuthorityCurrent",
+));
 assert.equal(publication.trainingTrajectory.negativeExamples.length, 0);
 assert.equal(publication.trainingTrajectory.strategyPolicyTargetsPresent, false);
 assert.equal(publication.trainingTrajectory.strategyValueTargetsPresent, false);
@@ -84,9 +92,7 @@ console.log(JSON.stringify({
   schemaVersion: "verify_reachability_publication_v1",
   publicationHash: publication.publicationHash,
   humanReportHash: publication.humanReportHash,
-  trajectoryDecisionCount:
-    publication.trainingTrajectory.candidates[0].decisions.length,
-  trajectoryStateCount:
-    Object.keys(publication.trainingTrajectory.candidates[0].states).length,
+  routeLayerCount: publication.humanReport.routeLayers.length,
+  semanticAuthorityDeniedTraining: true,
   deniedReasons: denied.trainingTrajectory.deniedReasons,
 }, null, 2));

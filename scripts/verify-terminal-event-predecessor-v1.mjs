@@ -328,6 +328,30 @@ assert.ok(reverse.candidates.every((candidate) =>
   candidate.matchingOutcomes.some((outcome) => outcome.terminalEvents.some((event) =>
     event.eventType === "terminal" && event.winnerSideKey === "player1"))));
 
+const invalidAssassinationTerminalState = structuredClone(
+  assassinationTerminalState,
+);
+invalidAssassinationTerminalState.pieces.push(
+  warrior("unrelated-terrain-overlap", "player1", { xIn: 19.2, yIn: 36 }),
+);
+invalidAssassinationTerminalState.terrain.push({
+  terrainKey: "reverse-invariant-south-wall",
+  type: "obstacle",
+  xIn: 24,
+  yIn: 36,
+  widthIn: 10,
+  heightIn: 2,
+  blocksMovement: true,
+  blocksLos: true,
+});
+const invalidTerminalReverse = generateWarmachineTerminalEventPredecessorsV1(
+  invalidAssassinationTerminalState,
+  domain.cells[0],
+);
+assert.equal(invalidTerminalReverse.strictCandidateCount, 0);
+assert.equal(invalidTerminalReverse.rejected.some((row) =>
+  row.reason === "reverse_predecessor_state_invariant_rejected"), true);
+
 const wrongActorCell = {
   ...domain.cells[0],
   actorPieceKey: "p2-target",

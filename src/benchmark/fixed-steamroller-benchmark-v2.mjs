@@ -13,6 +13,8 @@ import { warmachineSteamroller2026OfficialScenarioLayoutV1 } from
   "../contracts/steamroller-2026-official-scenario-layout-v1.mjs";
 import { stableGraphHash, stableGraphValue } from "../graph/typed-facts-v2.mjs";
 import { buildWarmachineActivationGroups } from "../search/matchup-search-v1.mjs";
+import { warmachineBenchmarkGameStateHashV2 } from
+  "./benchmark-game-state-hash-v2.mjs";
 
 export const WARMACHINE_FIXED_STEAMROLLER_BENCHMARK_V2_SCHEMA =
   "warmachine_fixed_steamroller_benchmark_v2";
@@ -290,7 +292,14 @@ export function bindWarmachineBenchmarkExplicitMovementPathV2(
   const actorPieceKey = String(rawPlan.actorPieceKey || "");
   const actor = state.pieces.find((piece) => piece.pieceKey === actorPieceKey);
   if (!actor) throw new Error(`Explicit movement path actor is unavailable: ${actorPieceKey}`);
-  const actionType = rawPlan.actionType === "run" ? "run" : "advance";
+  const requestedActionType = String(rawPlan.actionType || "advance");
+  const actionType = ["advance", "run", "charge"].includes(requestedActionType)
+    ? requestedActionType
+    : "advance";
+  const targetPieceKey = String(rawPlan.targetPieceKey || "");
+  if (actionType === "charge" && !targetPieceKey) {
+    throw new Error("Explicit charge path requires targetPieceKey");
+  }
   const waypoints = (rawPlan.waypoints || []).map((entry) => ({
     xIn: Number(entry.xIn),
     yIn: Number(entry.yIn),
@@ -299,15 +308,42 @@ export function bindWarmachineBenchmarkExplicitMovementPathV2(
     !Number.isFinite(entry.xIn) || !Number.isFinite(entry.yIn))) {
     throw new Error("Explicit movement path requires finite waypoints");
   }
+  const rawPathsByModel = rawPlan.pathsByModel || rawPlan.modelPaths || [];
+  const pathEntries = Array.isArray(rawPathsByModel)
+    ? rawPathsByModel
+    : Object.entries(rawPathsByModel).map(([pieceKey, entry]) => ({
+      pieceKey,
+      ...(Array.isArray(entry) ? { waypoints: entry } : entry),
+    }));
+  const pathsByModel = pathEntries.map((entry = {}) => {
+    const pieceKey = String(entry.pieceKey || entry.modelPieceKey || "");
+    const modelWaypoints = (entry.waypoints || []).map((waypoint) => ({
+      xIn: Number(waypoint.xIn),
+      yIn: Number(waypoint.yIn),
+    }));
+    if (!pieceKey || !modelWaypoints.length || modelWaypoints.some((waypoint) =>
+      !Number.isFinite(waypoint.xIn) || !Number.isFinite(waypoint.yIn))) {
+      throw new Error("Explicit unit movement paths require a pieceKey and finite waypoints");
+    }
+    return { pieceKey, waypoints: modelWaypoints };
+  }).sort((left, right) => left.pieceKey.localeCompare(right.pieceKey));
   const pathKey = String(rawPlan.pathKey ||
-    `reverse-candidate-${stableGraphHash({ actorPieceKey, actionType, waypoints }).slice(0, 16)}`);
+    `reverse-candidate-${stableGraphHash({
+      actorPieceKey,
+      actionType,
+      targetPieceKey,
+      waypoints,
+      pathsByModel,
+    }).slice(0, 16)}`);
   const path = {
     key: pathKey,
     pathKey,
     label: String(rawPlan.label || "Reverse candidate strict path"),
     actorPieceKey,
     actionType,
+    ...(targetPieceKey ? { targetPieceKey } : {}),
     waypoints,
+    ...(pathsByModel.length ? { pathsByModel } : {}),
     reverseCandidatePath: true,
     proposalSource: String(rawPlan.proposalSource || "terminal_predecessor_geometry_v2"),
   };
@@ -323,6 +359,7 @@ export function bindWarmachineBenchmarkExplicitMovementPathV2(
 export function enumerateWarmachineBenchmarkActionsV2(stateInput = {}, rawScope = {}) {
   const state = normalizeRulesV1State(stateInput);
   const inputStateHash = stableGraphHash(state);
+  const inputGameStateHash = warmachineBenchmarkGameStateHashV2(state);
   const runtimeActorKeys = runtimeWindowActive(state) ? runtimeWindowActorPieceKeys(state) : [];
   let actorPieceKeys = Array.isArray(rawScope.actorPieceKeys)
     ? rawScope.actorPieceKeys.map(String).filter(Boolean).sort()
@@ -357,7 +394,11 @@ export function enumerateWarmachineBenchmarkActionsV2(stateInput = {}, rawScope 
     // rules-v1 trusts a scoped enumeration only when apply receives this exact state object.
     state: enumeration.state,
     inputStateHash,
+    inputGameStateHash,
     enumerationStateHash: stableGraphHash(enumeration.state),
+    enumerationGameStateHash: warmachineBenchmarkGameStateHashV2(
+      enumeration.state,
+    ),
     activationGroup,
     runtimeWindowActive: runtimeWindowActive(state),
     actorPieceKeys,
@@ -482,6 +523,8 @@ export function executeScopedWarmachineBenchmarkActionV2(scoped, action, selecto
     upstreamReceiptHash: warmachineHost.receipt.receiptHash,
     stateHashInput: scoped.inputStateHash,
     stateHashBefore: scoped.enumerationStateHash,
+    gameStateHashInput: scoped.inputGameStateHash,
+    gameStateHashBefore: scoped.enumerationGameStateHash,
     turnNumberBefore: scoped.state.turnNumber,
     activeSideKeyBefore: scoped.state.activeSideKey,
     phaseKeyBefore: scoped.state.phaseKey,
@@ -499,6 +542,9 @@ export function executeScopedWarmachineBenchmarkActionV2(scoped, action, selecto
     reason: String(transition.reason || ""),
     events: stableGraphValue(transition.events || []),
     stateHashAfter: normalizedNextState ? stableGraphHash(normalizedNextState) : "",
+    gameStateHashAfter: normalizedNextState
+      ? warmachineBenchmarkGameStateHashV2(normalizedNextState)
+      : "",
   };
   return {
     ok: transition.ok === true,
@@ -675,7 +721,10 @@ export function executeWarmachineBenchmarkActivationV2(
   let state = normalizeRulesV1State(stateInput);
   const startingSideKey = state.activeSideKey;
   const initialGroup = buildWarmachineActivationGroups(state)
-    .find((group) => group.groupKey === activationGroupKey) || null;
+    .find((group) => group.groupKey === activationGroupKey) ||
+    (rawOptions.resumeInitialGroup?.groupKey === activationGroupKey
+      ? stableGraphValue(rawOptions.resumeInitialGroup)
+      : null);
   if (!initialGroup) {
     return {
       ok: false,
@@ -687,14 +736,21 @@ export function executeWarmachineBenchmarkActivationV2(
   }
   const groupPieceKeys = new Set(initialGroup.actorPieceKeys);
   const receipts = [];
+  const rejectedReceipts = [];
   const selectionAudit = [];
+  let attemptCount = 0;
   let completed = false;
   let paused = false;
   let pausedAtStepIndex = -1;
   let pausedBeforeAction = null;
   let reason = "";
   const maxSteps = Math.max(1, Number(rawOptions.maxSteps || initialGroup.pieceCount * 4 + 8));
-  for (let stepIndex = 0; stepIndex < maxSteps; stepIndex += 1) {
+  const stepIndexOffset = Math.max(0, Math.floor(Number(
+    rawOptions.stepIndexOffset || 0,
+  )));
+  for (let localStepIndex = 0; localStepIndex < maxSteps;
+    localStepIndex += 1) {
+    const stepIndex = stepIndexOffset + localStepIndex;
     const inRuntimeWindow = runtimeWindowActive(state);
     const requestedEnumerationScope = typeof rawOptions.enumerationScopeForStep === "function"
       ? rawOptions.enumerationScopeForStep({ state, stepIndex, initialGroup, inRuntimeWindow }) || {}
@@ -778,6 +834,7 @@ export function executeWarmachineBenchmarkActivationV2(
       actionPatch: policyChoice?.actionPatch || rawOptions.actionPatch,
       routeKey: `${rawOptions.routeKey || "fixed-benchmark"}:${activationGroupKey}:${stepIndex}`,
     });
+    attemptCount += 1;
     rawOptions.onTransition?.({
       stateBefore: state,
       scoped,
@@ -809,12 +866,13 @@ export function executeWarmachineBenchmarkActivationV2(
           .map(summarizeWarmachineBenchmarkRejectedActionV2),
       } : {}),
     });
-    receipts.push(result.receipt);
     if (!result.ok) {
+      rejectedReceipts.push(result.receipt);
       reason = result.reason || "strict_activation_transition_rejected";
       break;
     }
-    state = result.state;
+    receipts.push(result.receipt);
+    state = result.normalizedState || normalizeRulesV1State(result.state);
     if (activationCompletedByEvents(result.transition.events || []) ||
         terminalReachedByEvents(result.transition.events || [])) {
       completed = true;
@@ -832,6 +890,13 @@ export function executeWarmachineBenchmarkActivationV2(
       reason = "active_side_changed_before_activation_completed";
       break;
     }
+    if (rawOptions.pauseAfterTransitionBudget === true &&
+        localStepIndex + 1 >= maxSteps) {
+      paused = true;
+      pausedAtStepIndex = stepIndex + 1;
+      reason = "paused_after_transition_budget";
+      break;
+    }
   }
   if (!completed && !paused && !reason) reason = "activation_step_budget_exhausted";
   const core = {
@@ -839,6 +904,7 @@ export function executeWarmachineBenchmarkActivationV2(
     upstreamReceiptHash: warmachineHost.receipt.receiptHash,
     activationGroupKey,
     actorPieceKeys: initialGroup.actorPieceKeys,
+    resumeInitialGroup: stableGraphValue(initialGroup),
     startingSideKey,
     startingStateHash: stableGraphHash(normalizeRulesV1State(stateInput)),
     endingStateHash: stableGraphHash(state),
@@ -848,6 +914,10 @@ export function executeWarmachineBenchmarkActivationV2(
     pausedBeforeAction,
     transitionCount: receipts.length,
     receiptHashes: receipts.map((receipt) => receipt.receiptHash),
+    rejectedTransitionCount: rejectedReceipts.length,
+    rejectedReceiptHashes: rejectedReceipts.map((receipt) =>
+      receipt.receiptHash),
+    attemptCount,
     selectionAudit,
     reason,
   };
@@ -856,7 +926,9 @@ export function executeWarmachineBenchmarkActivationV2(
     activationReceiptHash: stableGraphHash(core),
     ok: completed || paused,
     state,
+    normalizedState: state,
     receipts,
+    rejectedReceipts,
   };
 }
 
@@ -953,7 +1025,9 @@ export function executeWarmachineBenchmarkTurnV2(stateInput = {}, rawOptions = {
     ? buildWarmachineActivationGroups(state)
     : [];
   let endTurnResult = null;
+  let preEndState = null;
   if (!failures.length && !remainingGroups.length && state.activeSideKey === startingSideKey) {
+    preEndState = state;
     rawOptions.onProgress?.({ stage: "before_end_turn", startingSideKey });
     endTurnResult = executeWarmachineBenchmarkActionV2(state, { actionType: "end_turn" }, {
       routeKey: `${rawOptions.routeKey || "fixed-benchmark-turn"}:${startingSideKey}:end-turn`,
@@ -1000,6 +1074,7 @@ export function executeWarmachineBenchmarkTurnV2(stateInput = {}, rawOptions = {
     turnReceiptHash: stableGraphHash(core),
     ok: turnCompleted,
     state,
+    preEndState,
     stepReceipts: allStepReceipts,
   };
 }
@@ -1311,9 +1386,39 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
       selectActivationGroup: ({ groups }) => openingActivationOrder.find((groupKey) =>
         groups.some((group) => group.groupKey === groupKey)) || groups[0].groupKey,
       intentForActivationGroup: ({ group }) => group.groupKey === raptorGroup.groupKey
-        ? { preferMovement: true, waypoint: raptorWaypoint, avoidFeat: true }
+        ? {
+          preferMovement: true,
+          waypoint: raptorWaypoint,
+          avoidFeat: true,
+          selectAction: rawOptions.requireOpeningRaptorExplicitPath === true
+            ? ({ scoped }) => scoped.enumeration.actions.find((action) =>
+              action.actorPieceKey === raptorPieceKey &&
+              action.actionType === "run" &&
+              /:run-path:/.test(action.actionKey)) || null
+            : undefined,
+        }
         : group.groupKey === attackerLeaderGroup.groupKey
-          ? {
+          ? rawOptions.openingLeaderRun === true
+            ? {
+              preferMovement: true,
+              waypoint: attackerLeaderWaypoint,
+              movementScopeOptions: {
+                actionTypes: ["run"],
+                maximumTargetsPerActionType: 12,
+              },
+              avoidFeat: true,
+              selectAction: ({ state: activationState, scoped }) => {
+                const leader = activationState.pieces.find((piece) =>
+                  piece.pieceKey === attackerLeaderPieceKey);
+                return scoped.enumeration.actions.filter((action) =>
+                  action.actorPieceKey === attackerLeaderPieceKey &&
+                  action.actionType === "run").sort((left, right) =>
+                  distance(actionDestination(left, leader), attackerLeaderWaypoint) -
+                  distance(actionDestination(right, leader), attackerLeaderWaypoint) ||
+                  left.actionKey.localeCompare(right.actionKey))[0] || null;
+              },
+            }
+            : {
             preferMovement: true,
             waypoint: attackerLeaderWaypoint,
             avoidFeat: true,
@@ -1330,7 +1435,7 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
             selectAction: ({ scoped }) => scoped.enumeration.actions.find((action) =>
               action.actorPieceKey === attackerLeaderPieceKey &&
               action.actionType === "precision_strike_battle_plan") || null,
-          }
+            }
           : clearanceActivationGroupKeys.includes(group.groupKey)
             ? {
               preferMovement: true,
@@ -1385,6 +1490,12 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
               maximumTargetsPerActionType: 12,
             },
             avoidFeat: true,
+            selectAction: rawOptions.requireDefenderLeaderExplicitPath === true
+              ? ({ scoped }) => scoped.enumeration.actions.find((action) =>
+                action.actorPieceKey === targetLeaderPieceKey &&
+                action.actionType === "run" &&
+                /:run-path:/.test(action.actionKey)) || null
+              : undefined,
           }
           : { completionOnly: true, avoidFeat: true },
       });
@@ -1463,7 +1574,7 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
               distance(actionDestination(left, caster), raptor?.position || {}) -
               distance(actionDestination(right, caster), raptor?.position || {}) ||
               left.actionKey.localeCompare(right.actionKey))[0];
-          if (!spellProbe && !precisionStrike && (targetedSpells.length || !advance)) {
+          if (!spellProbe && !precisionStrike) {
             spellProbe = {
               observedAtStepIndex: stepIndex,
               precisionStrikeAlreadyUsed: activationState.pieces.find((piece) =>
@@ -1480,6 +1591,17 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
           }
           if (precisionStrike) return precisionStrike;
           if (pieceBoxesRemaining(target) > 17 && targetedSpells.length && !breathStealerAlreadyApplied) {
+            const spell = targetedSpells.slice().sort((left, right) =>
+              Number(right.expectedDamage || 0) - Number(left.expectedDamage || 0) ||
+              left.actionKey.localeCompare(right.actionKey))[0];
+            return {
+              actionKey: spell.actionKey,
+              actionPatch: {
+                strictRollOutcome: buildWarmachineBenchmarkMaximumStrictRollOutcomeV2(spell),
+              },
+            };
+          }
+          if (rawOptions.exhaustTargetedSpells === true && targetedSpells.length) {
             const spell = targetedSpells.slice().sort((left, right) =>
               Number(right.expectedDamage || 0) - Number(left.expectedDamage || 0) ||
               left.actionKey.localeCompare(right.actionKey))[0];

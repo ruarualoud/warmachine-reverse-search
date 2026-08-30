@@ -266,11 +266,45 @@ function solveStitchedGraph(rootLabelKey, labels, edges) {
           group.conditionalProbability.denominator,
         );
         const responseRows = (group.responses || []).map((response) => {
-          const edge = edges.get(response.edgeKey);
-          if (!edge?.childLabelKey) throw new Error(`stitched_response_edge_missing:${response.edgeKey}`);
+          let responseLower = rational(0n);
+          let responseUpper = rational(0n);
+          let responseLowerMass = emptyMassVector();
+          let responseUpperMass = emptyMassVector();
+          let responseExact = response.postResponseChanceExactComplete === true;
+          let postResponseMass = rational(0n);
+          for (const branch of response.branches || []) {
+            const edge = edges.get(branch.edgeKey);
+            if (!edge?.childLabelKey) {
+              throw new Error(`stitched_response_edge_missing:${branch.edgeKey}`);
+            }
+            const branchProbability = rational(
+              branch.conditionalProbability.numerator,
+              branch.conditionalProbability.denominator,
+            );
+            const branchResult = solve(edge.childLabelKey);
+            postResponseMass = add(postResponseMass, branchProbability);
+            responseLower = add(responseLower,
+              multiply(branchProbability, branchResult.interval.lower));
+            responseUpper = add(responseUpper,
+              multiply(branchProbability, branchResult.interval.upper));
+            responseLowerMass = addMassVectors(responseLowerMass,
+              scaleMassVector(branchResult.lowerMass, branchProbability));
+            responseUpperMass = addMassVectors(responseUpperMass,
+              scaleMassVector(branchResult.upperMass, branchProbability));
+            if (!branchResult.interval.exact) responseExact = false;
+          }
+          if (compare(postResponseMass, rational(1n)) !== 0) responseExact = false;
           return {
             responseKey: response.responseKey,
-            result: solve(edge.childLabelKey),
+            result: {
+              interval: {
+                lower: responseLower,
+                upper: responseUpper,
+                exact: responseExact && compare(responseLower, responseUpper) === 0,
+              },
+              lowerMass: responseLowerMass,
+              upperMass: responseUpperMass,
+            },
           };
         });
         let selectedLower;

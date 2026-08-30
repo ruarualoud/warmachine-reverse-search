@@ -171,7 +171,14 @@ function trainingGate({
   probabilityClosure,
   opponentResponseClosure,
 }) {
+  const ruleSemanticsAuthority = warmachineHost.ruleSemanticsAuthority || {};
   const checks = {
+    ruleSemanticsAuthorityCurrent:
+      ruleSemanticsAuthority.sourceAuthority?.current === true &&
+      ruleSemanticsAuthority.verdict?.globalStrictReady === true &&
+      ruleSemanticsAuthority.verdict?.strictExecutorReady === true &&
+      ruleSemanticsAuthority.verdict?.trainingTruthAllowed === true &&
+      ruleSemanticsAuthority.quarantine?.active === false,
     legalDeploymentReached: route?.legalDeploymentReached === true &&
       route?.deploymentAudit?.legalDeploymentReached === true,
     routeStrictWitness: route?.strictWitness === true,
@@ -209,6 +216,7 @@ function humanMarkdown(report = {}) {
     `- 终局：${report.terminal.goalType}，第 ${report.terminal.roundNumber} 轮，胜者 ${report.terminal.winnerSideKey}`,
     `- 合法部署：${report.deployment?.legalDeploymentReached === true ? "是" : "否"}`,
     `- 独立 strict 重放：${report.strictReplay.fullRouteStrictReplayCertified === true ? "通过" : "未通过"}`,
+    `- 规则语义状态：${report.rulesAuthority.ruleSemanticsDisposition}`,
     `- 训练候选：${report.trainingGate.eligible ? "允许导出" : "禁止导出"}`,
     "",
     "## 终局假设",
@@ -354,6 +362,13 @@ export function publishWarmachineReverseReachabilityV1(rawInput = {}) {
     dispositionLedger: disposition,
     rulesAuthority: {
       hostReceiptHash: warmachineHost.receipt.receiptHash,
+      ruleSemanticsAuthorityReceiptHash:
+        warmachineHost.ruleSemanticsAuthority?.authorityReceiptHash || "",
+      ruleSemanticsAuthorityCurrent:
+        warmachineHost.ruleSemanticsAuthority?.verdict?.globalStrictReady === true,
+      ruleSemanticsDisposition:
+        warmachineHost.ruleSemanticsAuthority?.disposition ||
+        "rules_semantics_unreviewed",
       terminalHostReceiptHash: String(terminalCell.hostReceiptHash || ""),
       routeReceiptHashes: replay.freshReceiptHashes,
     },

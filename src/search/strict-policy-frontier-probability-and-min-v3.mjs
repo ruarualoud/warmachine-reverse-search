@@ -416,57 +416,105 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
               responseKey: response.responseKey,
             },
           );
-          const edgeKey = `frontier-edge-${stableGraphHash({
-            parentLabelKey: label.labelKey,
-            groupKey: group.groupKey,
+          const postResponseOutcomes = response.postResponseOutcomes?.length
+            ? response.postResponseOutcomes
+            : [{
+                classKey: "post-response-identity-or-unresolved",
+                probabilityNumerator: 1,
+                probabilityDenominator: 1,
+                transitionAccepted: response.transitionAccepted,
+                reason: response.reason,
+                executedState: response.state,
+                resultStateHash: response.stateHash,
+                outcome: response.outcome,
+                outcomeReason: response.outcomeReason,
+                receiptHash: response.receiptHash,
+                terminalEvents: response.terminalEvents,
+              }];
+          const responseBranches = [];
+          for (const postResponseOutcome of postResponseOutcomes) {
+            const postConditional = rational(
+              postResponseOutcome.probabilityNumerator,
+              postResponseOutcome.probabilityDenominator,
+            );
+            const edgeKey = `frontier-edge-${stableGraphHash({
+              parentLabelKey: label.labelKey,
+              groupKey: group.groupKey,
+              responseKey: response.responseKey,
+              postResponseChanceClassKey: postResponseOutcome.classKey,
+            }, 32)}`;
+            edges.set(edgeKey, {
+              edgeKey,
+              edgeType: "chance_owned_response_post_response_chance",
+              parentLabelKey: label.labelKey,
+              childLabelKey: "",
+              actionKey: step.action.actionKey,
+              adversarialChanceGroupKey: group.groupKey,
+              chanceClassKeys: group.chanceClassKeys,
+              responseKey: response.responseKey,
+              choice: response.choice,
+              recipientPieceKey: response.recipientPieceKey,
+              quantifier,
+              primaryConditionalProbability: probabilityRecord(conditional),
+              postResponseConditionalProbability: probabilityRecord(postConditional),
+              conditionalProbability: probabilityRecord(multiply(conditional, postConditional)),
+              transitionAccepted: postResponseOutcome.transitionAccepted,
+              representativeReceiptHash: postResponseOutcome.receiptHash,
+              postResponseChanceClassKey: postResponseOutcome.classKey,
+              ownedResponsePrecedesPostResponseChance: true,
+              equivalentExecutionEvidence: response.equivalentExecutionEvidence,
+            });
+            const contribution = multiply(
+              multiply(
+                rational(row.cumulativeProbability.numerator, row.cumulativeProbability.denominator),
+                conditional,
+              ),
+              postConditional,
+            );
+            const outcome = postResponseOutcome.transitionAccepted
+              ? terminalOutcome(postResponseOutcome.outcome)
+              : "unresolved";
+            const reason = postResponseOutcome.transitionAccepted
+              ? postResponseOutcome.outcomeReason
+              : postResponseOutcome.reason || "strict_response_transition_rejected";
+            const stateHash = postResponseOutcome.transitionAccepted
+              ? postResponseOutcome.resultStateHash
+              : `synthetic:${stableGraphHash({
+                  labelKey: label.labelKey,
+                  groupKey: group.groupKey,
+                  responseKey: response.responseKey,
+                  postResponseChanceClassKey: postResponseOutcome.classKey,
+                  reason,
+                })}`;
+            nextRawFrontier.push(classifyRaw({
+              state: postResponseOutcome.executedState,
+              stateHash,
+              cursor: step.action.nextCursor,
+              depth: label.depth + 1,
+              adversarialContextKey: nextContextKey,
+              continuationKey: continuationKey(
+                outcome,
+                reason,
+                postResponseOutcome.terminalEvents,
+              ),
+              contribution: probabilityRecord(contribution),
+              incomingEdgeKey: edgeKey,
+              routeKey,
+              outcome,
+              reason,
+              thresholdEligible: !outcome,
+            }));
+            responseBranches.push({
+              edgeKey,
+              postResponseChanceClassKey: postResponseOutcome.classKey,
+              conditionalProbability: probabilityRecord(postConditional),
+            });
+          }
+          groupResponses.push({
             responseKey: response.responseKey,
-          }, 32)}`;
-          edges.set(edgeKey, {
-            edgeKey,
-            edgeType: "chance_owned_response",
-            parentLabelKey: label.labelKey,
-            childLabelKey: "",
-            actionKey: step.action.actionKey,
-            adversarialChanceGroupKey: group.groupKey,
-            chanceClassKeys: group.chanceClassKeys,
-            responseKey: response.responseKey,
-            choice: response.choice,
-            recipientPieceKey: response.recipientPieceKey,
-            quantifier,
-            conditionalProbability: probabilityRecord(conditional),
-            transitionAccepted: response.transitionAccepted,
-            representativeReceiptHash: response.receiptHash,
-            equivalentExecutionEvidence: response.equivalentExecutionEvidence,
+            postResponseChanceExactComplete: response.postResponseChanceExactComplete !== false,
+            branches: responseBranches,
           });
-          const contribution = multiply(
-            rational(row.cumulativeProbability.numerator, row.cumulativeProbability.denominator),
-            conditional,
-          );
-          const outcome = response.transitionAccepted
-            ? terminalOutcome(response.outcome)
-            : "unresolved";
-          const reason = response.transitionAccepted
-            ? response.outcomeReason
-            : response.reason || "strict_response_transition_rejected";
-          const stateHash = response.transitionAccepted
-            ? response.stateHash
-            : `synthetic:${stableGraphHash({ labelKey: label.labelKey, groupKey: group.groupKey,
-              responseKey: response.responseKey, reason })}`;
-          nextRawFrontier.push(classifyRaw({
-            state: response.state,
-            stateHash,
-            cursor: step.action.nextCursor,
-            depth: label.depth + 1,
-            adversarialContextKey: nextContextKey,
-            continuationKey: continuationKey(outcome, reason, response.terminalEvents),
-            contribution: probabilityRecord(contribution),
-            incomingEdgeKey: edgeKey,
-            routeKey,
-            outcome,
-            reason,
-            thresholdEligible: !outcome,
-          }));
-          groupResponses.push({ responseKey: response.responseKey, edgeKey });
         }
         expansionGroups.push({
           groupKey: group.groupKey,
@@ -526,10 +574,50 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
           group.conditionalProbability.denominator,
         );
         const responseRows = group.responses.map((response) => {
-          const edge = edges.get(response.edgeKey);
+          let responseLower = rational(0n);
+          let responseUpper = rational(0n);
+          let responseLowerMass = emptyMassVector();
+          let responseUpperMass = emptyMassVector();
+          let responseExact = response.postResponseChanceExactComplete === true;
+          let postResponseMass = rational(0n);
+          for (const branch of response.branches || []) {
+            const edge = edges.get(branch.edgeKey);
+            const branchResult = solveLabel(edge.childLabelKey);
+            const branchProbability = rational(
+              branch.conditionalProbability.numerator,
+              branch.conditionalProbability.denominator,
+            );
+            postResponseMass = add(postResponseMass, branchProbability);
+            responseLower = add(
+              responseLower,
+              multiply(branchProbability, branchResult.interval.lower),
+            );
+            responseUpper = add(
+              responseUpper,
+              multiply(branchProbability, branchResult.interval.upper),
+            );
+            responseLowerMass = addMassVectors(
+              responseLowerMass,
+              scaleMassVector(branchResult.lowerMass, branchProbability),
+            );
+            responseUpperMass = addMassVectors(
+              responseUpperMass,
+              scaleMassVector(branchResult.upperMass, branchProbability),
+            );
+            if (!branchResult.interval.exact) responseExact = false;
+          }
+          if (compare(postResponseMass, rational(1n)) !== 0) responseExact = false;
           return {
             responseKey: response.responseKey,
-            result: solveLabel(edge.childLabelKey),
+            result: {
+              interval: {
+                lower: responseLower,
+                upper: responseUpper,
+                exact: responseExact && compare(responseLower, responseUpper) === 0,
+              },
+              lowerMass: responseLowerMass,
+              upperMass: responseUpperMass,
+            },
           };
         });
         let selectedLower;

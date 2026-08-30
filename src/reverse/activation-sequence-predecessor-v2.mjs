@@ -1,17 +1,196 @@
 import { stableGraphHash, stableGraphValue } from "../graph/typed-facts-v2.mjs";
+import { buildWarmachineSearchSourceReceiptV1 } from
+  "../contracts/search-execution-receipt-v1.mjs";
 import { normalizeRulesV1State } from "../warmachine-host-runtime.mjs";
 import { enumerateWarmachineBenchmarkActionsV2 } from
   "../benchmark/fixed-steamroller-benchmark-v2.mjs";
 import { generateWarmachineMovementActivationPredecessorsV1 } from
   "./movement-activation-predecessor-v1.mjs";
+import { generateWarmachineChargeCombatActivationPredecessorsV1 } from
+  "./charge-combat-activation-predecessor-v1.mjs";
 import { generateWarmachinePassActivationPredecessorsV1 } from
   "./pass-activation-predecessor-v1.mjs";
+import {
+  auditWarmachineReverseStateBoundaryV1,
+  summarizeWarmachineReverseStateBoundaryAuditV1,
+} from "./reverse-state-invariants-v1.mjs";
+import {
+  auditWarmachineDeclaredMovementDeploymentReachabilityLowerBoundV1,
+  auditWarmachineSideDeploymentGeometryV1,
+} from
+  "./deployment-reachability-v1.mjs";
 import { warmachineReverseStateSemanticHashV1 } from
   "./terminal-event-predecessor-v1.mjs";
 import { warmachinePieceInPlayV1 } from "./piece-lifecycle-v1.mjs";
 
 export const WARMACHINE_ACTIVATION_SEQUENCE_PREDECESSOR_V2_SCHEMA =
   "warmachine_activation_sequence_predecessor_v2";
+export const WARMACHINE_ACTIVATION_SEQUENCE_RESUME_CHECKPOINT_V1_SCHEMA =
+  "warmachine_activation_sequence_resume_checkpoint_v1";
+
+export const WARMACHINE_ACTIVATION_SEQUENCE_SEARCH_SOURCE_RECEIPT_V1 =
+  buildWarmachineSearchSourceReceiptV1({
+    entryRelativePaths: ["src/reverse/activation-sequence-predecessor-v2.mjs"],
+  });
+
+const ACTIVATION_RESUME_OPTION_EXCLUSIONS = new Set([
+  "onCheckpoint",
+  "onProgress",
+  "resumeCheckpoint",
+  "resumeCheckpoints",
+]);
+
+function activationResumeOptions(rawOptions = {}) {
+  return stableGraphValue(Object.fromEntries(Object.entries(rawOptions).filter(([
+    key,
+    value,
+  ]) => !ACTIVATION_RESUME_OPTION_EXCLUSIONS.has(key) &&
+    typeof value !== "function")));
+}
+
+function activationResumeContractHash(rootStateHash, sideKey, rawOptions = {}) {
+  return stableGraphHash(stableGraphValue({
+    schemaVersion: WARMACHINE_ACTIVATION_SEQUENCE_RESUME_CHECKPOINT_V1_SCHEMA,
+    searchSourceClosureHash:
+      WARMACHINE_ACTIVATION_SEQUENCE_SEARCH_SOURCE_RECEIPT_V1.sourceClosureHash,
+    rootStateHash,
+    sideKey,
+    options: activationResumeOptions(rawOptions),
+  }));
+}
+
+function activationCheckpointLabel(row = {}) {
+  return stableGraphValue({
+    labelKey: String(row.labelKey || ""),
+    state: row.state,
+    stateHash: String(row.stateHash || ""),
+    depth: Number(row.depth || 0),
+    reverseEdges: row.reverseEdges || [],
+  });
+}
+
+export function buildWarmachineActivationSequenceResumeCheckpointV1({
+  rootStateHash = "",
+  sideKey = "",
+  rawOptions = {},
+  queue = [],
+  boundaryLabels = [],
+  labelKeys = [],
+  uniqueStateHashes = [],
+  expansionLedgeredStateHashes = [],
+  unresolved = [],
+  rejected = [],
+  expandedLabelCount = 0,
+  generatedEdgeCount = 0,
+} = {}) {
+  const resumeContractHash = activationResumeContractHash(
+    rootStateHash,
+    sideKey,
+    rawOptions,
+  );
+  const core = stableGraphValue({
+    schemaVersion: WARMACHINE_ACTIVATION_SEQUENCE_RESUME_CHECKPOINT_V1_SCHEMA,
+    searchSourceClosureHash:
+      WARMACHINE_ACTIVATION_SEQUENCE_SEARCH_SOURCE_RECEIPT_V1.sourceClosureHash,
+    rootStateHash: String(rootStateHash || ""),
+    sideKey: String(sideKey || ""),
+    resumeContractHash,
+    resumeKey: `activation-sequence-resume-${stableGraphHash({
+      rootStateHash,
+      sideKey,
+      resumeContractHash,
+    }, 32)}`,
+    queue: queue.map(activationCheckpointLabel),
+    boundaryLabels: boundaryLabels.map(activationCheckpointLabel),
+    labelKeys: [...labelKeys].map(String).sort(),
+    uniqueStateHashes: [...uniqueStateHashes].map(String).sort(),
+    expansionLedgeredStateHashes:
+      [...expansionLedgeredStateHashes].map(String).sort(),
+    unresolved,
+    rejected,
+    expandedLabelCount: Number(expandedLabelCount || 0),
+    generatedEdgeCount: Number(generatedEdgeCount || 0),
+  });
+  return {
+    ...core,
+    checkpointHash: stableGraphHash(core),
+  };
+}
+
+export function auditWarmachineActivationSequenceResumeCheckpointV1(
+  checkpoint = {},
+  {
+    rootStateHash = "",
+    sideKey = "",
+    rawOptions = {},
+  } = {},
+) {
+  const issues = [];
+  const expectedContractHash = activationResumeContractHash(
+    rootStateHash,
+    sideKey,
+    rawOptions,
+  );
+  if (checkpoint.schemaVersion !==
+      WARMACHINE_ACTIVATION_SEQUENCE_RESUME_CHECKPOINT_V1_SCHEMA) {
+    issues.push("activation_resume_checkpoint_schema_mismatch");
+  }
+  if (checkpoint.rootStateHash !== rootStateHash) {
+    issues.push("activation_resume_checkpoint_root_state_mismatch");
+  }
+  if (checkpoint.searchSourceClosureHash !==
+      WARMACHINE_ACTIVATION_SEQUENCE_SEARCH_SOURCE_RECEIPT_V1.sourceClosureHash) {
+    issues.push("activation_resume_checkpoint_source_drift");
+  }
+  if (checkpoint.sideKey !== sideKey) {
+    issues.push("activation_resume_checkpoint_side_mismatch");
+  }
+  if (checkpoint.resumeContractHash !== expectedContractHash) {
+    issues.push("activation_resume_checkpoint_contract_mismatch");
+  }
+  const { checkpointHash: _checkpointHash, ...checkpointCore } = checkpoint;
+  if (stableGraphHash(stableGraphValue(checkpointCore)) !==
+      checkpoint.checkpointHash) {
+    issues.push("activation_resume_checkpoint_hash_mismatch");
+  }
+  const checkpointLabelKeys = new Set(checkpoint.labelKeys || []);
+  const checkpointStateHashes = new Set(checkpoint.uniqueStateHashes || []);
+  const rows = [
+    ...(Array.isArray(checkpoint.queue) ? checkpoint.queue : []),
+    ...(Array.isArray(checkpoint.boundaryLabels)
+      ? checkpoint.boundaryLabels
+      : []),
+  ];
+  for (const row of rows) {
+    const actualStateHash = warmachineReverseStateSemanticHashV1(row.state);
+    if (actualStateHash !== row.stateHash) {
+      issues.push("activation_resume_checkpoint_state_hash_mismatch");
+    }
+    if (labelKey(row.stateHash, row.reverseEdges || []) !== row.labelKey) {
+      issues.push("activation_resume_checkpoint_label_binding_mismatch");
+    }
+    if (!checkpointLabelKeys.has(row.labelKey)) {
+      issues.push("activation_resume_checkpoint_label_set_incomplete");
+    }
+    if (!checkpointStateHashes.has(row.stateHash)) {
+      issues.push("activation_resume_checkpoint_state_set_incomplete");
+    }
+  }
+  for (const stateHash of checkpoint.expansionLedgeredStateHashes || []) {
+    if (!checkpointStateHashes.has(stateHash)) {
+      issues.push("activation_resume_checkpoint_ledger_state_unknown");
+    }
+  }
+  return stableGraphValue({
+    ok: issues.length === 0,
+    issues: [...new Set(issues)],
+    checkpointHash: String(checkpoint.checkpointHash || ""),
+    resumeKey: String(checkpoint.resumeKey || ""),
+    queuedLabelCount: Array.isArray(checkpoint.queue)
+      ? checkpoint.queue.length
+      : 0,
+  });
+}
 
 function alive(piece = {}) {
   return warmachinePieceInPlayV1(piece);
@@ -94,11 +273,181 @@ function activationGroupGeometryDebt(state, group, rawOptions = {}) {
   }, rawOptions);
 }
 
+function activationGroupControlResourceDependencyRank(
+  state,
+  group,
+  rawOptions = {},
+) {
+  if (rawOptions.prioritizeControlResourceDependencies !== true) return 0;
+  const actorPieceKeys = new Set(group.actorPieceKeys || []);
+  const members = (state.pieces || []).filter((piece) =>
+    actorPieceKeys.has(piece.pieceKey));
+  const includesController = members.some((piece) =>
+    piece.isWarcaster === true || piece.isWarlock === true ||
+    piece.isInfernalMaster === true || piece.canAllocateFocus === true ||
+    piece.canLeechFury === true);
+  if (includesController) return 0;
+  const includesControlledCohort = members.some((piece) =>
+    (piece.isWarjack === true || piece.isWarbeast === true) &&
+    Boolean(piece.controllerPieceKey || piece.battlegroupControllerPieceKey ||
+      piece.metadata?.controllerPieceKey));
+  return includesControlledCohort ? 1 : 2;
+}
+
+function candidateActor(candidate = {}) {
+  return (candidate.predecessorState?.pieces || []).find((piece) =>
+    piece.pieceKey === candidate.actorPieceKey) || null;
+}
+
+function actorWithinControllerControlRange(candidate = {}) {
+  const actor = candidateActor(candidate);
+  if (!actor) return false;
+  const controllerPieceKey = String(actor.controllerPieceKey ||
+    actor.battlegroupControllerPieceKey || actor.metadata?.controllerPieceKey || "");
+  const controller = (candidate.predecessorState?.pieces || []).find((piece) =>
+    piece.pieceKey === controllerPieceKey && alive(piece));
+  if (!controller) return false;
+  const controlRangeIn = Math.max(0, numeric(
+    controller.controlRangeIn ?? controller.ctrl,
+    numeric(controller.arc) * 2,
+  ));
+  const closestDistanceIn = Math.max(0,
+    Math.hypot(
+      numeric(actor.position?.xIn) - numeric(controller.position?.xIn),
+      numeric(actor.position?.yIn) - numeric(controller.position?.yIn),
+    ) - baseRadius(actor) - baseRadius(controller));
+  return closestDistanceIn <= controlRangeIn + 0.001;
+}
+
+function activationCandidateControlResourceDependencyRank(
+  candidate,
+  rawOptions = {},
+) {
+  if (rawOptions.prioritizeControlResourceDependencies !== true) return 0;
+  if ([
+    "resource_prefix_movement_activation_inverse_v1",
+    "movement_resource_suffix_activation_inverse_v1",
+  ].includes(candidate.operatorKey)) return 0;
+  const actor = candidateActor(candidate);
+  const controlledCohort = Boolean(actor) &&
+    (actor.isWarjack === true || actor.isWarbeast === true) &&
+    Boolean(actor.controllerPieceKey || actor.battlegroupControllerPieceKey ||
+      actor.metadata?.controllerPieceKey);
+  if (!controlledCohort) return 1;
+  if (candidate.movementProposal?.relationKind ===
+      "controller_control_range_power_up_avoidance_origin") return 0;
+  const restoredResourcePoints = Number(
+    candidate.reverseRestoredResourcePoints || 0,
+  );
+  if (restoredResourcePoints !== 0 &&
+      actorWithinControllerControlRange(candidate)) return 0;
+  if (candidate.operatorKey === "pass_activation_inverse_v1") return 2;
+  return restoredResourcePoints !== 0 ? 3 : 1;
+}
+
+function completeBaseDistanceFromOwnEdge(state = {}, piece = {}, edgeKey = "") {
+  const radius = baseRadius(piece);
+  if (edgeKey === "south") return numeric(piece.position?.yIn) + radius;
+  if (edgeKey === "north") {
+    return numeric(state.board?.heightIn, 48) -
+      numeric(piece.position?.yIn) + radius;
+  }
+  if (edgeKey === "west") return numeric(piece.position?.xIn) + radius;
+  if (edgeKey === "east") {
+    return numeric(state.board?.widthIn, 48) -
+      numeric(piece.position?.xIn) + radius;
+  }
+  return Number.NEGATIVE_INFINITY;
+}
+
+function predecessorStateObligationViolations(state = {}, rawOptions = {}) {
+  const violations = [];
+  for (const obligation of rawOptions.predecessorStateObligations || []) {
+    if (obligation.obligationKind !==
+        "leader_outside_killbox_before_first_penalty") continue;
+    const leader = (state.pieces || []).find((piece) =>
+      piece.pieceKey === obligation.leaderPieceKey && alive(piece));
+    const observedDistanceIn = leader
+      ? completeBaseDistanceFromOwnEdge(
+        state,
+        leader,
+        obligation.ownTableEdgeKey,
+      )
+      : Number.NEGATIVE_INFINITY;
+    if (observedDistanceIn > numeric(obligation.killBoxDistanceIn, 12) + 0.001) {
+      continue;
+    }
+    violations.push(stableGraphValue({
+      ...obligation,
+      reason: leader
+        ? "leader_still_inside_killbox"
+        : "leader_preimage_missing_or_not_in_play",
+      observedCompleteBaseDistanceFromOwnEdgeIn:
+        Number.isFinite(observedDistanceIn) ? observedDistanceIn : null,
+    }));
+  }
+  return violations;
+}
+
+function activationBoundaryStateObligationViolations(
+  state = {},
+  rawOptions = {},
+) {
+  const violations = predecessorStateObligationViolations(state, rawOptions);
+  for (const obligation of rawOptions.activationBoundaryStateObligations || []) {
+    if (obligation.obligationKind === "side_legal_deployment_geometry") {
+      const audit = auditWarmachineSideDeploymentGeometryV1(state, {
+        sideKey: obligation.sideKey,
+        deployments: rawOptions.deployments,
+      });
+      if (audit.ok) continue;
+      violations.push(stableGraphValue({
+        ...obligation,
+        reason: "side_legal_deployment_geometry_unsatisfied",
+        failedChecks: audit.failedChecks,
+        deploymentFailedChecks: audit.deploymentAudit?.failedChecks || [],
+        baseOutliers: audit.deploymentAudit?.baseOutliers || [],
+        overlapPairs: audit.deploymentAudit?.overlapPairs || [],
+        disconnectedUnitGroups:
+          audit.deploymentAudit?.disconnectedUnitGroups || [],
+        attachmentDistanceOutliers:
+          audit.deploymentAudit?.attachmentDistanceOutliers || [],
+        crossSideOverlapPairs: audit.crossSideOverlapPairs || [],
+        auditHash: audit.auditHash,
+      }));
+      continue;
+    }
+    if (obligation.obligationKind ===
+        "declared_movement_deployment_reachability_lower_bound") {
+      const audit =
+        auditWarmachineDeclaredMovementDeploymentReachabilityLowerBoundV1(
+          state,
+          {
+            sideKey: obligation.sideKey,
+            deployments: rawOptions.deployments,
+            movementGroups: obligation.movementGroups,
+          },
+        );
+      if (audit.ok) continue;
+      violations.push(stableGraphValue({
+        ...obligation,
+        reason:
+          "declared_movement_deployment_reachability_lower_bound_unsatisfied",
+        failedChecks: audit.failedChecks,
+        violations: audit.violations,
+        auditHash: audit.auditHash,
+      }));
+    }
+  }
+  return violations;
+}
+
 function edge(candidate = {}) {
   return {
     candidateKey: candidate.candidateKey,
     operatorKey: candidate.operatorKey,
     actorPieceKey: candidate.actorPieceKey,
+    targetPieceKey: candidate.targetPieceKey || "",
     activationGroupPieceKeys: candidate.activationGroupPieceKeys || [candidate.actorPieceKey],
     activationGroupId: candidate.activationGroupId || "",
     actionType: candidate.actionType || "pass",
@@ -111,11 +460,20 @@ function edge(candidate = {}) {
     movementProposal: candidate.movementProposal || null,
     mutation: candidate.mutation || null,
     resourceEnvelopeMode: String(candidate.resourceEnvelopeMode || ""),
+    preActivationResourcePoints:
+      Number(candidate.preActivationResourcePoints || 0),
+    reverseRestoredResourcePoints:
+      Number(candidate.reverseRestoredResourcePoints || 0),
+    resourceSpendOrder: String(candidate.resourceSpendOrder || ""),
+    resourcePrefixActionKeys: candidate.resourcePrefixActionKeys || [],
+    resourceSuffixActionKeys: candidate.resourceSuffixActionKeys || [],
     matchedProbability: candidate.matchedProbability || null,
     matchedProbabilityInterval: candidate.matchedProbabilityInterval || null,
     matchedProbabilityExact: candidate.matchedProbabilityExact === true,
     adversarialContextKey: String(candidate.adversarialContextKey || ""),
     provenance: candidate.provenance || null,
+    predecessorStateInvariantAudit:
+      candidate.predecessorStateInvariantAudit || null,
   };
 }
 
@@ -151,28 +509,116 @@ export function reverseWarmachineActivationSequenceV2(
     0,
     Math.floor(numeric(rawOptions.maximumCandidatesPerExpansion, 0)),
   );
+  const movementGroupKeysWitnessScoped = Array.isArray(
+    rawOptions.movementGroupKeys,
+  );
+  const movementGroupKeySet = new Set(
+    (rawOptions.movementGroupKeys || []).map(String),
+  );
+  const chargeCombatActorPieceKeysScoped = Array.isArray(
+    rawOptions.chargeCombatActorPieceKeys,
+  );
+  const chargeCombatActorPieceKeySet = new Set(
+    (rawOptions.chargeCombatActorPieceKeys || []).map(String),
+  );
   const groupOrderIndex = new Map((rawOptions.groupOrderKeys || [])
     .map(String).map((groupKey, index) => [groupKey, index]));
   const frontierOrder = rawOptions.frontierOrder === "best_first_to_deployment"
     ? "best_first_to_deployment"
     : "breadth_first_by_activation_depth";
   const rootStateHash = warmachineReverseStateSemanticHashV1(root);
-  const queue = [{
+  const initialQueue = [{
     labelKey: labelKey(rootStateHash, []),
     state: root,
     stateHash: rootStateHash,
     depth: 0,
     reverseEdges: [],
   }];
-  const labelKeys = new Set(queue.map((row) => row.labelKey));
-  const uniqueStateHashes = new Set([rootStateHash]);
-  const boundaryLabels = [];
-  const unresolved = [];
-  const rejected = [];
+  const resumeContract = {
+    rootStateHash,
+    sideKey,
+    rawOptions,
+  };
+  const resumeKey = buildWarmachineActivationSequenceResumeCheckpointV1({
+    ...resumeContract,
+    queue: initialQueue,
+    labelKeys: initialQueue.map((row) => row.labelKey),
+    uniqueStateHashes: [rootStateHash],
+  }).resumeKey;
+  const requestedResumeCheckpoint = rawOptions.resumeCheckpoint ||
+    rawOptions.resumeCheckpoints?.[resumeKey] || null;
+  if (requestedResumeCheckpoint) {
+    const resumeAudit = auditWarmachineActivationSequenceResumeCheckpointV1(
+      requestedResumeCheckpoint,
+      resumeContract,
+    );
+    if (!resumeAudit.ok) {
+      throw new Error(`activation_resume_checkpoint_rejected:${
+        resumeAudit.issues.join(",")}`);
+    }
+  }
+  const queue = requestedResumeCheckpoint
+    ? requestedResumeCheckpoint.queue.map(activationCheckpointLabel)
+    : initialQueue;
+  const labelKeys = new Set(requestedResumeCheckpoint?.labelKeys ||
+    queue.map((row) => row.labelKey));
+  const uniqueStateHashes = new Set(
+    requestedResumeCheckpoint?.uniqueStateHashes || [rootStateHash],
+  );
+  const boundaryLabels = requestedResumeCheckpoint
+    ? requestedResumeCheckpoint.boundaryLabels.map(activationCheckpointLabel)
+    : [];
+  const unresolved = requestedResumeCheckpoint
+    ? stableGraphValue(requestedResumeCheckpoint.unresolved || [])
+    : [];
+  if (!requestedResumeCheckpoint) {
+    unresolved.push(...(rawOptions.predecessorStateObligations || []).map((row) => ({
+      reason: "predecessor_obligation_alternative_source_families_deferred",
+      detail: stableGraphValue(row),
+    })));
+  }
+  const rejected = requestedResumeCheckpoint
+    ? stableGraphValue(requestedResumeCheckpoint.rejected || [])
+    : [];
   const expansionCache = new Map();
-  const expansionLedgeredStateHashes = new Set();
-  let expandedLabelCount = 0;
-  let generatedEdgeCount = 0;
+  const expansionLedgeredStateHashes = new Set(
+    requestedResumeCheckpoint?.expansionLedgeredStateHashes || [],
+  );
+  let expandedLabelCount = Number(
+    requestedResumeCheckpoint?.expandedLabelCount || 0,
+  );
+  let generatedEdgeCount = Number(
+    requestedResumeCheckpoint?.generatedEdgeCount || 0,
+  );
+  const publishCheckpoint = (stage) => {
+    if (typeof rawOptions.onCheckpoint !== "function") return;
+    emitProgress("activation_checkpoint_build_started", { checkpointStage: stage });
+    const checkpoint = buildWarmachineActivationSequenceResumeCheckpointV1({
+      ...resumeContract,
+      queue,
+      boundaryLabels,
+      labelKeys,
+      uniqueStateHashes,
+      expansionLedgeredStateHashes,
+      unresolved,
+      rejected,
+      expandedLabelCount,
+      generatedEdgeCount,
+    });
+    emitProgress("activation_checkpoint_build_ready", {
+      checkpointStage: stage,
+      checkpointHash: checkpoint.checkpointHash,
+    });
+    rawOptions.onCheckpoint({
+      stage,
+      resumeKey,
+      checkpoint,
+    });
+    emitProgress("activation_checkpoint_published", {
+      checkpointStage: stage,
+      checkpointHash: checkpoint.checkpointHash,
+    });
+  };
   const emitProgress = (stage, detail = {}) => rawOptions.onProgress?.({
     schemaVersion: "warmachine_activation_sequence_predecessor_progress_v1",
     stage,
@@ -205,7 +651,41 @@ export function reverseWarmachineActivationSequenceV2(
   while (queue.length) {
     const current = takeNextLabel();
     if (!current) break;
+    const currentStateInvariantAudit = auditWarmachineReverseStateBoundaryV1(
+      current.state,
+      { boundaryKind: "activation_reverse_frontier" },
+    );
+    if (!currentStateInvariantAudit.ok) {
+      rejected.push({
+        labelKey: current.labelKey,
+        stateHash: current.stateHash,
+        depth: current.depth,
+        reason: "reverse_predecessor_state_invariant_rejected",
+        stateInvariantAudit:
+          summarizeWarmachineReverseStateBoundaryAuditV1(
+            currentStateInvariantAudit,
+          ),
+        issues: currentStateInvariantAudit.issues,
+      });
+      publishCheckpoint("activation_state_invariant_rejected");
+      continue;
+    }
     if (boundaryReached(current.state, sideKey)) {
+      const obligationViolations = activationBoundaryStateObligationViolations(
+        current.state,
+        rawOptions,
+      );
+      if (obligationViolations.length) {
+        unresolved.push({
+          labelKey: current.labelKey,
+          stateHash: current.stateHash,
+          depth: current.depth,
+          reason: "activation_predecessor_obligation_unsatisfied",
+          obligationViolations,
+        });
+        publishCheckpoint("activation_predecessor_obligation_unsatisfied");
+        continue;
+      }
       boundaryLabels.push(current);
       emitProgress("activation_boundary_reached", {
         labelKey: current.labelKey,
@@ -220,8 +700,10 @@ export function reverseWarmachineActivationSequenceV2(
           depth: row.depth,
           reason: "activation_reverse_boundary_witness_budget_deferred",
         })));
+        publishCheckpoint("activation_boundary_witness_budget_reached");
         break;
       }
+      publishCheckpoint("activation_boundary_reached");
       continue;
     }
     if (current.depth >= maximumDepth) {
@@ -231,19 +713,30 @@ export function reverseWarmachineActivationSequenceV2(
         depth: current.depth,
         reason: "activation_reverse_depth_budget_exhausted",
       });
+      publishCheckpoint("activation_depth_budget_reached");
       continue;
     }
     let expansion = expansionCache.get(current.stateHash);
     if (!expansion) {
       const inverseGroups = inverseActivationGroups(current.state, sideKey);
       const orderedGroups = inverseGroups.slice().sort((left, right) => {
+        const dependencyOrder =
+          activationGroupControlResourceDependencyRank(
+            current.state,
+            left,
+            rawOptions,
+          ) - activationGroupControlResourceDependencyRank(
+            current.state,
+            right,
+            rawOptions,
+          );
         const leftOrder = groupOrderIndex.has(left.groupKey)
           ? groupOrderIndex.get(left.groupKey)
           : Number.POSITIVE_INFINITY;
         const rightOrder = groupOrderIndex.has(right.groupKey)
           ? groupOrderIndex.get(right.groupKey)
           : Number.POSITIVE_INFINITY;
-        return leftOrder - rightOrder ||
+        return dependencyOrder || leftOrder - rightOrder ||
           activationGroupGeometryDebt(current.state, right, rawOptions) -
             activationGroupGeometryDebt(current.state, left, rawOptions) ||
           left.groupKey.localeCompare(right.groupKey);
@@ -255,6 +748,30 @@ export function reverseWarmachineActivationSequenceV2(
         ? orderedGroups.slice(maximumGroupsPerExpansion)
         : [];
       const scopedActorPieceKeys = selectedGroups.flatMap((group) =>
+        group.actorPieceKeys);
+      const chargeCombatActorPieceKeys = chargeCombatActorPieceKeysScoped
+        ? scopedActorPieceKeys.filter((pieceKey) =>
+          chargeCombatActorPieceKeySet.has(pieceKey))
+        : scopedActorPieceKeys;
+      const selectedGroupKey = selectedGroups.length === 1
+        ? selectedGroups[0].groupKey
+        : "";
+      const expansionMaximumCandidates = Math.max(0, Math.floor(numeric(
+        rawOptions.maximumCandidatesPerExpansionByGroupKey?.[selectedGroupKey],
+        maximumCandidatesPerExpansion,
+      )));
+      const movementMaximumStrictCandidates = Math.max(0, Math.floor(numeric(
+        rawOptions.maximumMovementStrictCandidatesByGroupKey?.[selectedGroupKey],
+        rawOptions.maximumMovementStrictCandidatesPerExpansion,
+      )));
+      const movementGroups = movementGroupKeysWitnessScoped
+        ? selectedGroups.filter((group) => movementGroupKeySet.has(group.groupKey))
+        : selectedGroups;
+      const movementActorPieceKeys = movementGroups.flatMap((group) =>
+        group.actorPieceKeys);
+      const reservedDeploymentPieceKeys = orderedGroups.filter((group) =>
+        group.groupKey !== selectedGroupKey &&
+        movementGroupKeySet.has(group.groupKey)).flatMap((group) =>
         group.actorPieceKeys);
       emitProgress("activation_expansion_started", {
         labelKey: current.labelKey,
@@ -274,34 +791,149 @@ export function reverseWarmachineActivationSequenceV2(
         });
       const movement = rawOptions.includeMovement === false
         ? { candidates: [], rejected: [], unresolved: [] }
-        : generateWarmachineMovementActivationPredecessorsV1(current.state, {
+        : movementActorPieceKeys.length
+          ? generateWarmachineMovementActivationPredecessorsV1(current.state, {
           sideKey,
-          actorPieceKeys: scopedActorPieceKeys,
+          actorPieceKeys: movementActorPieceKeys,
           deployments: rawOptions.deployments,
           actionTypes: rawOptions.movementActionTypes,
           originProposals: rawOptions.originProposals,
           deploymentSlotGapIn: rawOptions.deploymentSlotGapIn,
           maximumDeploymentSlotOrigins: rawOptions.maximumDeploymentSlotOrigins,
           maximumDeploymentSlotRings: rawOptions.maximumDeploymentSlotRings,
+          includeDeploymentSlotAlternatives:
+            rawOptions.includeDeploymentSlotAlternatives === true,
+          includeUnitDeploymentFormationAlternatives:
+            rawOptions.includeUnitDeploymentFormationAlternatives === true,
+          maximumUnitDeploymentFormationCandidates:
+            rawOptions.maximumUnitDeploymentFormationCandidates,
+          unitDeploymentFormationGridStepIn:
+            rawOptions.unitDeploymentFormationGridStepIn,
+          unitDeploymentFormationRotationCount:
+            rawOptions.unitDeploymentFormationRotationCount,
+          reservedDeploymentPieceKeys,
+          maximumUnitMovementAnchorsPerGroup:
+            rawOptions.maximumUnitMovementAnchorsPerGroup,
+          includeResourceSpendPrefixes:
+            rawOptions.includeResourceSpendPrefixes === true,
+          resourceSpendPrefixActorPieceKeys:
+            rawOptions.resourceSpendPrefixActorPieceKeys,
+          requireResourceSpendPrefixActorPieceKeys:
+            rawOptions.requireResourceSpendPrefixActorPieceKeys,
+          includePostMovementResourceSpendSuffixes:
+            rawOptions.includePostMovementResourceSpendSuffixes === true,
+          resourcePrefixTargetPieceKeys: rawOptions.resourcePrefixTargetPieceKeys,
+          maximumResourcePrefixTargets: rawOptions.maximumResourcePrefixTargets,
+          maximumResourcePrefixDepth: rawOptions.maximumResourcePrefixDepth,
+          maximumResourcePrefixLabels: rawOptions.maximumResourcePrefixLabels,
+          maximumResourcePrefixRoutes: rawOptions.maximumResourcePrefixRoutes,
+          maximumResourceSuffixTargets: rawOptions.maximumResourceSuffixTargets,
+          maximumResourceSuffixDepth: rawOptions.maximumResourceSuffixDepth,
+          maximumResourceSuffixLabels: rawOptions.maximumResourceSuffixLabels,
+          maximumResourceSuffixRoutes: rawOptions.maximumResourceSuffixRoutes,
+          maximumResourceSuffixMovementProposals:
+            rawOptions.maximumResourceSuffixMovementProposals,
+          predecessorStateObligations:
+            rawOptions.predecessorStateObligations || [],
+          prioritizeResourceContinuityFallbacks:
+            rawOptions.prioritizeControlResourceDependencies === true,
+          maximumStrictCandidates: Math.max(
+            expansionMaximumCandidates,
+            movementMaximumStrictCandidates,
+          ),
+          maximumStrictCandidateAttempts:
+            rawOptions.maximumMovementStrictCandidateAttempts,
+          dedupeEquivalentPathWitnessesForReachabilityBudget:
+            rawOptions.dedupeEquivalentPathWitnessesForReachabilityBudget ===
+              true,
           rejectedAuditLimit: rawOptions.rejectedAuditLimit,
+          onProgress: (event = {}) => {
+            const { stage: movementStage, ...detail } = event;
+            emitProgress("movement_predecessor_progress", {
+              movementStage,
+              ...detail,
+            });
+          },
           queryKey: `${rawOptions.queryKey || "activation-v2"}:movement:${current.stateHash}`,
-        });
-      const orderedCandidates = [...pass.candidates, ...movement.candidates].sort((left, right) =>
+        })
+          : { candidates: [], rejected: [], unresolved: [] };
+      const chargeCombat = rawOptions.includeChargeCombat === true &&
+          chargeCombatActorPieceKeys.length
+        ? generateWarmachineChargeCombatActivationPredecessorsV1(
+          current.state,
+          {
+            sideKey,
+            actorPieceKeys: chargeCombatActorPieceKeys,
+            targetPieceKeys: rawOptions.chargeTargetPieceKeys,
+            chargePredecessorProposals:
+              rawOptions.chargePredecessorProposals,
+            includeAutomaticChargeOrigins:
+              rawOptions.includeAutomaticChargeOrigins !== false,
+            chargeOriginDistancesIn: rawOptions.chargeOriginDistancesIn,
+            maximumChargeProposals: rawOptions.maximumChargeProposals,
+            maximumCandidates: rawOptions.maximumChargeCombatCandidates,
+            rejectedAuditLimit: rawOptions.rejectedAuditLimit,
+            queryKey: `${rawOptions.queryKey || "activation-v2"}:charge-combat:${current.stateHash}`,
+          },
+        )
+        : { candidates: [], rejected: [], unresolved: [] };
+      const declaredMovementWitnessGroup =
+        movementGroupKeysWitnessScoped &&
+        movementGroupKeySet.has(selectedGroupKey);
+      const orderedCandidates = [
+        ...pass.candidates,
+        ...movement.candidates,
+        ...chargeCombat.candidates,
+      ].sort((left, right) =>
+          Number(declaredMovementWitnessGroup &&
+            Boolean(right.movementProposal)) -
+            Number(declaredMovementWitnessGroup &&
+              Boolean(left.movementProposal)) ||
+          numeric(declaredMovementWitnessGroup
+            ? left.movementProposal?.proposalPriority
+            : 0) - numeric(declaredMovementWitnessGroup
+              ? right.movementProposal?.proposalPriority
+              : 0) ||
+          predecessorStateObligationViolations(
+            left.predecessorState,
+            rawOptions,
+          ).length - predecessorStateObligationViolations(
+            right.predecessorState,
+            rawOptions,
+          ).length ||
+          activationCandidateControlResourceDependencyRank(left, rawOptions) -
+            activationCandidateControlResourceDependencyRank(right, rawOptions) ||
           warmachineDeploymentGeometryDebtV1(left.predecessorState, rawOptions) -
             warmachineDeploymentGeometryDebtV1(right.predecessorState, rawOptions) ||
+          Number(right.reverseRestoredResourcePoints || 0) -
+            Number(left.reverseRestoredResourcePoints || 0) ||
           left.candidateKey.localeCompare(right.candidateKey));
-      const candidates = maximumCandidatesPerExpansion > 0
-        ? orderedCandidates.slice(0, maximumCandidatesPerExpansion)
+      const candidates = expansionMaximumCandidates > 0
+        ? orderedCandidates.slice(0, expansionMaximumCandidates)
         : orderedCandidates;
-      const omittedCandidates = maximumCandidatesPerExpansion > 0
-        ? orderedCandidates.slice(maximumCandidatesPerExpansion)
+      const omittedCandidates = expansionMaximumCandidates > 0
+        ? orderedCandidates.slice(expansionMaximumCandidates)
         : [];
       expansion = {
         candidates,
-        rejected: [...(pass.rejected || []), ...(movement.rejected || [])],
+        rejected: [
+          ...(pass.rejected || []),
+          ...(movement.rejected || []),
+          ...(chargeCombat.rejected || []),
+        ],
         unresolved: [
           ...(pass.unresolved || []),
           ...(movement.unresolved || []),
+          ...(chargeCombat.unresolved || []),
+          ...(rawOptions.includeChargeCombat === true &&
+              chargeCombatActorPieceKeysScoped
+            ? scopedActorPieceKeys.filter((pieceKey) =>
+              !chargeCombatActorPieceKeySet.has(pieceKey)).map((pieceKey) => ({
+              reason: "charge_combat_actor_scope_not_enabled",
+              actorPieceKey: pieceKey,
+              detail: "This bounded witness call did not expand charge-combat predecessors for this actor; the omitted family remains unresolved.",
+            }))
+            : []),
           ...omittedGroups.map((group) => ({
             reason: "activation_reverse_group_order_budget_deferred",
             groupKey: group.groupKey,
@@ -314,6 +946,16 @@ export function reverseWarmachineActivationSequenceV2(
             operatorKey: candidate.operatorKey,
             predecessorStateHash: candidate.predecessorStateHash,
           })),
+          ...(movementGroupKeysWitnessScoped
+            ? selectedGroups.filter((group) =>
+              !movementGroupKeySet.has(group.groupKey)).map((group) => ({
+              reason: "activation_reverse_movement_family_witness_deferred",
+              groupKey: group.groupKey,
+              actorPieceKeys: group.actorPieceKeys,
+              claimBoundary:
+                "This route witness declares the group as a non-mover; other legal movement predecessors remain unresolved.",
+            }))
+            : []),
         ],
       };
       emitProgress("activation_expansion_ready", {
@@ -321,6 +963,19 @@ export function reverseWarmachineActivationSequenceV2(
         stateHash: current.stateHash,
         depth: current.depth,
         selectedGroups: stableGraphValue(selectedGroups),
+        selectedCandidates: stableGraphValue(candidates.map((candidate) => ({
+          candidateKey: candidate.candidateKey,
+          operatorKey: candidate.operatorKey,
+          actorPieceKey: candidate.actorPieceKey,
+          activationGroupId: candidate.activationGroupId || "",
+          actionType: candidate.actionType,
+          movementOrigin: candidate.movementProposal?.origin || null,
+          movementRelationKind:
+            candidate.movementProposal?.relationKind || "",
+          transitionActionKey: candidate.transitionActionKey,
+          targetPieceKey: candidate.targetPieceKey || "",
+          predecessorStateHash: candidate.predecessorStateHash,
+        }))),
         candidateCount: candidates.length,
         rejectedCount: expansion.rejected.length,
         unresolvedCount: expansion.unresolved.length,
@@ -344,6 +999,11 @@ export function reverseWarmachineActivationSequenceV2(
         detail: row,
       })));
     }
+    emitProgress("activation_expansion_ledger_ready", {
+      labelKey: current.labelKey,
+      stateHash: current.stateHash,
+      depth: current.depth,
+    });
     expandedLabelCount += 1;
     if (!expansion.candidates.length) {
       unresolved.push({
@@ -354,6 +1014,7 @@ export function reverseWarmachineActivationSequenceV2(
         rejected: stableGraphValue(expansion.rejected),
         unresolved: stableGraphValue(expansion.unresolved),
       });
+      publishCheckpoint("activation_inverse_dead_end");
       continue;
     }
     for (const candidate of expansion.candidates) {
@@ -390,6 +1051,12 @@ export function reverseWarmachineActivationSequenceV2(
         reverseEdges,
       });
     }
+    emitProgress("activation_label_queue_ready", {
+      labelKey: current.labelKey,
+      stateHash: current.stateHash,
+      depth: current.depth,
+    });
+    publishCheckpoint("activation_label_expanded");
   }
   emitProgress("activation_reverse_complete");
   for (const boundary of boundaryLabels) {
@@ -398,9 +1065,24 @@ export function reverseWarmachineActivationSequenceV2(
       rawOptions,
     );
   }
-  boundaryLabels.sort((left, right) =>
-    right.deploymentGeometryDebt - left.deploymentGeometryDebt ||
-    left.labelKey.localeCompare(right.labelKey));
+  if (frontierOrder === "best_first_to_deployment") {
+    boundaryLabels.sort((left, right) =>
+      right.deploymentGeometryDebt - left.deploymentGeometryDebt ||
+      left.labelKey.localeCompare(right.labelKey));
+  }
+  const runtimeResumeCheckpoint =
+    buildWarmachineActivationSequenceResumeCheckpointV1({
+      ...resumeContract,
+      queue,
+      boundaryLabels,
+      labelKeys,
+      uniqueStateHashes,
+      expansionLedgeredStateHashes,
+      unresolved,
+      rejected,
+      expandedLabelCount,
+      generatedEdgeCount,
+    });
   const core = {
     schemaVersion: WARMACHINE_ACTIVATION_SEQUENCE_PREDECESSOR_V2_SCHEMA,
     sideKey,
@@ -432,17 +1114,31 @@ export function reverseWarmachineActivationSequenceV2(
       frontierOrder,
       maximumGroupsPerExpansion,
       maximumCandidatesPerExpansion,
+      includeChargeCombat: rawOptions.includeChargeCombat === true,
+      chargeCombatActorPieceKeys: chargeCombatActorPieceKeysScoped
+        ? [...chargeCombatActorPieceKeySet].sort()
+        : [],
+      maximumChargeProposals: Math.max(0, Math.floor(numeric(
+        rawOptions.maximumChargeProposals,
+        0,
+      ))),
       maximumPassActorsPerExpansion: Math.max(0, Math.floor(numeric(
         rawOptions.maximumPassActorsPerExpansion,
         0,
       ))),
       groupOrderKeys: [...groupOrderIndex.keys()],
+      prioritizeControlResourceDependencies:
+        rawOptions.prioritizeControlResourceDependencies === true,
+      predecessorStateObligationCount:
+        (rawOptions.predecessorStateObligations || []).length,
     },
-    claimBoundary: "Pass and movement are peer inverse activation families. Distinct activation orders remain distinct route labels even when their clean rules states converge; expansion results may be memoized by exact state only. Every budget omission and unsupported attack/spell/resource/trigger activation remains unresolved.",
+    claimBoundary: "Pass, movement, Host-validated resource-prefix movement and opt-in charge-combat activations are peer inverse activation families. A charge candidate includes its target-bound straight movement, mandatory first charge attack and selected completion sequence; actor scopes, omitted origins, attacks, reactions and Chance classes remain unresolved. Optional control-resource dependency ordering reverses controllers before their controlled cohorts and those cohorts before ordinary groups; it is a rules-feasibility ordering only, and every omitted activation order remains unresolved. Restored resources affect reachability ordering only after deployment geometry ties; this is not strategy scoring. Distinct activation orders remain distinct route labels even when their clean rules states converge, and expansion results may be memoized by exact state only. Every budget omission and unsupported attack, spell, resource or trigger activation remains unresolved.",
   };
   return {
     ...core,
     runtimeBoundaries: boundaryLabels,
+    resumeCheckpointAccepted: Boolean(requestedResumeCheckpoint),
+    runtimeResumeCheckpoint,
     reportHash: stableGraphHash(stableGraphValue(core)),
     ok: boundaryLabels.length > 0,
   };

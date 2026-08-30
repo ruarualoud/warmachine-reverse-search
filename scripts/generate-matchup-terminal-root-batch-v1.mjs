@@ -10,7 +10,6 @@ import {
   auditWarmachineMatchupTerminalRootBatchCheckpointV1,
   buildWarmachineMatchupTerminalRootBatchCheckpointV1,
   buildWarmachineMatchupTerminalRootBatchPlanV1,
-  refreshWarmachineMatchupTerminalRootBatchPinnedResultsV1,
   recordWarmachineMatchupTerminalRootBatchResultsV1,
   summarizeWarmachineMatchupTerminalRootBatchV1,
 } from "../src/matchup/matchup-terminal-root-batch-v1.mjs";
@@ -143,27 +142,6 @@ if (fs.existsSync(checkpointPath)) {
     throw new Error(`matchup_terminal_batch_existing_checkpoint_invalid:${
       audit.issues.join(",")}`);
   }
-  const selectedPinnedTasks = plan.selectedTasks.slice(0, pinnedRows.length);
-  const refreshed = refreshWarmachineMatchupTerminalRootBatchPinnedResultsV1(
-    checkpoint,
-    plan,
-    {
-      workerId: "strict-seed-reconcile",
-      nowMs: Number(checkpoint.updatedAtMs || 0) + 1,
-      results: selectedPinnedTasks.map((task, index) => ({
-        taskKey: task.taskKey,
-        disposition: "strict_materialized",
-        reason: "refreshed_task_roster_terminal_root",
-        authority: "rules_v1_host",
-        reportHash: pinnedRows[index].reportHash,
-        hostReceiptHash: warmachineHost.receipt.receiptHash,
-        constructionHostReceiptHash:
-          warmachineConstructionHost.receipt.receiptHash,
-      })),
-    },
-  );
-  checkpoint = refreshed.checkpoint;
-  if (refreshed.refreshedTaskCount > 0) writeJsonAtomic(checkpointPath, checkpoint);
   resumed = true;
 } else {
   checkpoint = buildWarmachineMatchupTerminalRootBatchCheckpointV1(plan, { nowMs: 0 });
@@ -197,6 +175,8 @@ if (fs.existsSync(checkpointPath)) {
         hostReceiptHash: warmachineHost.receipt.receiptHash,
         constructionHostReceiptHash:
           warmachineConstructionHost.receipt.receiptHash,
+        executionSemanticReceiptHash:
+          plan.receipts.executionSemanticReceiptHash,
       })),
     },
   );

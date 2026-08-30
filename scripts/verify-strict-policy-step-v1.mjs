@@ -35,6 +35,21 @@ function piece(overrides = {}) {
   };
 }
 
+function lifeSpiralDamage() {
+  const aspectKeys = ["mind", "body", "spirit"];
+  const lifeSpiralRows = Array.from({ length: 9 }, (_entry, rowIndex) =>
+    Array.from({ length: 3 }, () => ({
+      systemKey: aspectKeys[Math.floor(rowIndex / 3)],
+      marked: false,
+    })));
+  return {
+    boxesRemaining: 27,
+    maxBoxes: 27,
+    systems: { mind: 9, body: 9, spirit: 9 },
+    lifeSpiralRows,
+  };
+}
+
 const state = {
   stateKey: "strict-policy-step-v1",
   activeSideKey: "player2",
@@ -67,8 +82,7 @@ const state = {
       resourceMax: 4,
       controllerPieceKey: "defender-lock",
       battlegroupId: "defender-bg",
-      boxesRemaining: 100,
-      maxBoxes: 100,
+      damage: lifeSpiralDamage(),
     }),
     piece({
       pieceKey: "attacker",
@@ -115,8 +129,16 @@ assert.equal(attackStep.responseSet.decisionKind, "damage_transfer");
 assert.equal(attackStep.strictRejectedResponseCount, 0);
 assert.ok(attackStep.groups.length > 0);
 assert.ok(attackStep.groups.every((group) => group.responses.every((response) =>
-  response.transitionAccepted && response.receiptHash &&
-  response.equivalentExecutionEvidence.every((evidence) => evidence.receiptHash))));
+  response.transitionAccepted &&
+  response.postResponseChanceExactComplete === true &&
+  response.postResponseOutcomes.length > 0 &&
+  response.postResponseOutcomes.every((outcome) => outcome.receiptHash) &&
+  response.equivalentExecutionEvidence.every((evidence) =>
+    evidence.postResponseOutcomeEvidence.length > 0 &&
+    evidence.postResponseOutcomeEvidence.every((outcome) => outcome.receiptHash)))));
+assert.ok(attackStep.groups.some((group) => group.responses.some((response) =>
+  response.choice === "transfer" &&
+  response.postResponseOutcomes.length === 6)));
 
 const deterministicStep = expandWarmachineStrictPolicyStepV1(state, ({ state: currentState }) => {
   const scoped = enumerateWarmachineBenchmarkActionsV2(currentState, {

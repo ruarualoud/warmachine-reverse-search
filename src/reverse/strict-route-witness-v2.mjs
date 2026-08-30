@@ -7,8 +7,14 @@ import {
   warmachineHost,
 } from "../warmachine-host-runtime.mjs";
 import { stableGraphHash, stableGraphValue } from "../graph/typed-facts-v2.mjs";
+import { warmachineBenchmarkGameStateHashV2 } from
+  "../benchmark/benchmark-game-state-hash-v2.mjs";
 import { buildWarmachineTerminalPredecessorAlgebraV2 } from "./predecessor-algebra-v2.mjs";
 import { buildWarmachineMinimalTerminalProofV2 } from "./terminal-proof-v2.mjs";
+import {
+  auditWarmachineReverseStateBoundaryV1,
+  summarizeWarmachineReverseStateBoundaryAuditV1,
+} from "./reverse-state-invariants-v1.mjs";
 
 export const WARMACHINE_STRICT_TERMINAL_ROUTE_WITNESS_V2_SCHEMA =
   "warmachine_strict_terminal_route_witness_v2";
@@ -121,8 +127,30 @@ export function replayWarmachineTerminalRouteStrictV2(
   const receipts = [];
   const allEvents = [];
   let rejected = null;
+  const stateInvariantAudits = [];
+  const initialStateInvariantAudit = auditWarmachineReverseStateBoundaryV1(
+    state,
+    { boundaryKind: "strict_terminal_route_initial" },
+  );
+  stateInvariantAudits.push(
+    summarizeWarmachineReverseStateBoundaryAuditV1(
+      initialStateInvariantAudit,
+    ),
+  );
+  if (!initialStateInvariantAudit.ok) {
+    rejected = {
+      stepIndex: 0,
+      reason: "strict_route_initial_state_invariant_rejected",
+      stateInvariantAudit:
+        summarizeWarmachineReverseStateBoundaryAuditV1(
+          initialStateInvariantAudit,
+        ),
+      issues: initialStateInvariantAudit.issues,
+    };
+  }
 
   for (const [stepIndex, step] of routeSteps.entries()) {
+    if (rejected) break;
     progress("strict_route_enumeration_start", { stepIndex });
     const enumeration = enumerateRulesV1Actions(state, step.enumerationOptions || {});
     const enumeratedState = enumeration.state;
@@ -203,6 +231,27 @@ export function replayWarmachineTerminalRouteStrictV2(
       break;
     }
     state = transition.nextState;
+    const successorStateInvariantAudit =
+      auditWarmachineReverseStateBoundaryV1(state, {
+        boundaryKind: "strict_terminal_route_step_successor",
+      });
+    stateInvariantAudits.push(
+      summarizeWarmachineReverseStateBoundaryAuditV1(
+        successorStateInvariantAudit,
+      ),
+    );
+    if (!successorStateInvariantAudit.ok) {
+      rejected = {
+        stepIndex,
+        reason: "strict_route_successor_state_invariant_rejected",
+        stateInvariantAudit:
+          summarizeWarmachineReverseStateBoundaryAuditV1(
+            successorStateInvariantAudit,
+          ),
+        issues: successorStateInvariantAudit.issues,
+      };
+      break;
+    }
   }
 
   const terminalReceiptCore = {
@@ -254,6 +303,8 @@ export function replayWarmachineTerminalRouteStrictV2(
     proof,
     algebraHash: algebra.algebraHash,
     rejected,
+    stateInvariantAudits,
+    stateInvariantAuditPassed: stateInvariantAudits.every((audit) => audit.ok),
     strictWitness,
     strategyRobustnessProven: false,
     chanceMassComplete: false,
@@ -288,7 +339,40 @@ export function certifyWarmachineExecutedTerminalRouteStrictV2(
   const initialStateHash = stableGraphHash(initialState);
   const finalStateHash = stableGraphHash(finalState);
   const issues = [];
-  let expectedStateHash = initialStateHash;
+  const endpointStateInvariantAudits = [
+    auditWarmachineReverseStateBoundaryV1(initialState, {
+      boundaryKind: "executed_terminal_route_initial",
+    }),
+    auditWarmachineReverseStateBoundaryV1(finalState, {
+      boundaryKind: "executed_terminal_route_final",
+    }),
+  ];
+  for (const [endpointIndex, audit] of endpointStateInvariantAudits.entries()) {
+    if (audit.ok) continue;
+    issues.push({
+      endpointKey: endpointIndex === 0 ? "initial" : "final",
+      reason: "executed_terminal_route_endpoint_state_invariant_rejected",
+      stateInvariantAudit:
+        summarizeWarmachineReverseStateBoundaryAuditV1(audit),
+      stateInvariantIssues: audit.issues,
+    });
+  }
+  const projectedReceiptCount = strictReceipts.filter((receipt) =>
+    String(receipt.gameStateHashInput || "") &&
+    String(receipt.gameStateHashBefore || "") &&
+    String(receipt.gameStateHashAfter || "")).length;
+  const projectedGameStateChain = strictReceipts.length > 0 &&
+    projectedReceiptCount === strictReceipts.length;
+  if (projectedReceiptCount > 0 && !projectedGameStateChain) {
+    issues.push({ reason: "strict_route_mixes_full_and_projected_state_hash_receipts" });
+  }
+  const initialChainStateHash = projectedGameStateChain
+    ? warmachineBenchmarkGameStateHashV2(initialState)
+    : initialStateHash;
+  const finalChainStateHash = projectedGameStateChain
+    ? warmachineBenchmarkGameStateHashV2(finalState)
+    : finalStateHash;
+  let expectedStateHash = initialChainStateHash;
   for (const [stepIndex, receipt] of strictReceipts.entries()) {
     const integrity = benchmarkReceiptIntegrity(receipt);
     if (receipt.schemaVersion !== "warmachine_fixed_benchmark_step_receipt_v2") {
@@ -306,25 +390,33 @@ export function certifyWarmachineExecutedTerminalRouteStrictV2(
     if (!receipt.persistedAction || typeof receipt.persistedAction !== "object") {
       issues.push({ stepIndex, reason: "strict_receipt_action_missing" });
     }
-    if (String(receipt.stateHashInput || "") !== expectedStateHash) {
+    const observedInputHash = String(projectedGameStateChain
+      ? receipt.gameStateHashInput
+      : receipt.stateHashInput || "");
+    const observedBeforeHash = String(projectedGameStateChain
+      ? receipt.gameStateHashBefore
+      : receipt.stateHashBefore || "");
+    if (observedInputHash !== expectedStateHash) {
       issues.push({
         stepIndex,
         reason: "strict_receipt_state_chain_mismatch",
         expectedStateHash,
-        observedStateHash: String(receipt.stateHashInput || ""),
+        observedStateHash: observedInputHash,
       });
     }
-    if (!String(receipt.stateHashBefore || "")) {
+    if (!observedBeforeHash) {
       issues.push({ stepIndex, reason: "strict_receipt_enumeration_state_hash_missing" });
     }
-    expectedStateHash = String(receipt.stateHashAfter || "");
+    expectedStateHash = String(projectedGameStateChain
+      ? receipt.gameStateHashAfter
+      : receipt.stateHashAfter || "");
   }
   if (!strictReceipts.length) issues.push({ reason: "strict_route_has_no_receipts" });
-  if (strictReceipts.length && expectedStateHash !== finalStateHash) {
+  if (strictReceipts.length && expectedStateHash !== finalChainStateHash) {
     issues.push({
       reason: "strict_route_final_state_hash_mismatch",
       expectedStateHash,
-      observedFinalStateHash: finalStateHash,
+      observedFinalStateHash: finalChainStateHash,
     });
   }
   const allEvents = strictReceipts.flatMap((receipt) => receipt.events || []);
@@ -334,6 +426,11 @@ export function certifyWarmachineExecutedTerminalRouteStrictV2(
     stepReceiptHashes: strictReceipts.map((receipt) => receipt.receiptHash),
     initialStateHash,
     finalStateHash,
+    stateHashChainMode: projectedGameStateChain
+      ? "benchmark_game_state_projection_v2"
+      : "full_normalized_state_v1",
+    initialChainStateHash,
+    finalChainStateHash,
     events: stableGraphValue(allEvents),
   };
   const terminalReceiptHash = stableGraphHash(terminalReceiptCore);
@@ -367,6 +464,11 @@ export function certifyWarmachineExecutedTerminalRouteStrictV2(
     finalStateKey: String(finalState.stateKey || ""),
     initialStateHash,
     finalStateHash,
+    stateHashChainMode: projectedGameStateChain
+      ? "benchmark_game_state_projection_v2"
+      : "full_normalized_state_v1",
+    initialChainStateHash,
+    finalChainStateHash,
     requestedStepCount: strictReceipts.length,
     acceptedStepCount: strictReceipts.filter((receipt) => receipt.transitionOk === true).length,
     stepReceiptHashes: strictReceipts.map((receipt) => receipt.receiptHash),
@@ -374,6 +476,10 @@ export function certifyWarmachineExecutedTerminalRouteStrictV2(
     proof,
     algebraHash: algebra.algebraHash,
     issues,
+    endpointStateInvariantAudits: endpointStateInvariantAudits.map(
+      summarizeWarmachineReverseStateBoundaryAuditV1,
+    ),
+    intermediateStateInvariantAuditAvailable: false,
     strictWitness,
     routeExecutionValidated: issues.length === 0,
     strategyRobustnessProven: false,

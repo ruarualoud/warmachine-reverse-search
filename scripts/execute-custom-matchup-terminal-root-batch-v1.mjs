@@ -33,6 +33,13 @@ import {
 import {
   executeWarmachineMatchupTerminalTaskBatchV1,
 } from "../src/matchup/matchup-terminal-task-execution-batch-v1.mjs";
+import {
+  acquireWarmachineMatchupTerminalRootBatchWriterV1,
+  commitWarmachineMatchupTerminalRootBatchCheckpointFileV1,
+  loadWarmachineMatchupTerminalRootBatchCheckpointFileV1,
+  releaseWarmachineMatchupTerminalRootBatchWriterV1,
+} from
+  "../src/matchup/matchup-terminal-root-batch-checkpoint-store-v1.mjs";
 import { warmachineConstructionHost } from
   "../src/warmachine-construction-host-runtime.mjs";
 import { warmachineHost } from "../src/warmachine-host-runtime.mjs";
@@ -45,6 +52,12 @@ const outputDirectory = path.resolve(process.argv.find((argument) =>
     ".scratch/custom-matchup-reports/sepsira-six-swarms-vs-fane-v1"));
 const maximumTasks = Math.max(0, Math.floor(Number(process.argv.find((argument) =>
   argument.startsWith("--maximum-tasks="))?.slice("--maximum-tasks=".length) || 16)));
+const candidateChunkSize = Math.max(1, Math.floor(Number(process.argv.find(
+  (argument) => argument.startsWith("--candidate-chunk-size="),
+)?.slice("--candidate-chunk-size=".length) || 1)));
+const transitionChunkSize = Math.max(1, Math.floor(Number(process.argv.find(
+  (argument) => argument.startsWith("--transition-chunk-size="),
+)?.slice("--transition-chunk-size=".length) || 1)));
 const requestedShards = process.argv.find((argument) =>
   argument.startsWith("--shards="))?.slice("--shards=".length);
 const shardIndexes = requestedShards
@@ -68,7 +81,10 @@ const current = loadJson(currentPath);
 const planDirectory = path.join(batchRoot, current.relativePlanDirectory);
 const plan = loadJson(path.join(planDirectory, "plan.json"));
 const checkpointPath = path.join(planDirectory, "checkpoint.json");
-const checkpoint = loadJson(checkpointPath);
+const checkpointWriter =
+  acquireWarmachineMatchupTerminalRootBatchWriterV1(checkpointPath);
+const checkpoint =
+  loadWarmachineMatchupTerminalRootBatchCheckpointFileV1(checkpointPath);
 const openingReport = loadJson(path.join(planDirectory, "opening-batch-report.json"));
 const openingRuntime = loadJson(path.join(planDirectory, "opening-batch-runtime.json"));
 const evidenceCorpus = loadJson(path.join(
@@ -118,7 +134,11 @@ const execution = executeWarmachineMatchupTerminalTaskBatchV1({
   nowMs: Date.now(),
   maximumTasks,
   shardIndexes,
-  materializerContext: { partitionCapabilityAuditsByTaskKey },
+  materializerContext: {
+    partitionCapabilityAuditsByTaskKey,
+    candidateChunkSize,
+    transitionChunkSize,
+  },
   materializersByGoalFamily: {
     assassination: assassinationTerminalAdapter,
     scenario_score_threshold: scoreTerminalAdapter,
@@ -140,7 +160,12 @@ writeJsonAtomic(path.join(
   executionDirectory,
   `${execution.report.reportHash}.json`,
 ), execution.report);
-writeJsonAtomic(checkpointPath, execution.checkpoint);
+commitWarmachineMatchupTerminalRootBatchCheckpointFileV1({
+  checkpointPath,
+  owner: checkpointWriter,
+  expectedCheckpointHash: checkpoint.checkpointHash,
+  checkpoint: execution.checkpoint,
+});
 const summary = summarizeWarmachineMatchupTerminalRootBatchV1(
   execution.checkpoint,
   plan,
@@ -161,6 +186,10 @@ writeJsonAtomic(currentPath, {
   ...currentCore,
   currentHash: stableGraphHash(currentCore),
 });
+releaseWarmachineMatchupTerminalRootBatchWriterV1(
+  checkpointPath,
+  checkpointWriter,
+);
 
 process.stdout.write(`${JSON.stringify({
   ok: true,
@@ -173,5 +202,7 @@ process.stdout.write(`${JSON.stringify({
   completedTaskCount: summary.completedTaskCount,
   incompleteTaskCount: summary.incompleteTaskCount,
   taskSpecificStrictRootCount: summary.taskSpecificStrictRootCount,
+  candidateChunkSize,
+  transitionChunkSize,
   candidateMassConserved: execution.report.candidateMassConserved,
 }, null, 2)}\n`);

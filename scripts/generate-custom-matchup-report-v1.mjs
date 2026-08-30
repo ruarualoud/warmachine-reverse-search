@@ -5,9 +5,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { loadWarmachineMatchupTemplateRoomV1 } from
+  "./load-matchup-template-room-v1.mjs";
+
 import { stableGraphHash, stableGraphValue } from "../src/graph/typed-facts-v2.mjs";
 import { buildWarmachineInitialStateDomainV1 } from
   "../src/matchup/initial-state-domain-v1.mjs";
+import { buildWarmachineDeclaredMapTopologyRealizationV1 } from
+  "../src/matchup/declared-map-topology-realization-v1.mjs";
 import { solveWarmachineInitialStateValuesV1 } from
   "../src/matchup/initial-state-value-v1.mjs";
 import { buildWarmachineMatchupScreeningV1 } from
@@ -34,11 +39,6 @@ const reverseDirectory = path.resolve(scriptDirectory, "..");
 const dataPath = resolveWarmachineHostPath(
   "android-shell/assets/default/warmachine-lite-data.json",
 );
-const baseDirectory = resolveWarmachineHostPath(
-  "build/warmachine-ai/sepsira-swarm-vs-fane-v20260805",
-);
-const poolPath = path.join(baseDirectory, "strict-construction-pool-v1/report.json");
-const roomStorePath = path.join(baseDirectory, "local-layer3/state.json");
 const outputDirectory = path.resolve(process.argv.find((argument) =>
   argument.startsWith("--output="))?.slice("--output=".length) ||
   path.join(reverseDirectory, ".scratch/custom-matchup-reports/sepsira-six-swarms-vs-fane-v1"));
@@ -175,7 +175,8 @@ const terminalDemandCachePath = path.join(
   "terminal-demand-evidence-corpus.json",
 );
 const terminalDemandEvidence = loadJsonWithHash(terminalDemandCachePath).value;
-const loadedRoomStore = loadJsonWithHash(roomStorePath);
+const { loadedRoomStore, templateRoom } =
+  loadWarmachineMatchupTemplateRoomV1();
 const data = loadedData.value;
 const pool = loadedPool.value;
 const task = buildSepsiraSixSwarmVsFaneTaskV1();
@@ -231,25 +232,34 @@ const rosterPairs = subjectRepresentatives.flatMap((subject) =>
     challengerRosterKey: challenger.roster.key,
     pairReason: `${subject.reason}:versus:${challenger.leader.leaderName}`,
   })));
-const templateRoom = loadedRoomStore.value.roomsById?.[
-  "room_f1823ced-bf71-4392-8669-c6330d237efb"
-];
-if (!templateRoom) throw new Error("representative_opening_template_room_missing");
 const mapTemplateHash = stableGraphHash({
   roomStoreContentHash: loadedRoomStore.contentHash,
   roomId: templateRoom.id,
   shapes: templateRoom.shapes,
   deployments: templateRoom.deployments,
 });
-const exactTwoFrontsMapTemplate =
-  buildWarmachineSteamrollerOpeningMapTemplateV1({
-    templateRoom,
+const mapRealizationsByKey = Object.fromEntries(task.stateDomain.mapProfiles.map(
+  (mapProfile) => [mapProfile.mapKey,
+    buildWarmachineDeclaredMapTopologyRealizationV1({
+      templateRoom,
+      baseTemplateHash: mapTemplateHash,
+      mapProfile,
+    })],
+));
+function exactMapTemplate(mapKey, scenarioKey, firstPlayerSideKey) {
+  const realization = mapRealizationsByKey[mapKey];
+  if (!realization) throw new Error(`custom_matchup_map_realization_missing:${mapKey}`);
+  return buildWarmachineSteamrollerOpeningMapTemplateV1({
+    templateRoom: realization.templateRoom,
     baseTemplateHash: mapTemplateHash,
-    mapKey: "mixed_table",
-    scenarioKey: "two_fronts",
-    firstPlayerSideKey: "player1",
+    mapKey,
+    scenarioKey,
+    firstPlayerSideKey,
     scenarioTerrainSetupClassKey: "all_selected_from_single_candidate",
+    topologyAudit: realization.topologyAudit,
+    topologyRealizationHash: realization.realizationHash,
   });
+}
 const scenarioBinders = buildWarmachineSteamrollerFallbackOpeningBindersV1();
 const materialization = materializeWarmachineRepresentativeOpeningsV1({
   task,
@@ -258,26 +268,28 @@ const materialization = materializeWarmachineRepresentativeOpeningsV1({
     challenger: poolsByKey[task.sides.challenger.sourcePoolKey],
   },
   rosterPairs,
-  exactMapTemplatesByKey: {
-    mixed_table: exactTwoFrontsMapTemplate,
-  },
-  resolveExactMapTemplate: (row = {}) =>
-    buildWarmachineSteamrollerOpeningMapTemplateV1({
-      templateRoom,
-      baseTemplateHash: mapTemplateHash,
-      mapKey: row.mapKey,
-      scenarioKey: row.scenarioKey,
-      firstPlayerSideKey: row.firstPlayerTaskSideKey === "challenger"
-        ? "player2" : "player1",
-      scenarioTerrainSetupClassKey: "all_selected_from_single_candidate",
-    }),
+  exactMapTemplatesByKey: Object.fromEntries(task.stateDomain.mapProfiles.map(
+    (mapProfile) => [mapProfile.mapKey, exactMapTemplate(
+      mapProfile.mapKey,
+      "two_fronts",
+      "player1",
+    )],
+  )),
+  resolveExactMapTemplate: (row = {}) => exactMapTemplate(
+    row.mapKey,
+    row.scenarioKey,
+    row.firstPlayerTaskSideKey === "challenger" ? "player2" : "player1",
+  ),
   scenarioBindersByKey: {
     two_fronts: (state, options = {}) => scenarioBinders.two_fronts(state, {
       ...options,
       scenarioTerrainSetupClassKey: "all_selected_from_single_candidate",
     }),
   },
-  maximumMaterializedOpenings: 96,
+  maximumMaterializedOpenings: rosterPairs.length *
+    task.stateDomain.mapProfiles.length *
+    task.stateDomain.firstPlayerRows.length *
+    task.stateDomain.deploymentSeeds.length,
   includeFullStates: false,
 });
 const unresolvedNodes = materialization.openings.map((opening) => ({
@@ -336,6 +348,12 @@ const reportCore = stableGraphValue({
     dataContentHash: loadedData.contentHash,
     poolContentHash: loadedPool.contentHash,
     roomStoreContentHash: loadedRoomStore.contentHash,
+    mapTopologyRealizationSetHash: stableGraphHash(Object.fromEntries(
+      Object.entries(mapRealizationsByKey).map(([mapKey, realization]) => [mapKey, {
+        realizationHash: realization.realizationHash,
+        topologyAuditHash: realization.topologyAudit.topologyAuditHash,
+      }]),
+    )),
     hostReceiptHash: warmachineHost.receipt.receiptHash,
   },
   task,

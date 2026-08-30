@@ -29,6 +29,8 @@ export const WARMACHINE_PROJECT_COMPLETION_GATE_GROUPS_V1 = Object.freeze([
       "verify-adversarial-frontier-ledger-v1.mjs",
       "verify-probability-dag-v1.mjs",
       "verify-strict-action-probability-and-min-v2.mjs",
+      "verify-post-response-chance-outcomes-v1.mjs",
+      "verify-semantic-slice-23-5-host-parity-v1.mjs",
       "verify-strict-policy-probability-v1.mjs",
       "verify-strict-policy-step-v1.mjs",
       "verify-matchup-search-parity.mjs",
@@ -90,6 +92,7 @@ export const WARMACHINE_PROJECT_COMPLETION_GATE_GROUPS_V1 = Object.freeze([
       "verify-fixed-terminal-prior-turn-frontier-v1.mjs",
       "verify-fixed-terminal-score-prior-turn-frontier-v1.mjs",
       "verify-terminal-position-batch-v1.mjs",
+      "verify-terminal-geometry-reduction-v1.mjs",
       "verify-terminal-spatial-materializer-v1.mjs",
       "verify-terminal-event-predecessor-v1.mjs",
       "verify-movement-activation-order-v2.mjs",
@@ -137,6 +140,7 @@ export function buildWarmachineProjectCompletionGateReportV1({
   hostReceiptHash = "",
   discoveredVerifierNames = [],
   verifierResults = [],
+  ruleSemanticsAuthority = null,
 } = {}) {
   if (!hostReceiptHash) throw new Error("completion_gate_host_receipt_required");
   const declaredVerifierNames = WARMACHINE_PROJECT_COMPLETION_GATE_GROUPS_V1
@@ -166,7 +170,32 @@ export function buildWarmachineProjectCompletionGateReportV1({
       results,
     });
   });
-  const allPassed = gateRows.every((gate) => gate.passed);
+  const allDeclaredVerifiersPassed = gateRows.every((gate) => gate.passed);
+  const semanticVerdict = ruleSemanticsAuthority?.verdict || {};
+  const semanticAuthorityReady =
+    ruleSemanticsAuthority?.sourceAuthority?.current === true &&
+    semanticVerdict.globalStrictReady === true &&
+    semanticVerdict.strictExecutorReady === true &&
+    ruleSemanticsAuthority?.quarantine?.active === false;
+  const semanticAuthority = stableGraphValue({
+    schemaVersion: String(ruleSemanticsAuthority?.schemaVersion || ""),
+    authorityReceiptHash: String(
+      ruleSemanticsAuthority?.authorityReceiptHash || "",
+    ),
+    disposition: String(ruleSemanticsAuthority?.disposition ||
+      (semanticAuthorityReady
+        ? "strict_certified"
+        : "rules_semantics_unreviewed")),
+    sourceAuthorityCurrent:
+      ruleSemanticsAuthority?.sourceAuthority?.current === true,
+    globalStrictReady: semanticVerdict.globalStrictReady === true,
+    strictExecutorReady: semanticVerdict.strictExecutorReady === true,
+    quarantineActive: ruleSemanticsAuthority?.quarantine?.active !== false,
+    failClosedReasons: [...(ruleSemanticsAuthority?.failClosedReasons || [])]
+      .map(String).sort(),
+    passed: semanticAuthorityReady,
+  });
+  const allPassed = allDeclaredVerifiersPassed && semanticAuthorityReady;
   const core = stableGraphValue({
     schemaVersion: WARMACHINE_PROJECT_COMPLETION_GATES_V1_SCHEMA,
     hostReceiptHash,
@@ -176,12 +205,16 @@ export function buildWarmachineProjectCompletionGateReportV1({
     passedGateCount: gateRows.filter((gate) => gate.passed).length,
     passedVerifierCount: verifierResults.filter((result) => result.passed === true).length,
     gateRows,
+    semanticAuthority,
+    completionPassed: allPassed,
     readiness: {
       projectReadyForBoundedResearchUse: allPassed,
+      researchExecutionAllowed: allDeclaredVerifiersPassed,
+      projectReadyForStrictClaims: allPassed,
       strictForwardHostRemainsRulesAuthority: allPassed,
       reverseSearchMayAffectRules: false,
       unresolvedAndDeferredMassPreserved: allPassed,
-      trainingExportFailClosed: allPassed,
+      trainingExportFailClosed: !semanticAuthorityReady || allDeclaredVerifiersPassed,
       completeContinuousStateSpaceExhausted: false,
       naturalWinRateProven: false,
       globalOptimalityProven: false,
@@ -197,7 +230,7 @@ export function buildWarmachineProjectCompletionGateReportV1({
       rules_drift: "A dependency receipt changed and prior evidence cannot be reused.",
       proven_unreachable: "Reserved for a closed declared finite domain with exact proof.",
     },
-    claimBoundary: "Passing this gate means the current version is usable for bounded, recoverable, auditable Warmachine reverse-search research under the current rules-v1 Host. It does not exhaust the continuous game state space, prove undiscovered routes unreachable, rank strategy, estimate natural win rates, or establish global roster, faction, or race optimality.",
+    claimBoundary: "Completion requires every declared verifier plus the source-bound rule-semantics authority. With semantic quarantine active, research execution may continue but checkpoints, strict claims, reports and training material remain non-current. Passing still does not exhaust the continuous game state space, prove undiscovered routes unreachable, rank strategy, estimate natural win rates, or establish global roster, faction, or race optimality.",
     trainingTruth: false,
   });
   return stableGraphValue({ ...core, reportHash: stableGraphHash(core) });

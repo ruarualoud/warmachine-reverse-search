@@ -8,6 +8,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 export const WARMACHINE_HOST_CONTRACT_SCHEMA = "warmachine_host_contract_v1";
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const REVIEWED_FOCUSED_ENGINE_RECEIPT_PATH = path.join(
+  REPOSITORY_ROOT,
+  "config/warmachine-focused-engine-receipt-v1.json",
+);
+const FOCUSED_ENGINE_CLOSURE_MODULE =
+  "scripts/warmachine-focused-execution-source-closure-v1.mjs";
 
 const HOST_MODULES = Object.freeze({
   rules: "scripts/warmachine-rules-v1.mjs",
@@ -15,6 +21,7 @@ const HOST_MODULES = Object.freeze({
   atoms: "scripts/warmachine-rule-atoms-v1.mjs",
   probability: "scripts/warmachine-exact-dice-probability-v1.mjs",
   steamroller: "scripts/warmachine-steamroller-2026-v1.mjs",
+  semanticsAuthority: "scripts/warmachine-rule-semantics-authority-v1.mjs",
 });
 
 const CONSTRUCTION_HOST_MODULES = Object.freeze({
@@ -71,6 +78,94 @@ function command(root, args, fallback = "") {
 
 async function sha256(filePath) {
   return createHash("sha256").update(await readFile(filePath)).digest("hex");
+}
+
+function stableHash(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function assertFocusedReceipt(condition, reason) {
+  if (!condition) throw new Error(reason);
+}
+
+async function loadReviewedFocusedEngineReceipt(projectDRoot) {
+  const reviewed = JSON.parse(await readFile(REVIEWED_FOCUSED_ENGINE_RECEIPT_PATH, "utf8"));
+  assertFocusedReceipt(
+    reviewed.schemaVersion === "warmachine_reviewed_focused_engine_receipt_v1",
+    "Warmachine reviewed focused Engine receipt schema mismatch",
+  );
+  assertFocusedReceipt(
+    reviewed.gatePassed === true &&
+      Number(reviewed.passedVerifierCount) === Number(reviewed.verifierCount) &&
+      Number(reviewed.failedVerifierCount) === 0,
+    "Warmachine reviewed focused Engine receipt is not green",
+  );
+  for (const key of [
+    "sourceReceiptHash",
+    "manifestHash",
+    "aggregateHash",
+    "executionSourceReceiptHash",
+  ]) {
+    assertFocusedReceipt(
+      /^[0-9a-f]{64}$/.test(String(reviewed[key] || "")),
+      `Warmachine reviewed focused Engine receipt has invalid ${key}`,
+    );
+  }
+
+  const closureModulePath = path.join(projectDRoot, FOCUSED_ENGINE_CLOSURE_MODULE);
+  await access(closureModulePath);
+  const closureModuleUrl = pathToFileURL(closureModulePath);
+  closureModuleUrl.searchParams.set("source", (await sha256(closureModulePath)).slice(0, 16));
+  const closureModule = await import(closureModuleUrl.href);
+  assertFocusedReceipt(
+    typeof closureModule.buildWarmachineFocusedExecutionSourceClosureV1 === "function",
+    "Warmachine focused Engine closure builder missing",
+  );
+  const observedClosure = closureModule.buildWarmachineFocusedExecutionSourceClosureV1(
+    projectDRoot,
+  );
+  const failClosedReasons = [
+    ...(observedClosure.sourceReceiptHash === reviewed.executionSourceReceiptHash
+      ? []
+      : ["focused_engine_execution_source_receipt_mismatch"]),
+    ...(Number(observedClosure.sourceFileCount) === Number(reviewed.sourceFileCount)
+      ? []
+      : ["focused_engine_source_file_count_mismatch"]),
+  ];
+
+  const sourceReceiptPath = path.join(
+    projectDRoot,
+    String(reviewed.sourceReceiptRelativePath || ""),
+  );
+  let localArtifactVerified = false;
+  if (existsSync(sourceReceiptPath)) {
+    const sourceReceipt = JSON.parse(await readFile(sourceReceiptPath, "utf8"));
+    const { sourceReceiptHash, ...receiptCore } = sourceReceipt;
+    assertFocusedReceipt(
+      stableHash(JSON.stringify(receiptCore)) === sourceReceiptHash &&
+        sourceReceiptHash === reviewed.sourceReceiptHash,
+      "Warmachine focused Engine source receipt hash mismatch",
+    );
+    assertFocusedReceipt(
+      sourceReceipt.gatePassed === true &&
+        sourceReceipt.manifestHash === reviewed.manifestHash &&
+        sourceReceipt.aggregateHash === reviewed.aggregateHash &&
+        sourceReceipt.executionSourceClosure?.sourceReceiptHash ===
+          reviewed.executionSourceReceiptHash,
+      "Warmachine focused Engine source receipt evidence mismatch",
+    );
+    localArtifactVerified = true;
+  }
+
+  return {
+    schemaVersion: "warmachine_focused_engine_receipt_binding_v1",
+    reviewedReceipt: reviewed,
+    observedExecutionSourceReceiptHash: observedClosure.sourceReceiptHash,
+    observedSourceFileCount: observedClosure.sourceFileCount,
+    current: failClosedReasons.length === 0,
+    failClosedReasons,
+    localArtifactVerified,
+  };
 }
 
 function localModuleSpecifiers(source = "") {
@@ -150,15 +245,7 @@ export function resolveWarmachineEngineRoot(
   rawRoot = process.env.WARMACHINE_ENGINE_ROOT || process.env.WARMACHINE_PROJECT_D_ROOT,
 ) {
   if (rawRoot) return path.resolve(rawRoot);
-
-  const candidates = [
-    path.resolve(REPOSITORY_ROOT, "..", "warmachine-strict-engine"),
-    path.resolve(REPOSITORY_ROOT, ".."),
-    path.resolve(REPOSITORY_ROOT, "..", "project-d"),
-  ];
-  return candidates.find((candidate) => (
-    existsSync(path.join(candidate, HOST_MODULES.rules))
-  )) || candidates.at(-1);
+  return path.resolve(REPOSITORY_ROOT, "..", "warmachine-strict-engine");
 }
 
 // Legacy public name retained so existing evidence and downstream callers keep loading.
@@ -220,6 +307,9 @@ export async function buildWarmachineHostDependencyReceipt(rawOptions = {}) {
 
 export async function loadWarmachineHost(rawOptions = {}) {
   const receipt = await buildWarmachineHostDependencyReceipt(rawOptions);
+  const focusedEngineReceipt = await loadReviewedFocusedEngineReceipt(
+    receipt.projectDRoot,
+  );
   const modules = await importModules(receipt.projectDRoot, HOST_MODULES, receipt.sourceHashes);
   requireFunctions(modules.rules, "rules", [
     "normalizeRulesV1State",
@@ -228,6 +318,13 @@ export async function loadWarmachineHost(rawOptions = {}) {
     "auditRulesV1StaticPlacement",
     "auditRulesV1StaticUnitFormation",
     "auditRulesV1SteamrollerScenarioTerrainSetup",
+    "buildRulesV1UnitCombatActionAttackSlotPlan",
+    "buildRulesV1MovementPathProposalPlan",
+    "buildRulesV1MovementGeometryPredicatePlan",
+    "evaluateRulesV1MovementGeometryEndpoint",
+    "evaluateRulesV1MovementGeometryPath",
+    "materializeRulesV1ParameterizedLifecycleReplacementAction",
+    "materializeRulesV1ParameterizedUnitMovementAction",
     "scoreScenarioElements",
     "validateRulesV1State",
   ]);
@@ -250,9 +347,23 @@ export async function loadWarmachineHost(rawOptions = {}) {
     "steamroller2026ScenarioProfile",
     "steamroller2026ScenarioProfiles",
   ]);
+  requireFunctions(modules.semanticsAuthority, "semanticsAuthority", [
+    "buildWarmachineRuleSemanticsAuthorityV1",
+  ]);
+  const ruleSemanticsAuthority =
+    modules.semanticsAuthority.buildWarmachineRuleSemanticsAuthorityV1({
+      engineRoot: receipt.projectDRoot,
+      projectRoot: path.resolve(receipt.projectDRoot, ".."),
+    });
+  const focusedSourceReceipt = {
+    ...focusedEngineReceipt,
+    ruleSemanticsAuthority,
+  };
   return {
     schemaVersion: WARMACHINE_HOST_CONTRACT_SCHEMA,
     receipt,
+    focusedSourceReceipt,
+    ruleSemanticsAuthority,
     rules: modules.rules,
     adapter: modules.adapter,
     atoms: modules.atoms,
@@ -300,6 +411,7 @@ export async function loadWarmachineConstructionHost(rawOptions = {}) {
       receiptHash: createHash("sha256").update(JSON.stringify(receiptCore)).digest("hex"),
     },
     core,
+    focusedSourceReceipt: core.focusedSourceReceipt,
     deployment: modules.deployment,
     formation: modules.formation,
     strictForwardExecutionIsAuthority: true,

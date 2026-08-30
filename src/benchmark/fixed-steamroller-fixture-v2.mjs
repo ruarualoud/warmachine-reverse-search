@@ -13,8 +13,10 @@ import { bindWarmachineTwoFrontsOpeningV2 } from "./fixed-steamroller-benchmark-
 export const WARMACHINE_FIXED_STEAMROLLER_FIXTURE_V2_SCHEMA =
   "warmachine_fixed_steamroller_fixture_v2";
 
-const DEFAULT_BUILD_DIR = "build/warmachine-ai/sepsira-swarm-vs-fane-v20260805";
-const DEFAULT_ROOM_ID = "room_f1823ced-bf71-4392-8669-c6330d237efb";
+const LEGACY_BUILD_DIR = "build/warmachine-ai/sepsira-swarm-vs-fane-v20260805";
+const DEFAULT_POOL_PATH = "fixtures/ruleset-baseline/construction-pool-report.json";
+const DEFAULT_ROOM_STORE_PATH = "fixtures/ruleset-baseline/fixed-roster-room.json";
+const DEFAULT_ROOM_ID = "construction-cryx-recursion-screen-fane-ashmael-scenario-blender-balanced-collision-player1-e4937ca7b578";
 
 function requireValue(value, message) {
   if (!value) throw new Error(message);
@@ -29,10 +31,24 @@ function loadJsonWithHash(filePath) {
   };
 }
 
+function hostRelativePath(filePath) {
+  return path.relative(resolveWarmachineHostPath("."), filePath).split(path.sep).join("/");
+}
+
 export function buildWarmachineFixedSteamrollerFixtureV2(rawOptions = {}) {
-  const baseDir = resolveWarmachineHostPath(rawOptions.buildDir || DEFAULT_BUILD_DIR);
-  const poolPath = path.join(baseDir, "strict-construction-pool-v1", "report.json");
-  const roomStorePath = path.join(baseDir, "local-layer3", "state.json");
+  const legacyBaseDir = rawOptions.buildDir
+    ? resolveWarmachineHostPath(rawOptions.buildDir || LEGACY_BUILD_DIR)
+    : "";
+  const poolPath = rawOptions.poolPath
+    ? resolveWarmachineHostPath(rawOptions.poolPath)
+    : legacyBaseDir
+      ? path.join(legacyBaseDir, "strict-construction-pool-v1", "report.json")
+      : resolveWarmachineHostPath(DEFAULT_POOL_PATH);
+  const roomStorePath = rawOptions.roomStorePath
+    ? resolveWarmachineHostPath(rawOptions.roomStorePath)
+    : legacyBaseDir
+      ? path.join(legacyBaseDir, "local-layer3", "state.json")
+      : resolveWarmachineHostPath(DEFAULT_ROOM_STORE_PATH);
   const loadedPool = loadJsonWithHash(poolPath);
   const pool = loadedPool.value;
   const sourceMetadata = {
@@ -98,10 +114,13 @@ export function buildWarmachineFixedSteamrollerFixtureV2(rawOptions = {}) {
     schemaVersion: WARMACHINE_FIXED_STEAMROLLER_FIXTURE_V2_SCHEMA,
     hostReceiptHash: warmachineHost.receipt.receiptHash,
     source: {
+      poolPath: hostRelativePath(poolPath),
       poolContentHash: loadedPool.contentHash,
+      roomStorePath: hostRelativePath(roomStorePath),
       roomStoreContentHash: roomStore.contentHash,
       roomId,
       remoteVersion: String(sourceMetadata.remoteVersion || ""),
+      historicalBuildDependencyUsed: Boolean(legacyBaseDir),
     },
     rosters: {
       player1: {
