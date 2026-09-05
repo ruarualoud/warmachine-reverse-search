@@ -38,11 +38,15 @@ npm run status:custom-matchup-wayfinder
 
 ## 当前里程碑
 
-Wayfinder 共 `13` 个工单：`01–04` 已完成，`05` 正在进行，`06–13` 待完成。当前已完全验证的 Ticket 05 生产基线是 `37/64` 个终局任务处置，其中 `12` 个任务专属 strict 根、`2` 个 Host strict reject、`17` 个精确候选过滤、`6` 个规则来源未决、`27` 个预算延迟。
+2026-09-05：当前Wayfinder共 `23` 个工单，`14` 个历史范围已完成、`9` 个开放。Ticket23完成 `8/12`，正在进行卡牌规则重认证；按Cryx -> Dusk（含Fane of Nyrro）-> Convergence推进，三族后贯通搜索链路。旧Strict/skill及完整对抗值仍保持隔离。
 
-Ticket 05 后续 Gorman/Experimental Warhead 六任务改动已写入工作树，但交接前只单独验证了地形阻挡的 strict reject；其余五项以及更新后的全 `13` 项 verifier 仍需重跑。因此不能把当前代码宣称为 `43/64`。
+当前协作分支为 `codex/post-audit-mainline-recovery`。开发恢复先读[任务执行说明](docs/AGENT_TASK_GUIDE.md)；当前状态以[权威地图及各ticket](.scratch/warmachine-custom-matchup-wayfinder-v1/map.md)为准，各OPT直接维护开发/验收清单。
 
-完整状态见 [docs/HANDOFF_STATUS.md](docs/HANDOFF_STATUS.md)。代码导航见 [docs/CODE_GUIDE.md](docs/CODE_GUIDE.md)，设计见 [docs/DEVELOPMENT_DESIGN.md](docs/DEVELOPMENT_DESIGN.md)，后续计划见 [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md)。
+代码导航见[CODE_GUIDE](docs/CODE_GUIDE.md)，设计见[DEVELOPMENT_DESIGN](docs/DEVELOPMENT_DESIGN.md)，修正计划见[DEVELOPMENT_PLAN](docs/DEVELOPMENT_PLAN.md)。[HANDOFF_STATUS](docs/HANDOFF_STATUS.md)保留旧交接快照，不作为今天的工单进度。
+
+## 策略工作台目标
+
+目标是在明确任务域内支持两势力军表对抗、当前局面指导和到达指定目标局面的策略搜索。三者共享规则与搜索内核，但当前控制台仍以终局种子/回放为主；局面导入、完整对抗建议及选手决策对比尚待现有ticket完成，不能当作已经可用的通用策略器。详见[用途与开发缺口](docs/STRATEGY_WORKBENCH_SCOPE.md)。
 
 ## 产物策略
 

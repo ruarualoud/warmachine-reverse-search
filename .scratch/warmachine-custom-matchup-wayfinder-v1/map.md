@@ -9,6 +9,8 @@ Label: wayfinder:map
 - Git boundary: this tracker belongs only to the independent `warmachine-reverse-search` repository; Engine implementation and proof changes belong to `warmachine-strict-engine` and are linked through receipts rather than copied here.
 - Publication boundary: repository history is authoritative for the current ticket text and status. GitHub web Issues are an optional projection and must never become a second, divergent ticket source.
 
+开发恢复入口：[任务执行说明](../../docs/AGENT_TASK_GUIDE.md)。工作台用途与当前缺口：[策略指导合同](../../docs/STRATEGY_WORKBENCH_SCOPE.md)。两者路由到原有ticket，不建立第二份完成计数。
+
 ## 2026-09-05 原理优化复核
 
 逐工单开发与验收待办已直接写入23张ticket的“开发补充”章节；[23项优化审计](../../docs/research/ticket-search-principles-audit-20260905.md)仅作依据与索引，不另维护第二份待办状态。不增加Ticket分母、不作废历史验收范围。开发顺序更新为：先Cryx→Dusk→Convergence；随后交错推进20a参数债务、21a局部区间、22局部精化与09/10证据展示；任务域完整声明仍须20/22/21b闭合。12增量依赖贯穿开发，其它族和全产品总门保留开放。任务级分阶段放行收据尚未实现，现有隔离门不因本文修改而解除。
@@ -25,6 +27,8 @@ Label: wayfinder:map
 ## Destination
 
 完成一个可由玩家自定义阵营、领袖、固定核心、可替换槽位、配装、Steamroller 场景、地图与搜索预算的对抗分析系统。系统从有限且公开的胜利场景需求组出发，生成目标驱动的合法军表与后续回合终局根，反推到合法部署并由 rules-v1 Host 严格正向认证，再把每个初始状态的值区间、可达路线、拒绝、未解析与预算延迟做成可实时操作的中文报告。
+
+同一内核还服务当前局面建议和达到指定目标局面的条件搜索：当前局面模式以受校验快照为起点，不把回到部署作为前提；目标局面是独立终点约束。选手复盘比较动作前信息下的合法选择，不使用未来骰值。该产品接入尚待10/21等原有工单开发，首版只读分析，不自动执行对局。
 
 初始状态值必须建立在 Host 派生的完整激活候选域、可证明的连续几何行为商、目标条件化的完整策略商、整轮对手回应和守恒 Chance 质量之上。发现一条双方合作的 strict 路线只证明可达性；它不能替代策略动作域或对抗闭包。
 
@@ -90,4 +94,4 @@ Ticket 09 地图纵切已完成：三类精确地形在数值拓扑审计后产�
 - 证明 Warmachine 连续状态空间、所有军表或所有未来规则版本下的全局最优解。
 - 在本地图内训练或部署 MuZero/MCTS。
 - 用 LLM、Skill、静态构筑分数或人工偏好修改 rules-v1 合法动作、概率或可达性。
-- Route3 自弈、prompt-reply 与人机对战观察链路；它们消费本系统稳定产物后另行接入。
+- Route3 自弈、prompt-reply、实时房间跟随与自动对战操作；它们消费本系统稳定产物后另行接入。手工/导出快照的只读策略分析与选手复盘纳入本地图10/21，不等于完成这些实时集成。
