@@ -1,12 +1,22 @@
 # 建立规则语义权威、原语重认证与可信 Strict 门禁
 
-优化复核（2026-09-05）：见[全工单原理审计](../../../docs/research/ticket-search-principles-audit-20260905.md) 的 `OPT-23`。这是待实现/待验收的优化子任务，不改变下方历史完成范围；`Blocked by` 表示最终完成依赖，局部研究开发见报告的分阶段安排。
+优化任务 `OPT-23` 已直接列于本工单的“开发补充”中；[原理审计](../../../docs/research/ticket-search-principles-audit-20260905.md) 仅保留依据与索引。`Blocked by` 表示最终完成依赖，历史验收范围不追溯改变。
 
 Type: task
 Status: open
 Blocked by: 04
 Blocks: 20-completion, 21, 22-real-binding, 08-13-recertification, skill-promotion, online-experiment
 Part of: ../map.md
+
+## 开发补充：OPT-23（2026-09-05）
+
+以下为本工单剩余开发及新增验收，当前全部待实现/待验收，不因写入计划计完成。
+
+- [ ] 23.8按Cryx -> Dusk -> Convergence固定账本继续，先跑真实来源纵向烟雾再决定纯组合/接线/共享协议分类；复用既有DSL、编译器、原语及证明，按不同语义而非source ID数估时。
+- [ ] 23.8/23.9在来源合同中核对决策方、can/must、观察时点、Chance前后顺序、嵌套反应及真实终局后停止；不能把所有反应一律归对手或总是允许decline。
+- [ ] 23.10与13局部门共同定义机器可验证的任务规则闭包证据，覆盖双方持有、可授予、反应、资源、场景及构筑发现依赖；无完整证据继续隔离，不以手写三族白名单放行。
+- [ ] 任务局部证据只授权其对应范围的当前Host验证，不等于23全局完成；三族优先部分完成后可按用户顺序转搜索链路，其它族及23.11保留未完成。
+
 
 ## Question
 

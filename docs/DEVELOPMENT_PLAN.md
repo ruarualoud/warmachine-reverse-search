@@ -38,7 +38,9 @@ Ticket23：十二个纵切完成8个，23.8卡牌特殊规则进行中，23.9关
 
 ## 优化与执行顺序
 
-[原理调研和逐工单 OPT-01 至 OPT-23](research/ticket-search-principles-audit-20260905.md) 是本轮新增的优化子任务明细；没有增加 Ticket 分母，也没有将建议记为完成。
+[原理调研和逐工单 OPT-01 至 OPT-23](research/ticket-search-principles-audit-20260905.md) 保留研究依据与索引；实际开发步骤、验收和勾选状态直接维护在各ticket的“开发补充”，不再只放一条报告链接。没有增加 Ticket 分母，也没有将建议记为完成。
+
+实质调整20/21/22的开发分期；08复用既有值代数补接口；09/10/11/12/13/23增加相应集成验收；01-07与14-19只增加历史范围外维护项。20的最终`Blocked by`补齐23，与既有地图规则门一致。完整[对手回应合同与R21矩阵](../.scratch/warmachine-custom-matchup-wayfinder-v1/issues/21-multiturn-adversarial-chance-closure.md)以Ticket21正文为准。
 
 1. 完成三族任务所需的规则与关联证明，复用已有原语；纯组合批次计时，发现共享协议缺口就另列。
 2. 20a输出参数域与未闭合债务；21a复用08计算可靠局部区间；22按需精化相关策略类。允许局部研究开发交错进行，不要求全游戏先完整建图。

@@ -1,11 +1,22 @@
 # 建立目标条件化的完整策略有限商
 
-优化复核（2026-09-05）：见[全工单原理审计](../../../docs/research/ticket-search-principles-audit-20260905.md) 的 `OPT-22`。这是待实现/待验收的优化子任务，不改变下方历史完成范围；`Blocked by` 表示最终完成依赖，局部研究开发见报告的分阶段安排。
+优化任务 `OPT-22` 已直接列于本工单的“开发补充”中；[原理审计](../../../docs/research/ticket-search-principles-audit-20260905.md) 仅保留依据与索引。`Blocked by` 表示最终完成依赖，历史验收范围不追溯改变。
 
 Type: prototype
 Status: open
 Blocked by: 08, 19, 20
 Part of: ../map.md
+
+## 开发补充：OPT-22（2026-09-05）
+
+以下为本工单剩余开发及新增验收，当前全部待实现/待验收，不因写入计划计完成。
+
+- [ ] 先按玩家、任务目标、时域、可达历史、观察信息和规则签名分桶，惰性比较相关状态；现有全对固定点保留为微域独立对照，不重复实现语义。
+- [ ] 对手域新增回应必须参加交替量词比较；对手动作不能因不通向我方预设根、启发式评分低或未进入反向包络而被删除。
+- [ ] 受控剪枝只依赖不可达、已证等价/支配或可靠区间；例如对方节点中一个选项的我方收益下界不低于另一个选项上界，才可对单目标最优值停止展开它。需要全部等优路线时仍保留等号分支身份。
+- [ ] 为21a提供局部证书与补集队列；未解析情况下拒绝effectiveStrategyQuotientComplete，但允许可靠区间继续收紧。完整签证仍依赖20，不能把部分探索当全部空间已覆盖。
+- [ ] 验收增加隐藏反制、未来信息不兼容、跨目标根错误合并及同均值不同分布；同域全量/纯反向/混合对照要计入符号、Host和存储总成本。
+
 
 Implementation design: `docs/goal-conditioned-strategy-quotient-v1.md`
 
@@ -33,6 +44,8 @@ Implementation design: `docs/goal-conditioned-strategy-quotient-v1.md`
 本工单只对声明任务、当前 Host、有限时域和公开目标向量证明策略商完整。它不保证商空间很小；真实互不支配的策略必须保留，也不宣称未来规则、未知偏好、无限时域或全游戏全局最优。
 
 ## Prototype Evidence
+
+下列构造实验的58/9是预设昂贵根成本模型，不是实际整局Host计时；不能据此宣称真实任务84.48%的成本下降。
 
 - `npm run verify:strategy-quotient`：固定 17 状态正负例。
 - `npm run experiment:strategy-quotient-search`：三法同域/同 strict 根预算对照和 128 个确定性排列。
