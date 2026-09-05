@@ -9,6 +9,10 @@ Label: wayfinder:map
 - Git boundary: this tracker belongs only to the independent `warmachine-reverse-search` repository; Engine implementation and proof changes belong to `warmachine-strict-engine` and are linked through receipts rather than copied here.
 - Publication boundary: repository history is authoritative for the current ticket text and status. GitHub web Issues are an optional projection and must never become a second, divergent ticket source.
 
+## 2026-09-05 原理优化复核
+
+逐工单待办见[23项优化审计](../../docs/research/ticket-search-principles-audit-20260905.md)，不增加Ticket分母、不作废历史验收范围。开发顺序更新为：先Cryx→Dusk→Convergence；随后交错推进20a参数债务、21a局部区间、22局部精化与09/10证据展示；任务域完整声明仍须20/22/21b闭合。12增量依赖贯穿开发，其它族和全产品总门保留开放。任务级分阶段放行收据尚未实现，现有隔离门不因本文修改而解除。
+
 ## Destination
 
 完成一个可由玩家自定义阵营、领袖、固定核心、可替换槽位、配装、Steamroller 场景、地图与搜索预算的对抗分析系统。系统从有限且公开的胜利场景需求组出发，生成目标驱动的合法军表与后续回合终局根，反推到合法部署并由 rules-v1 Host 严格正向认证，再把每个初始状态的值区间、可达路线、拒绝、未解析与预算延迟做成可实时操作的中文报告。
@@ -56,12 +60,12 @@ Label: wayfinder:map
 
 ## Game-tree completeness tickets
 
-- [建立规则语义权威、原语重认证与可信 Strict 门禁](issues/23-rule-semantics-authority-and-strict-recertification.md)（进行中，`5/12`，最高优先级）— 已完成 23.0-23.4；当前重认证攻击、骰子、伤害和模型系统。全部现有规则语义继续按“历史实现候选”处理，先区分已重认证、仅缺独立证明、真实执行缺陷和确实未实现，再决定是否改代码。Ticket 23 完成前，历史 Strict、skill、搜索值和线上实验保持隔离。
+- [建立规则语义权威、原语重认证与可信 Strict 门禁](issues/23-rule-semantics-authority-and-strict-recertification.md)（进行中，`8/12`，最高优先级）— 已完成 23.0-23.7；当前23.8卡牌规则重认证，23.9关联证明、23.10统一运行链、23.11聚合认证待完成。先区分已重认证、仅缺独立证明、真实执行缺陷和确实未实现，再决定是否改代码。历史 Strict、skill、搜索值和线上实验保持隔离。
 - [建立完整激活域与连续几何商空间](issues/20-complete-activation-and-continuous-geometry-domain.md)（进行中，完成门受 23 阻断）— 从 Host 枚举全部激活族，并以规则事件边界、路径拓扑和逐模型约束建立有证明的有限几何单元；固定比例移动只能作为代表，不得冒充完整连续域。
 - [建立目标条件化的完整策略有限商](issues/22-goal-conditioned-strategy-quotient-completeness.md)（进行中）— 有限三法对照已用 `9` 个 strict 根保留 `6/6` 潜在有效类，较完整纯正向 `58` 根减少 `84.48%`，并由补集挑战找回纯反向漏掉的隐藏优解；下一步把该证明链绑定 Ticket 20 的真实规则行为商。
 - [闭合多回合对抗选择与概率质量](issues/21-multiturn-adversarial-chance-closure.md)（待开始）— 消费 Ticket 20 的候选域、Ticket 22 的策略商和 Ticket 08 的值代数，按 OR/max、AND/min 与 Chance 守恒展开整轮行动并把未闭合质量投影到逐初始状态区间。
 
-Tickets 08 与 19 已完成其值语义和历史预设职责，但本轮审计已使其规则权威前提失效；这些工件保留为历史素材，待 Ticket 23 后重新认证。下一阶段先完成 Ticket 23，再完成 Ticket 20 的动作/几何行为商、Ticket 22 的策略保持证明和 Ticket 21 的多回合对抗闭包；随后才把逐格值、路线与缺失质量接入固定题证据报告和交互控制台。未枚举历史与策略质量继续保留为 unresolved 或 budget deferred。
+Tickets 08 与 19 已完成其值语义和历史预设职责，但规则权威前提需随当前Engine重新认证；旧工件保留为历史素材。最终完成仍须规则、动作域、策略商和对抗概率闭合。局部研究开发不必等待全游戏完整建图，具体采用上方2026-09-05分阶段安排；未枚举历史与策略质量继续保留为 unresolved 或 budget deferred，报告不得将路线存在性提升为胜率。
 
 Ticket 09 地图纵切已完成：三类精确地形在数值拓扑审计后产生 `288/288` strict 代表开局，四名 Fane 领袖的地图、三部署和双先手缺口为零。路线报告已从硬编码两条升级为动态路线单元和值格归并；三条刺杀与 Ashmael 得分加入后当前为 `6/8`，只余 Auricant/Nymara 得分。因此 Ticket 09/10 继续 open，不能从已发现路线推导完整排名或自然胜率。
 

@@ -1,5 +1,7 @@
 # 建立目标条件化的完整策略有限商
 
+优化复核（2026-09-05）：见[全工单原理审计](../../../docs/research/ticket-search-principles-audit-20260905.md) 的 `OPT-22`。这是待实现/待验收的优化子任务，不改变下方历史完成范围；`Blocked by` 表示最终完成依赖，局部研究开发见报告的分阶段安排。
+
 Type: prototype
 Status: open
 Blocked by: 08, 19, 20

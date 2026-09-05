@@ -1,5 +1,7 @@
 # 建立搜索暴露规则缺口的回流修复门
 
+优化复核（2026-09-05）：见[全工单原理审计](../../../docs/research/ticket-search-principles-audit-20260905.md) 的 `OPT-04`。这是待实现/待验收的优化子任务，不改变下方历史完成范围；`Blocked by` 表示最终完成依赖，局部研究开发见报告的分阶段安排。
+
 Type: task
 Status: resolved
 Blocked by: 01

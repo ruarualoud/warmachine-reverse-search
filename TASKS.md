@@ -1,5 +1,14 @@
 # Tasks
 
+## 2026-09-05 全工单原理审计与开发顺序
+
+- [x] 逐一核对23个当前Wayfinder工单、历史完成范围及现有值/几何/依赖实现；把过期18工单公开计划更新为23工单，纠正地图Ticket23为8/12。保留14完成/9开放，不因审计修改增加完成数。
+- [x] 补充PET2、可靠区间迭代、符号几何规划、冲突回流、NBS、XDO、动态依赖与PRISM目标语义研究，写入 `docs/research/ticket-search-principles-audit-20260905.md`；每张ticket链接其OPT子任务。
+- [x] 复跑17状态策略商回归与66候选三法构造实验；6/6有效类、隐藏优解补回及对手/随机分布隔离通过。58/9根计数不解释为真实整局速度。
+- [x] Engine独立提交 `d29fa88` 完成Defensive Line估时试做及v1.1规范：2来源/1语义/1原子/0新原语，实测归类为接线+组合。当前三族账本剩余213（不重复归属53/152/8），未在Search复制规则、刷新认证收据或晋级旧结果。约46分钟端到端样本含穿插文档与返工；下一批3种简单语义暂按2-4小时预算，不能外推全任务工期。
+- [ ] 实现任务级规则/查询域收据与20a/21a/22的可靠局部区间链。当前只是开发计划已分阶段，生产隔离门未放行。
+- [ ] 按审计的OPT-01至OPT-23执行后续优化；完成范围以实际证据更新，不以文档勾选或微型通过代替。
+
 ## 2026-08-26 Ticket 23 rule semantics recertification
 
 - [x] Create the independent Wayfinder Ticket 23 plan for rule semantics authority, primitive recertification and a computed Strict gate. The ticket quarantines current global Strict/skill/search claims without deleting historical evidence, separates official-source semantics from implementation and oracle, and defines twelve end-to-end slices from baseline quarantine through auto-hit/auto-miss, timing, Unit/combat, geometry, resources, scenario, faction rules, interaction/mutation closure and one canonical runtime receipt.

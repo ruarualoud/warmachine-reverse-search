@@ -1,5 +1,7 @@
 # 收口自定义对抗分析产品完成门禁
 
+优化复核（2026-09-05）：见[全工单原理审计](../../../docs/research/ticket-search-principles-audit-20260905.md) 的 `OPT-13`。这是待实现/待验收的优化子任务，不改变下方历史完成范围；`Blocked by` 表示最终完成依赖，局部研究开发见报告的分阶段安排。
+
 Type: task
 Status: open
 Blocked by: 09, 10, 11, 12, 14, 15, 16, 17, 18, 20, 21
