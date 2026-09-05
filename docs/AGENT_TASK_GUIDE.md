@@ -32,6 +32,21 @@
 
 完成条件：一个小场景从合法输入到候选、对手反制、概率/区间、中文可回放输出全链路通过。仅完成页面、schema或手算例子不算策略器可用。
 
+### 需求到工单的领取入口
+
+下表只负责导航，不维护第二份待办或完成率；进入链接中的“策略工作台接入补充”执行并记录证据。原有三族优先顺序和最终认证依赖不变。
+
+| 用户目标 | 主责工单与复用基础 | 验收时必须能回答 |
+|---|---|---|
+| 两势力的军表对抗解法 | [21 对抗策略](../.scratch/warmachine-custom-matchup-wayfinder-v1/issues/21-multiturn-adversarial-chance-closure.md)，复用 [03 构筑](../.scratch/warmachine-custom-matchup-wayfinder-v1/issues/03-generic-custom-task-and-force-builder.md) | 固定对手、先后选表还是同时选表？地图、配装与池外候选如何计入结论边界？ |
+| 当前场面建议与指定目标搜索 | [10 输入与操作](../.scratch/warmachine-custom-matchup-wayfinder-v1/issues/10-interactive-custom-matchup-console.md)、21，消费 [20 动作域](../.scratch/warmachine-custom-matchup-wayfinder-v1/issues/20-complete-activation-and-continuous-geometry-domain.md) | 当前状态与目标是否分开？建议在对手反制后如何继续，目标概率是否被误写成整局胜率？ |
+| 选手决策复盘与中文指导 | [09 报告](../.scratch/warmachine-custom-matchup-wayfinder-v1/issues/09-sepsira-vs-fane-evidence-report.md)，复用 [08 值代数](../.scratch/warmachine-custom-matchup-wayfinder-v1/issues/08-adversarial-probability-initial-values.md) | 实际动作和替代动作是否按动作前信息比较？区间未分开时是否保留“尚不能判断”？ |
+| 安全缩减与最优性边界 | [22 策略商](../.scratch/warmachine-custom-matchup-wayfinder-v1/issues/22-goal-conditioned-strategy-quotient-completeness.md)、21 | 剪枝后还能解释具体动作吗？未知候选是否仍计入上界，误差证书覆盖哪个声明域？ |
+| 规则更新、局面更新与恢复 | [12 增量失效](../.scratch/warmachine-custom-matchup-wayfinder-v1/issues/12-incremental-rules-data-update.md) | 旧建议是否过期？复用和重算是否绑定同一状态、规则、目标、时域及信息？ |
+| 可信发布 | [23 规则认证](../.scratch/warmachine-custom-matchup-wayfinder-v1/issues/23-rule-semantics-authority-and-strict-recertification.md)、[13 产品门禁](../.scratch/warmachine-custom-matchup-wayfinder-v1/issues/13-product-completion-gates.md) | 规则执行、搜索覆盖、数值误差是否分别有证据？是否仅放行只读分析而非自动对战？ |
+
+每项集成先提交一个小型可复现端到端场景，关联输入、当前Host收据、实际执行分支、独立预期、未解析账与中文输出；随后接入三族真实场景。修改计划或通过文档检查均不计为该场景完成。
+
 ## 4. 收口与提交
 
 1. 先专项和受影响相邻门，批末共享回归；文档修改只检查链接、状态与依赖，不触发旧长搜索。
