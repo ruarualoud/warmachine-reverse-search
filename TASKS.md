@@ -2,6 +2,47 @@
 
 恢复开发先读 [docs/AGENT_TASK_GUIDE.md](docs/AGENT_TASK_GUIDE.md)，再按当前ticket内清单执行。规范由Engine维护，修正计划/工作台接入由本仓库维护。
 
+## 2026-09-14 Fane of Nyrro 真实对局逐回合基准
+
+- [x] 检索公开完整对局；未找到可完整复盘的当前 Fane of Nyrro 对 Cryx 录像，选择 50 分 Hysene 对 Oriax、Closed Quarters/Tales from the Frontlines 对局作为最接近的完整负向基准，并记录另一场 Hysene 对 Grymkin Fault Line 作为场景可支持但势力协议未闭环的备选。
+- [x] 逐回合审计实际计划、动作、规则纠错和对手回应，形成 `docs/research/real-match-nyrro-system-audit-20260914.md`。当前 Force Builder 能接受精确 50 分 Nyrro 表并拒绝多出的 Sythyss Prophet；没有合格近战击杀时 Murderous Impulse 不能代替 Fury 购买攻击，符合录像最终纠正。
+- [x] 证明当前完整复盘必须失败关闭：Host 没有 Closed Quarters、Muddy Ground 或 Tales 场景；Orgoth 的 Star-Crossed、Careful Reconnaissance、Bite And Hold 没有可认证执行器；录像不能提供严格几何；Search 当前观察到 `1188` 个执行源文件，仍绑定旧 `679` 文件收据，触发两个 focused receipt mismatch。
+- [ ] 按报告第 7 节归属继续 Ticket 23/12/20/21/22/09/10；在场景、对手规则、当前收据、精确状态输入和对手/Chance 闭包完成前，不发布首轮最优、整局胜率或训练真值。
+
+## 2026-09-14 合理终局场景生成数学重评估
+
+- [x] 先从数学项目而非相似战棋产品重评估终局场景生成，形成 `docs/research/mathematical-terminal-scene-generation-reassessment-20260914.md`。调研覆盖有限双模拟、混合系统可达性、半代数单元/CAD/roadmap、符号动态规划、AllSMT/AMC/WMI、随机博弈、稀有事件条件路径、概率 CEGAR、POR、覆盖数组和质量多样性。
+- [x] 明确当前终局代表选择器的证据边界：`deterministic_greedy_obligation_cover + legal_baseline_plus_single_dimension_variation`、`interactionStrength=1` 只能安排覆盖挑战；它不证明高阶规则交互、单元转移稳定、初态可达、场景概率或策略等价。
+- [x] 固化概率与剪枝边界：没有显式先验或双方 policy 就没有自然场景概率；单条低概率路线不能按阈值删除，必须在相同目标/时层/policy/对手上下文中先合并累计质量，并保留被裁上界；最可能路线、目标总概率和 max-min 值分别报告。
+- [ ] 在当前 Host 基线稳定后，把新流水线落到现有开放 Ticket 20/21/22：终局公式与规则因果闭包 -> 混合符号区域 -> 反向集合传播 -> Strict 正向挑战 -> CEGAR 拆分 -> Max/Min/Chance 区间。先用可关闭 reduction 全量穷举的 2-3 模型双终局 Demo 证明零错误硬剪枝、概率守恒和区间覆盖，再接固定 Cryx/Fane 域。
+
+## 2026-09-14 成功项目复核与搜索路线重评估
+
+- [x] 广泛复核直接微缩战棋、军用兵棋、形式化随机博弈、连续任务规划、残局逆向库、扑克子博弈求解、RTS 动作抽象及策略种群项目，形成 `docs/research/successful-systems-reassessment-20260914.md`。直接相似项目中，4Hammer 仅覆盖 6/35 个 Combat Patrol 势力、22 个单位、一英寸二维无障碍域且尚无良好战略代理；NPS Atlatl 也未证明复杂兵棋普遍超人。没有现成项目支持完整 Warmachine 全局最优或全策略商声明。
+- [x] 重定反向搜索的证明角色：它负责目标义务、候选 policy、连续采样偏置和乐观上界；真实可达、对手回应、Chance 与值由当前 Strict Host 正向重放、有限随机博弈和反制迭代证明。现有 142 类/七个形状组仍仅作调度。
+- [ ] 在 Ticket 23/20 新 Host 基线稳定后实现双轨：有界认证求解器使用独立 reduction 证书、上下界与 CEGAR；实用策略顾问使用 policy 级 PSRO/Double Oracle、Strict 自弈收益矩阵和局部持续重求解。两轨禁止共用模糊的等价/最优标志。
+- [ ] 先在可全量穷举 micro 域证明 reduction 开关同值、零错误硬剪枝和反例拆分，再在固定 Cryx/Fane 域报告认证区间、策略种群经验胜率、最强已知反制和未决质量。
+
+## 2026-09-14 Ticket 22 压缩安全复核
+
+- [x] 用原始论文复核当前延续压缩，并写入 `docs/research/continuation-compression-safety-audit-20260914.md`。结论是七个动作形状组只能调度比较，不能签发策略等价；当前 142 个具体类、全部动作身份和 6318 个未展开槽仍保留，硬合并/剪枝继续为零。
+- [x] 核对已有生产骨架：有限显式博弈上的有理概率 coupling、最大交替 simulation/bisimulation、目标支配、上下界、可达性和补集队列已存在；它尚未接上完整真实 `Q_rule`，闭合布尔值也尚无 Ticket 20 收据支撑。
+- [ ] Ticket 23/20 完成并冻结新 Host 后，重建最小真实延续基线；旧 Host `cae4bd34...` 的 142 类与动作页只保留为历史性能/缺陷证据，不续签当前语义。当前 Host 为 `f313823e...`。
+- [ ] 将候选调度升级为分层证书链：精确重访、对称自同构、双人顽固集、概率交替双模拟、交替支配/可采纳上界分别出具可追溯证书；跨组未证明关系与预算遗漏全部保持 `unresolved`。
+- [ ] 用可全量穷举 micro 真值和固定 Cryx/Fane 真实任务分别证明零错误硬剪枝、上下界守恒、补集反例可回流及 reduction 关闭/开启结果一致，之后才允许 Ticket 22 策略值发布。
+
+## 2026-09-11 势力级协议分母与搜索主线恢复
+
+- [x] 更正覆盖口径：固定卡牌来源账本只证明子集，不代表势力级总规则。Appendix 2 的 Cephalyx、Convergence、Farrow、Gatorman、Grymkin、Infernals 和 Rhulic 七类协议单独记账，任一未闭环都不得宣称该势力搜索 ready。
+- [x] 记录 Convergence Vector 当前已确认的执行缺口：Interface Node/I 状态、受控 warcaster 的实时 MAT/RAT 投影及修改规则、No Power Up、Force Induction 9英寸传递、Induction Repeater 12英寸以及与 cortex 特效的排除关系。已有 Engine focused verifier 以错误 Power Up 为最小失败证据；CoC 开发按用户要求暂缓，不重跑该红门。
+- [ ] 搜索主线从 Ticket 20a 恢复：只消费当前 Engine 收据中已重认证的共享核心、Cryx/Fane 任务实际所需且已证明的来源。任务依赖中命中 Vector 或其它未审计势力协议时必须 fail closed 为 `rules_unknown`，不允许 Search 估算或复制规则。
+- [x] 完成20a首个当前决策窗口收据：保留Host accepted/rejected完整行，暴露决策方、已声明参数轴、逐动作即时回应域、未闭合理由与稳定分页游标。它已接入Host strict continuation/activation window合同，一个Host动作严格执行后必定从后继状态重新枚举；实跑守恒`10 = 3 + 7`分页并将`pass`后继重枚举为`1`个选项。因Engine总认证尚未收口，研究接口可用但Strict完整与策略值发布仍为false。下一交付是保留多个同时回应的中间Host状态/优先级，无该能力时继续fail closed。
+- [x] 将多回应中间态缺口固化为可计算债务。两个Countercharge反例实际产生`2`个回应要求与`48`个动作前组合，但Host未暴露第一个回应后的重枚举状态。Search现禁止将该组合产品升级为完整域，并以`multiple_response_host_prefix_state_unavailable`保留上界。该债务不阻止21a局部保守区间，但阻止20/21b闭环。
+- [x] 完成21a第一片真实纵切。当前Host从封存结算边界重放Nymara刺杀路线：合作后缀走到终态；对手在第25步选择合法`pass`后，固定后缀于第50步失配并被证明阻断。旧路线缺失的三段Control时序和四个Machine Wraith Apparition均以原地strict结算桥接，未跳过规则。固定脚本上界从1收紧到0，整局仍为`[0,1]`；运行约773秒，报告`ticket21a-nymara-known-route-counterexample-v1.json`。
+- [x] 完成Ticket22面向21a的局部策略精化收据。它现在绑定反例、当前窗口frontier及后继激活计划三份哈希证据：当前窗口`5`个合法/`2`个拒绝动作守恒，`5/5`均已strict执行并持久化，当前窗未执行数由`3`归零；只有合作与反制两个动作拥有固定后缀值，另外三个动作仍是“单步已执行、深层值未解析”。同Host/同决策窗/同固定脚本因对手反制可用`[0,0]`停止数值扩展，但动作域不因此完整；整局仍为`[0,1]`且禁止发布。报告`ticket22-nymara-local-strategy-refinement-v1.json`，哈希`94b4f5eb...178f`。
+- [x] 完成21a第二片的第一层真实DAG纵切及后继调度清单，整片仍开放。第25步作用域内`5/5`合法动作均由Host strict执行并重枚举后继，决策量词为对手`AND/min`；分页分母耗尽，1个根和5个后继以6个内容寻址gzip状态保存并在写入时重建核验，总占用约4.5MB。五个后继共有`366`个激活槽，已物化首批`30`槽，得到`682`个合法与`3534`个拒绝候选，剩`336`槽及全部合法候选的深层转移待展开；这些计数不是概率。为避免把20b全域偷渡进局部纵切，后继只枚举“所选棋子+无棋子时序”，收据明确标记作用域不完整、Chance/完整对手回合/更深后续未展开。frontier及计划报告分别为`ticket21a-nymara-current-window-frontier-v1.json`和`ticket21a-nymara-successor-activation-plans-v1.json`。
+- [ ] 继续21a第二片的深层展开。反制`pass`分支首个物化动作页的`162/162`个合法动作已strict执行，零失败并归并为`142`个仅限规则后继复用类（20条边共享计算，不宣称策略等价）；全部代表状态均可恢复，并生成`7170`个下一层激活槽、2种仅供调度的计划形状。首分页广度现已覆盖`142/142`类，共`852/7170`槽，得到`2535`合法/`73646`拒绝候选；`2535/2535`合法动作均已strict执行并持久化后继，零转移失败，`61`个短计划类已完全穷尽。Ticket22现已把142类按首分页可观察动作形状预分成`71/61/4/3/1/1/1`七组：精确后继指纹仍为`142/142`互异，全对比较为`4324`对，首轮代表挑战为`135`对，硬合并/裁剪均为`0`。抽样确认短计划状态实际改变多模型位置、当前选中模型和激活来源，不能按动作数同形合并。余下`81`个长计划类各有`78`槽，合计`6318`槽；只在比较证书成立后才复用，否则按补集断点推进。完整对手回合、连续参数、Chance、适应性后续和策略商仍开放；整局区间仍为`[0,1]`。
+
 ## 2026-09-05 策略目标补入工单指导
 
 - [x] 核对已有03/08/09/10/12/13/20/21接入清单，补齐22的具体动作映射、目标隔离与缩减对照，以及23的快照调用一致性、反制规则闭包与认证边界；新增条目保持待开发，不增加ticket或来源完成数。

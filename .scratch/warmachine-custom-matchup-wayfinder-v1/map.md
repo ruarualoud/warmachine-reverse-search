@@ -13,7 +13,7 @@ Label: wayfinder:map
 
 ## 2026-09-05 原理优化复核
 
-逐工单开发与验收待办已直接写入23张ticket的“开发补充”章节；[23项优化审计](../../docs/research/ticket-search-principles-audit-20260905.md)仅作依据与索引，不另维护第二份待办状态。不增加Ticket分母、不作废历史验收范围。开发顺序更新为：先Cryx→Dusk→Convergence；随后交错推进20a参数债务、21a局部区间、22局部精化与09/10证据展示；任务域完整声明仍须20/22/21b闭合。12增量依赖贯穿开发，其它族和全产品总门保留开放。任务级分阶段放行收据尚未实现，现有隔离门不因本文修改而解除。
+逐工单开发与验收待办已直接写入23张ticket的“开发补充”章节；[23项优化审计](../../docs/research/ticket-search-principles-audit-20260905.md)仅作依据与索引，不另维护第二份待办状态。不增加Ticket分母、不作废历史验收范围。原定Cryx→Dusk→Convergence的规则开发顺序于2026-09-11停在Convergence之前：CoC Vector及其它Appendix 2势力协议转为23/11显式待办，不进入当前搜索认证范围。当前恢复20a参数/回应域，随后交错推进21a局部区间、22局部精化与09/10证据展示；任务域完整声明仍须20/22/21b闭合。12增量依赖贯穿开发，其它族和全产品总门保留开放。任务级分阶段放行收据尚未实现，现有隔离门不因本文修改而解除。
 
 | 变更组 | Ticket | 本次调整性质 |
 |---|---|---|
@@ -58,7 +58,7 @@ Label: wayfinder:map
 
 - [产出 Sepsira 六队 Swarm 对 Fane 的可论证报告](issues/09-sepsira-vs-fane-evidence-report.md)（开放）— 当前已归并 `6/8` 条真实路线单元；完整报告继续受候选域、策略商和多回合对抗闭包阻断。
 - [建成可实时操作的自定义对抗控制台](issues/10-interactive-custom-matchup-console.md)（开放）— 已有回放与分支浏览基础，最终初始状态值、人工种子和完整策略分支仍需消费 Ticket 21 的闭包结果。
-- [验证全阵营独有机制可被搜索调用](issues/11-all-faction-rule-mechanism-validation.md)（开放）— 需要在重认证 Engine 上逐机制证明构筑、动作、Chance、资源、生命周期和反向义务链，而不是依赖规则名出现。
+- [验证全阵营独有机制可被搜索调用](issues/11-all-faction-rule-mechanism-validation.md)（开放）— 需要在重认证 Engine 上逐机制证明构筑、动作、Chance、资源、生命周期和反向义务链。已单列Appendix 2的7类势力协议；CoC Vector暂缓且不得被卡牌来源覆盖率隐藏。
 - [建立规则与卡牌更新的增量重建流程](issues/12-incremental-rules-data-update.md)（开放）— 数据、语义、原语或 Engine 收据变化必须定向失效受影响的军表、终局根、路径、值与报告。
 - [收口自定义对抗分析产品完成门禁](issues/13-product-completion-gates.md)（开放）— 聚合规则、搜索、值、报告、全阵营、增量更新和产品证据；上游任何未闭合质量都必须继续显示为未完成。
 
@@ -73,7 +73,7 @@ Label: wayfinder:map
 
 ## Game-tree completeness tickets
 
-- [建立规则语义权威、原语重认证与可信 Strict 门禁](issues/23-rule-semantics-authority-and-strict-recertification.md)（进行中，`8/12`，最高优先级）— 已完成 23.0-23.7；当前23.8卡牌规则重认证，23.9关联证明、23.10统一运行链、23.11聚合认证待完成。先区分已重认证、仅缺独立证明、真实执行缺陷和确实未实现，再决定是否改代码。历史 Strict、skill、搜索值和线上实验保持隔离。
+- [建立规则语义权威、原语重认证与可信 Strict 门禁](issues/23-rule-semantics-authority-and-strict-recertification.md)（进行中，`8/12`）— 已完成 23.0-23.7；23.8同时包含卡牌来源与独立势力协议分母，23.9关联证明、23.10统一运行链、23.11聚合认证待完成。CoC暂缓后本工单仍开放并阻止全局Strict；当前搜索只能在任务级已证明规则范围内研究执行。
 - [建立完整激活域与连续几何商空间](issues/20-complete-activation-and-continuous-geometry-domain.md)（进行中，完成门受 23 阻断）— 从 Host 枚举全部激活族，并以规则事件边界、路径拓扑和逐模型约束建立有证明的有限几何单元；固定比例移动只能作为代表，不得冒充完整连续域。
 - [建立目标条件化的完整策略有限商](issues/22-goal-conditioned-strategy-quotient-completeness.md)（进行中）— 有限构造对照保留 `6/6` 潜在有效类并补回隐藏优解；其中 `58 -> 9` 是昂贵根计数模型，非实战速度。下一步按需比较相关类并绑定Ticket20真实域证据，未知对手回应仍保留。
 - [闭合多回合对抗选择与概率质量](issues/21-multiturn-adversarial-chance-closure.md)（待开始）— 消费 Ticket 20 的候选域、Ticket 22 的策略商和 Ticket 08 的值代数，按 OR/max、AND/min 与 Chance 守恒展开整轮行动并把未闭合质量投影到逐初始状态区间。

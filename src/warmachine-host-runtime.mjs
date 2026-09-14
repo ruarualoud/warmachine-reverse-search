@@ -34,8 +34,11 @@ export const {
 } = warmachineHost.rules;
 
 export const {
+  WARMACHINE_STRICT_ACTIVATION_WINDOW_CONTRACT,
+  WARMACHINE_STRICT_CONTINUATION_WINDOW_CONTRACT,
   buildWarmachineRulesV1StateFromLayer3Room,
   buildWarmachineRulesV1ActionWithStrictRngOutcome,
+  strictExternalDecisionBoundaryFromEnumeration,
   strictOpponentReactionRequirementsForAction,
 } = warmachineHost.adapter;
 

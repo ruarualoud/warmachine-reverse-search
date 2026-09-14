@@ -12,7 +12,7 @@ Part of: ../map.md
 
 以下为本工单剩余开发及新增验收，当前全部待实现/待验收，不因写入计划计完成。
 
-- [ ] 23.8按Cryx -> Dusk -> Convergence固定账本继续，先跑真实来源纵向烟雾再决定纯组合/接线/共享协议分类；复用既有DSL、编译器、原语及证明，按不同语义而非source ID数估时。
+- [ ] 23.8卡牌来源账本与Appendix 2势力协议账本分开闭环；已做的Cryx/Dusk卡牌证明保留，Convergence按用户要求暂缓。恢复任一势力时先跑一条真实来源纵向烟雾，再按纯组合/接线/共享协议分类；复用既有DSL、编译器、原语及证明，按不同语义而非source ID数估时。
 - [ ] 23.8/23.9在来源合同中核对决策方、can/must、观察时点、Chance前后顺序、嵌套反应及真实终局后停止；不能把所有反应一律归对手或总是允许decline。
 - [ ] 23.10与13局部门共同定义机器可验证的任务规则闭包证据，覆盖双方持有、可授予、反应、资源、场景及构筑发现依赖；无完整证据继续隔离，不以手写三族白名单放行。
 - [ ] 任务局部证据只授权其对应范围的当前Host验证，不等于23全局完成；三族优先部分完成后可按用户顺序转搜索链路，其它族及23.11保留未完成。
@@ -237,6 +237,8 @@ OfficialRuleSource
 完成证据：当前来源 ownership 为动态 `100%`，且任意新增/修改来源会自动生成未决债务并定向使依赖证据失效。
 
 当前证据：当前数据版本为 `40049`，动态来源分母 `3159`。截至 23.8x，精确闭环 `572`、未闭环 `2587`；规则注册表为 `547` 个原子定义 / `650` 个钩子声明，全部当前声明 proof role 闭合。23.8x 用一个共享 strict Host 闭合 `18` 条 Field Marshal 来源：复用 `15` 个载荷原子，只新增一个 transport-only Unyielding 载荷，并以 `21` 条显式 allowlist 钩子运输防止文本推断和派生来源自举。Engine/Layer3/Route3-LLM-facing/Search Host-only 通过 `156` 条结构化证明、`15/15` mutation 和 micro `108/108`，聚合报告 `1ae7723b...a085`，Search 侧规则重复实现为零。Field Marshal 当前为 `22/62` 精确闭环，剩余 `40` 条需要载荷语义开发或审计；父纵切、全局 Strict、Skill/training、`Q_rule`、值与线上实验均未晋级。固定 `1274` 条人工审阅分母不因批量执行重新生成；下一批继续按共享 Host/动作族闭合完整来源，不把实现片、钩子或调度义务冒充规则来源完成数。
+
+2026-09-11分母更正：上述 `3159/572/2587` 只是卡牌来源账本，不是全规则或势力ready分母。主规则Appendix 2的Cephalyx、Convergence、Farrow、Gatorman、Grymkin、Infernals和Rhulic必须另建条款级协议账本。Convergence已确认Interface Node/I、controller MAT/RAT、No Power Up、Force Induction/Repeater和非cortex交互缺口；相关focused verifier已在错误Power Up处稳定失败。CoC开发现暂缓，不重跑该红门；父纵切、全局Strict、Skill/training、`Q_rule`、值与线上实验均未晋级。
 
 ### Slice 23.9: 自动关联闭包、性质测试与变异门
 

@@ -13,7 +13,7 @@
 
 ## 2. 领取下一项
 
-- 主线仍是Ticket23的 Cryx -> Dusk（含Fane of Nyrro）-> Convergence；先完成三族优先范围，再暂停其它族扩张并贯通搜索。计时对照样本不改变此顺序。
+- 2026-09-11后主线切回搜索：CoC Vector与Appendix 2其它未审计势力协议保留在23/11，暂不扩展；当前从20a开始，只消费Engine复合收据中已证明的Cryx/Fane任务能力。
 - 来源分母取Engine `data/function3-rules/warmachine-faction-priority-ledger-v40049.json`，日常只更新选中行及计数。数据版本变化或整族/最终收口再全量对账。
 - 简单规则先做一条真实来源纵向烟雾，确认全部上下文与传播入口再组批。纯组合、接线、共享协议分别计时；同义source ID不算多个独立语义。具体证明要求以Engine规范为准。
 - 三族后按[开发计划](DEVELOPMENT_PLAN.md)交错推进20a、21a、22与09/10；12的增量依赖贯穿。最终认证依赖不因提前写代码而解除。

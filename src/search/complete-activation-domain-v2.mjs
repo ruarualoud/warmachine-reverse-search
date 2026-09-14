@@ -356,6 +356,11 @@ export function enumerateNextWarmachineCompleteActivationDomainPageV2(
   const groupBaseCache = new Map();
   const slotReceipts = selectedSlots.map((slot) =>
     materializeSlot(state, plan, slot, groupBaseCache));
+  if (typeof options.onRuntimeGroupEnumeration === "function") {
+    for (const [groupIndex, enumeration] of groupBaseCache.entries()) {
+      options.onRuntimeGroupEnumeration({ groupIndex, enumeration });
+    }
+  }
   const followingSlotIndex = nextSlotIndex + selectedSlots.length;
   const exhausted = followingSlotIndex >= plan.slotCount;
   const remainingSlots = plan.slots.slice(followingSlotIndex);

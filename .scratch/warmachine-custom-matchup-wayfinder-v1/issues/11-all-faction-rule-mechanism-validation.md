@@ -14,6 +14,8 @@ Part of: ../map.md
 - [ ] 按资源、规则授予、替代、空投、配装、Unit联合行动等机制选择代表，并从关联图计算跨机制义务；同义来源可复用，不能只按阵营名称选几张卡。
 - [ ] 优先验证三族任务依赖，包括对手持有和临时获得的能力；未知范围保留未认证，不以当前胜利路线未使用为理由排除。
 - [ ] 至少复用corpse资源、空投、授予能力和反应链的正反场景检查搜索调用、概率与反向约束；全族验收仍保持独立开放。
+- [ ] 为主规则Appendix 2的Cephalyx、Convergence、Farrow、Gatorman、Grymkin、Infernals和Rhulic七类势力协议分别建立“来源条款 -> 执行能力 -> 搜索候选/反向义务 -> 实际路线”证明；不得用卡牌source ID账本代替。
+- [ ] Convergence Vector子项暂缓；恢复时必须同时覆盖Interface Node/I、控制者MAT/RAT投影、No Power Up、Force Induction、Induction Repeater与非cortex交互，并证明搜索能枚举传递选择及对手回应。
 
 
 ## Question

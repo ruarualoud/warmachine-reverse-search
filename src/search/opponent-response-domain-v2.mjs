@@ -114,8 +114,18 @@ function responseBucket(requirement = {}) {
 export function buildWarmachineOpponentResponseDomainV2(
   action = {},
   enumeration = {},
+  options = {},
 ) {
-  const state = normalizeRulesV1State(enumeration.state || {});
+  const cachedEnumerationState =
+    options.normalizedEnumerationState === enumeration.state
+      ? options.normalizedEnumerationState
+      : null;
+  const state = cachedEnumerationState ||
+    normalizeRulesV1State(enumeration.state || {});
+  const inputRuleBehaviorStateHash = cachedEnumerationState &&
+    options.inputRuleBehaviorStateHash
+    ? String(options.inputRuleBehaviorStateHash)
+    : warmachineRuleBehaviorStateHashV1(state);
   const requirements = strictOpponentReactionRequirementsForAction(
     action,
     { rulesV1State: state, rulesV1Enumeration: enumeration },
@@ -170,7 +180,7 @@ export function buildWarmachineOpponentResponseDomainV2(
   const finiteDeclaredChoiceProductWellFormed = issues.length === 0;
   const core = stableGraphValue({
     schemaVersion: WARMACHINE_OPPONENT_RESPONSE_DOMAIN_V2_SCHEMA,
-    inputRuleBehaviorStateHash: warmachineRuleBehaviorStateHashV1(state),
+    inputRuleBehaviorStateHash,
     actionKey: String(action.actionKey || ""),
     actingSideKey: String(state.activeSideKey || ""),
     requirementRows: rows,

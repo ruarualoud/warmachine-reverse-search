@@ -21,6 +21,7 @@ const CONTENT_KIND_SET = new Set(WARMACHINE_EXTERNAL_DAG_CONTENT_KINDS);
 const DEFAULT_PARTITION_COUNT = 256;
 const DEFAULT_DELTA_DEPTH = 16;
 const DEFAULT_DELTA_RATIO = 0.25;
+const DEFAULT_FAST_DELTA_BYTES = 64 * 1024;
 const DEFAULT_SORT_RUN_RECORDS = 2_048;
 
 function ensureDirectory(directoryPath) {
@@ -397,11 +398,10 @@ export class WarmachineExternalDagStore {
       return { ...identity, id, created: false, encoding: restored.encoding, physicalBytes: fs.statSync(filePath).size };
     }
 
-    const fullGzip = zlib.gzipSync(identity.canonicalBytes, { level: 9 });
     let encoding = "full";
     let deltaDepth = 0;
     let parentStateId = "";
-    let payload = fullGzip;
+    let payload = null;
     let operationCount = 0;
     if (options.parentStateId && fs.existsSync(this.objectPath("state", String(options.parentStateId)))) {
       const parent = this.readState(String(options.parentStateId));
@@ -410,16 +410,27 @@ export class WarmachineExternalDagStore {
       const deltaBytes = canonicalWarmachineSearchBytes(operations);
       const deltaGzip = zlib.gzipSync(deltaBytes, { level: 9 });
       const candidateDepth = parent.deltaDepth + 1;
-      if (
-        candidateDepth <= this.maxDeltaDepth &&
-        deltaGzip.byteLength <= fullGzip.byteLength * this.maxDeltaRatio
-      ) {
+      const fastDeltaEligible = candidateDepth <= this.maxDeltaDepth &&
+        deltaGzip.byteLength <= DEFAULT_FAST_DELTA_BYTES &&
+        deltaGzip.byteLength <=
+          identity.canonicalLength * this.maxDeltaRatio;
+      let deltaEligible = fastDeltaEligible;
+      if (!fastDeltaEligible) {
+        const fullGzip = zlib.gzipSync(identity.canonicalBytes, { level: 9 });
+        deltaEligible = candidateDepth <= this.maxDeltaDepth &&
+          deltaGzip.byteLength <= fullGzip.byteLength * this.maxDeltaRatio;
+        if (!deltaEligible) payload = fullGzip;
+      }
+      if (deltaEligible) {
         encoding = "delta";
         deltaDepth = candidateDepth;
         parentStateId = String(options.parentStateId);
         payload = deltaGzip;
         operationCount = operations.length;
       }
+    }
+    if (!payload) {
+      payload = zlib.gzipSync(identity.canonicalBytes, { level: 9 });
     }
     const record = {
       schemaVersion: identity.schemaVersion,
