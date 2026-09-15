@@ -89,6 +89,25 @@ function twoCounterchargeRoom() {
   return room;
 }
 
+function twoFreeStrikeRoom() {
+  const room = counterchargeRoom();
+  room.id = "search-opponent-response-domain-v2-sequential-free-strike";
+  room.tokens.mover.damage = { maxBoxes: 1, boxesRemaining: 1 };
+  delete room.tokens.reactor.specialRules;
+  room.tokens.reactor.x = 8;
+  room.tokens.reactor.y = 9.4;
+  room.tokens.reactor.mat = 100;
+  room.tokens.reactor.meleePower = 100;
+  room.tokens.reactor2 = {
+    ...structuredClone(room.tokens.reactor),
+    id: "reactor2",
+    pieceKey: "reactor2",
+    label: "Free Striker 2",
+    y: 6.6,
+  };
+  return room;
+}
+
 const state = buildWarmachineRulesV1StateFromLayer3Room(counterchargeRoom());
 const enumeration = enumerateRulesV1Actions(state);
 const action = enumeration.actions.find((candidate) =>
@@ -288,6 +307,73 @@ assert.equal(
 );
 assert.equal(staleWindowTransition.nextState, staleWindowTransition.state);
 
+const sequentialFreeStrikeState = buildWarmachineRulesV1StateFromLayer3Room(
+  twoFreeStrikeRoom(),
+);
+sequentialFreeStrikeState.disengagementRuleMode = "legacy_free_strike";
+const sequentialFreeStrikeEnumeration = enumerateRulesV1Actions(
+  sequentialFreeStrikeState,
+);
+const sequentialFreeStrikeAction = sequentialFreeStrikeEnumeration.actions.find(
+  (candidate) => candidate.actorPieceKey === "mover" &&
+    candidate.metadata?.freeStrikeResolutionRequirements?.length === 2,
+);
+assert.ok(
+  sequentialFreeStrikeAction,
+  "one legacy disengagement must expose both Free Strike models",
+);
+assert.equal(
+  sequentialFreeStrikeAction.metadata.sequentialFreeStrikeWindowSupported,
+  true,
+);
+const sequentialFreeStrikeOpened = advanceWarmachineCurrentDecisionWindowV1(
+  sequentialFreeStrikeState,
+  sequentialFreeStrikeAction.actionKey,
+);
+assert.equal(sequentialFreeStrikeOpened.transitionAccepted, true);
+assert.equal(sequentialFreeStrikeOpened.nextDecisionOwnerSideKey, "player2");
+assert.ok(sequentialFreeStrikeOpened.nextStrictContinuationWindowFlags.includes(
+  "strictFreeStrikeWindowOnly",
+));
+const firstFreeStrikeDecline =
+  sequentialFreeStrikeOpened.nextDecisionWindowDomain.optionRows.find((row) =>
+    row.disposition === "host_accepted" &&
+    row.actionEvidence?.actorPieceKey === "reactor" &&
+    row.actionEvidence?.actionType === "resolve_free_strike_window" &&
+    /decline/.test(row.actionKey));
+assert.ok(firstFreeStrikeDecline);
+const afterFirstFreeStrikeDecline = advanceWarmachineCurrentDecisionWindowV1(
+  sequentialFreeStrikeOpened.successorState,
+  firstFreeStrikeDecline.actionKey,
+);
+assert.equal(afterFirstFreeStrikeDecline.transitionAccepted, true);
+assert.ok(afterFirstFreeStrikeDecline.nextStrictContinuationWindowFlags.includes(
+  "strictFreeStrikeWindowOnly",
+));
+assert.deepEqual(
+  [...new Set(afterFirstFreeStrikeDecline.nextDecisionWindowDomain.optionRows
+    .filter((row) => row.disposition === "host_accepted")
+    .map((row) => row.actionEvidence?.actorPieceKey))],
+  ["reactor2"],
+);
+const firstFreeStrikeUse =
+  sequentialFreeStrikeOpened.nextDecisionWindowDomain.optionRows.find((row) =>
+    row.disposition === "host_accepted" && /:use:/.test(row.actionKey));
+assert.ok(firstFreeStrikeUse);
+const afterLethalFreeStrike = advanceWarmachineCurrentDecisionWindowV1(
+  sequentialFreeStrikeOpened.successorState,
+  firstFreeStrikeUse.actionKey,
+);
+assert.equal(afterLethalFreeStrike.transitionAccepted, true);
+assert.equal(
+  afterLethalFreeStrike.successorState.pieces.find((piece) =>
+    piece.pieceKey === "mover")?.destroyed,
+  true,
+);
+assert.ok(!afterLethalFreeStrike.nextStrictContinuationWindowFlags.includes(
+  "strictFreeStrikeWindowOnly",
+));
+
 console.log(JSON.stringify({
   ok: true,
   marker: "opponent_response_domain_v2",
@@ -309,6 +395,9 @@ console.log(JSON.stringify({
   sequentialDeclineReenumeratedRemainingReactor: true,
   lethalFirstReactionRemovedSecondWindow: true,
   staleReactionWindowFailsClosed: true,
+  sequentialFreeStrikeWindowOpened: true,
+  sequentialFreeStrikeDeclineReenumeratedRemainingEnemy: true,
+  lethalFirstFreeStrikeRemovedSecondWindow: true,
   activationDomainReactionDebtVisible: true,
   chanceMassAssigned: receipt.chanceMassAssigned,
 }, null, 2));

@@ -159,7 +159,8 @@ function responseSummary(action = {}, enumeration = {}, windowContext = {}) {
     windowContext,
   );
   const sequentialResponsePrefixStateAvailable = domain.requirementCount <= 1 ||
-    action.metadata?.sequentialEnemyEnterReactionWindowSupported === true;
+    action.metadata?.sequentialEnemyEnterReactionWindowSupported === true ||
+    action.metadata?.sequentialFreeStrikeWindowSupported === true;
   return stableGraphValue({
     opponentResponseDomainHash: domain.opponentResponseDomainHash,
     requirementCount: domain.requirementCount,
@@ -185,6 +186,11 @@ function responseSummary(action = {}, enumeration = {}, windowContext = {}) {
       action.metadata?.sequentialEnemyEnterReactionWindowSupported === true,
     sequentialReactionWindowScope: String(
       action.metadata?.sequentialEnemyEnterReactionWindowScope || "",
+    ),
+    sequentialFreeStrikeWindowSupported:
+      action.metadata?.sequentialFreeStrikeWindowSupported === true,
+    sequentialFreeStrikeWindowScope: String(
+      action.metadata?.sequentialFreeStrikeWindowScope || "",
     ),
     independentCartesianExpansionAuthorized: false,
   });
@@ -545,6 +551,31 @@ function strictCurrentWindowAction(
   state = {},
   enumeration = {},
 ) {
+  if (action.metadata?.freeStrikeWindowDecision === true) {
+    const choiceKey = String(action.metadata?.freeStrikeChoiceKey || action.actorPieceKey || "");
+    const use = action.metadata?.freeStrikeChoice === "use";
+    return buildWarmachineRulesV1ActionWithStrictRngOutcome(action, {
+      room: {
+        id: `current-window-free-strike-${String(state.stateKey || "state")}`,
+        game: {
+          round: state.turnNumber,
+          turnNumber: state.turnNumber,
+          activeSideKey: state.activeSideKey,
+        },
+      },
+      sourceContext: {
+        rulesV1State: state,
+        rulesV1Enumeration: enumeration,
+      },
+      selectedActionKey: action.actionKey,
+      reactionResolutionPolicy: "bot_confirmed",
+      humanReactionChoices: {
+        freeStrikeOutcomesByEnemy: {
+          [choiceKey]: use ? { use: true } : { decline: true },
+        },
+      },
+    });
+  }
   if (action.metadata?.enemyEnterReactionWindowDecision === true) {
     const choiceKey = String(action.metadata?.reactionChoiceKey || action.actorPieceKey || "");
     const use = action.metadata?.reactionChoice === "use";
@@ -579,20 +610,38 @@ function strictCurrentWindowAction(
       },
     });
   }
+  const metadata = { ...(action.metadata || {}) };
+  let sequentialProtocolAdded = false;
   if (
-    array(action.metadata?.reactionResolutionRequirements).length > 0 &&
-    action.metadata?.sequentialEnemyEnterReactionWindowSupported === true
+    array(metadata.reactionResolutionRequirements).length > 0 &&
+    metadata.sequentialEnemyEnterReactionWindowSupported === true
   ) {
-    return stableGraphValue({
-      ...action,
-      metadata: {
-        ...(action.metadata || {}),
+    Object.assign(metadata, {
         strictSequentialEnemyEnterReactionResolution: true,
         strictSequentialEnemyEnterReactionOrderPrefix: [],
-      },
     });
+    sequentialProtocolAdded = true;
   }
-  return action;
+  if (
+    array(metadata.freeStrikeResolutionRequirements).length > 0 &&
+    metadata.sequentialFreeStrikeWindowSupported === true
+  ) {
+    Object.assign(metadata, {
+      strictSequentialFreeStrikeResolution: true,
+      strictSequentialFreeStrikeScope: {
+        movedPieceKey: String(action.actorPieceKey || ""),
+        expectedFreeStrikeOrderKeys:
+          array(metadata.freeStrikeResolutionRequirements)
+            .map((entry) => String(entry.enemyPieceKey || ""))
+            .filter(Boolean),
+      },
+      strictSequentialFreeStrikeOrderPrefix: [],
+    });
+    sequentialProtocolAdded = true;
+  }
+  return sequentialProtocolAdded
+    ? stableGraphValue({ ...action, metadata })
+    : action;
 }
 
 export function advanceWarmachineCurrentDecisionWindowV1(

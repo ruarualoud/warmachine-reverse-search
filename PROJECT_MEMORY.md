@@ -1,5 +1,15 @@
 # Project Memory
 
+- 2026-09-15 durable sequential Free Strike boundary: explicit
+  `legacy_free_strike` mode now resolves multiple interrupts through an
+  opponent-owned Host window. Search selects one current decline/use action,
+  then the Engine replays the sealed source movement and accepted response
+  prefix before re-enumerating live eligible enemies. A lethal first interrupt
+  closes later opportunities; malformed/stale windows fail closed. This does
+  not alter current MKIV disengagement, and it does not certify multi-model
+  movement, the exact melee-exit interruption point, a forced-movement
+  continuation path, nested responses or complete Free Strike Chance.
+
 - 2026-09-15 durable sequential enemy-enter reaction invariant: when one moved
   model opens multiple optional Countercharge/Admonition/Pursuit reactions, the
   Engine owns an explicit opponent decision window and re-enumerates eligibility
