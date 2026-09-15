@@ -1,5 +1,14 @@
 # Project Memory
 
+- 2026-09-15 durable interaction-authority invariant: the old hand-authored
+  67-node graph is diagnostic history, not rule authority. Engine now derives a
+  current denominator from 149 semantic rules, 1140 atom definitions, 1354
+  hook consumer contracts, explicit relations and state read/write overlap.
+  Per-atom interaction fixtures do not prove every derived edge until an exact
+  relation-specific proof binding exists. This Engine-wide static inventory is
+  separate from cross-runtime interface validation, which remains scoped to
+  the current Cryx/Nyrro task plus neutral shared-contract witnesses.
+
 - 2026-09-15 durable geometry-interface invariant: when Engine omits a model
   obstacle because a signed start-distance lower bound exceeds the complete
   movement allowance, Search must validate and preserve that exclusion proof

@@ -2,6 +2,11 @@
 
 恢复开发先读 [docs/AGENT_TASK_GUIDE.md](docs/AGENT_TASK_GUIDE.md)，再按当前ticket内清单执行。规范由Engine维护，修正计划/工作台接入由本仓库维护。
 
+## 2026-09-15 Ticket 23.9 dynamic interaction handoff boundary
+
+- [x] Record Engine report `4b01a293...21669` as the first current automatically derived interaction denominator. Its initial nine semantic-to-primitive catalogue debts are now closed through seven existing shared builders; relation-specific evidence remains unresolved, so the report stays `ready=false`. It is not a Search parity result and does not authorize values, pruning, Skill/training or online execution.
+- [ ] After relation-specific Engine proofs close, bind the exact dynamic interaction report hash into the Search composite receipt and task-local rule-closure report. Cross-runtime interface scenarios remain limited to Cryx/Nyrro plus neutral shared-contract witnesses; no Fortress King or unrelated-faction matrix is required for this handoff.
+
 ## 2026-09-15 Ticket 20 移动反应几何债务校准
 
 - [x] 保留并逐字段验证 Engine 对“底盘排除区在完整移动上限之外”的模型障碍签名证明；Search 不再只校验父计划哈希后丢掉证明。该项只关闭一个跨层传输缺口，不证明可达障碍、路径类、转移稳定或当前 Cryx/Fane 任务以外的势力规则。
