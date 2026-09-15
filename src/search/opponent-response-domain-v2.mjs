@@ -188,6 +188,16 @@ function localResponseOptions(requirement = {}, state = {}) {
     for (const destination of array(
       requirement.requirement?.destinationOptions,
     )) {
+      const destinationOutcomeRequirements =
+        destination.outcomeRequirements &&
+        typeof destination.outcomeRequirements === "object"
+          ? destination.outcomeRequirements
+          : {};
+      const deterministicNonAttackDestination =
+        !requirement.requirement?.attackProfileKey &&
+        !destination.attackResolution &&
+        destination.damageDiceCount == null &&
+        Object.keys(destinationOutcomeRequirements).length === 0;
       rows.push({
         optionKey: `${requirement.kind}:use:${String(destination.optionId || "")}`,
         choice: "use",
@@ -195,8 +205,20 @@ function localResponseOptions(requirement = {}, state = {}) {
         destination: destination.destination || null,
         payload: {
           use: true,
+          destinationOptionId: String(destination.optionId || ""),
+          ...(destination.movedModelPieceKey ? {
+            selectedMovedModelPieceKey: String(destination.movedModelPieceKey),
+          } : {}),
           destination: destination.destination || null,
+          ...(array(destination.movementPathPoints).length ? {
+            movementPathPoints: stableGraphValue(destination.movementPathPoints),
+          } : {}),
         },
+        chanceOutcomeExact: deterministicNonAttackDestination,
+        chanceRequired: false,
+        chanceReasons: deterministicNonAttackDestination
+          ? []
+          : ["reaction_destination_attack_or_outcome_chance_unresolved"],
       });
     }
     return rows;

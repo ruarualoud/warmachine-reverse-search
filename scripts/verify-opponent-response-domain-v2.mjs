@@ -390,6 +390,41 @@ assert.equal(domain.requirementRows[0].options[0].choice, "decline");
 assert.ok(domain.requirementRows[0].options.some((option) =>
   option.choice === "use" && option.destinationOptionId));
 
+const pursuitProjectionAction = structuredClone(action);
+const pursuitRequirement = {
+  ...structuredClone(action.metadata.reactionResolutionRequirements[0]),
+  ruleKey: "pursuit",
+  reactivePieceKey: "reactor",
+  sourceSpellcasterPieceKey: "reactor",
+  eligibleMovedModelPieceKeys: ["reactor"],
+  destinationOptions: [{
+    optionId: "pursuit:reactor:mover:reactor:one-inch",
+    movedModelPieceKey: "reactor",
+    destination: { xIn: 15, yIn: 8 },
+    movementPathPoints: [{ xIn: 14, yIn: 8 }, { xIn: 15, yIn: 8 }],
+    distanceIn: 1,
+    movementCostIn: 1,
+    maximumDistanceIn: 6,
+    exactWithinScope: true,
+  }],
+};
+pursuitProjectionAction.metadata.reactionResolutionRequirements = [pursuitRequirement];
+const pursuitProjectionDomain = buildWarmachineOpponentResponseDomainV2(
+  pursuitProjectionAction,
+  enumeration,
+);
+const pursuitProjectionUse = pursuitProjectionDomain.requirementRows[0].options.find((option) =>
+  option.choice === "use");
+assert.equal(pursuitProjectionUse.payload.selectedMovedModelPieceKey, "reactor",
+  "Pursuit projection must retain the Host-selected battlegroup model");
+assert.deepEqual(pursuitProjectionUse.payload.movementPathPoints,
+  pursuitRequirement.destinationOptions[0].movementPathPoints,
+  "Pursuit projection must retain the Host-validated reaction path");
+assert.equal(pursuitProjectionDomain.reactionChanceOutcomeDomainComplete, true,
+  "a Pursuit move with no fall or other outcome requirement has no unresolved Chance axis");
+assert.equal(pursuitProjectionDomain.destinationParameterDomainComplete, false,
+  "deterministic reaction execution must not falsely close its continuous destination domain");
+
 const defensiveStrikeState = buildWarmachineRulesV1StateFromLayer3Room(
   defensiveStrikeRoom(),
 );

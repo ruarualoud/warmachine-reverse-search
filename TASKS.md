@@ -8,6 +8,7 @@
 - [x] 每个 Chance 类均通过共享 strict executor，按规则后继哈希合并并守恒概率质量。现有对手回应验证中的真实 Defensive Strike 子域完整闭合、零 strict 拒绝；原 Countercharge 仍因连续目的地影响攻击结算而保持 Chance/目的地域未完成，额外来源规则/状态和武器特规也继续保守失败关闭。
 - [x] 补齐 Engine 反应要求漏传的结构化目标规则语义，并让 Search 按这些语义而不是“目标有任何规则”整体拒绝。真实 Cryx Mechanithrall Swarm 的 Tough 现在作为致死伤害条件下的独立 d6 Chance 维度执行，Vengeance 等非当前触发效果不制造假分支；未知、诊断失败或 Search 不支持的效果仍失败关闭。只扩展现有对手回应验证器，没有新增测试文件或其它势力矩阵。
 - [x] 修正对手回应领域与工作清单把 `chanceMassAssigned` 永久写成 `false` 的账本错误。现在仅当至少一个对手使用分支绑定了完整精确 Chance 分布时置真；真实 Defensive Strike/Tough 分支置真，仍不完整的 Countercharge 与无随机量动作保持为假。
+- [x] 修正 Nyrro Pursuit 目的地投影：Search 现在从 Engine 选项保留被选战团模型、目的地编号和完整反应路径，不再把“哪台模型移动”丢掉。无攻击且没有坠落/其它结果要求的 Pursuit/Admonition 代表点被正确标成确定性；它们的连续目的地域仍单独保持未完成，Countercharge 的目的地相关攻击 Chance 也未被误报完成。
 
 ## 2026-09-15 Ticket 20 Cryx同时放置复合结算
 

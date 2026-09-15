@@ -11,6 +11,14 @@
   reaction use branch carries that conserved Chance distribution; it is not a
   synonym for response-domain completeness.
 
+- 2026-09-15 durable destination-reaction projection invariant: a Pursuit
+  destination option is the tuple `(selected battlegroup model, validated path,
+  endpoint)`, not an endpoint alone. Search must preserve that complete Host
+  tuple. Pursuit/Admonition representatives without fall or other outcome
+  requirements are deterministic, but this never closes their continuous
+  destination domain; Countercharge retains separate destination-dependent
+  attack Chance debt.
+
 - 2026-09-15 durable legacy Free Strike path invariant: explicit
   `legacy_free_strike` movement now computes base-aware melee-range exits along
   the declared path, interrupts the mover at each exact exit point and resolves
