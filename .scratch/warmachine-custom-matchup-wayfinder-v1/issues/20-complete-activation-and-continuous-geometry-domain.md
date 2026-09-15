@@ -62,6 +62,8 @@ Implementation design: `docs/continuous-action-domain-v1.md`
 
 ## Current Evidence
 
+- 2026-09-15 远处模型障碍证明跨层收口：Engine 对起点到底盘排除区的保守距离下界严格大于完整移动上限的模型保留签名证明，Search 现逐字段验证距离、上限、定理和几何原语并原样投影，不再只校验父计划哈希后丢失证明。该证据只移除不可达碰撞障碍；敌方反应、可达障碍、路径类与转移稳定仍分别保持债务，不扩展其它势力验证。
+
 - 2026-09-11 20a当前窗口收据：`current-decision-window-domain-v1` 从单次Host枚举保留全部accepted/rejected动作对象，输出Host的`decisionSideKey`、动作族、已声明离散参数、连续坐标债务、逐动作对手回应域摘要和内容绑定分页游标。它现直接消费Host的strict continuation/activation window合同，选中一个Host动作后严格执行并从后继状态重新枚举，不授权将响应做静态笛卡尔积。现有`micro_single_advance_moves_model`执行烟雾将`10`个Host动作按`3 + 7`稳定分页，选择`runner:pass:v1`后重枚举到`1`个后继选项，决策方为`player1`且账目守恒；当前Engine总收据未认证，因此正确保持`currentWindowStrictComplete=false`、`strategyValuePublicationAllowed=false`。多个同时回应的中间Host状态/优先级仍是本工单第二项债务。
 - 2026-09-15 单移动主体多回应纵切：Engine新增可恢复的`enemyEnterReactionWindow`，并通过Layer3严格继续窗口合同公开。源移动落地后，Host只枚举当前仍合法的下一项Countercharge/Defensive Strike/Admonition/Pursuit放弃或使用动作；每次选择后从更新状态重新计算剩余反应和目的地，再以封存源输入恢复动作后半段。Search当前窗口会主动采用该协议并返回哈希绑定的`successorState`。双Countercharge实际证明：放弃第一项后仅第二反应者保留；第一项使用并击杀移动者后第二窗口消失。旧单反应`9/9`、Bot反应桥和Host handoff均保持通过。该能力仅认证单移动主体；Unit多模型/同时落位、Free Strike、伤害转移、连续目的地穷尽和精确Chance仍是20a.2/20b债务。
 - 2026-09-15 单移动主体多Free Strike纵切：Engine新增可恢复的`freeStrikeWindow`并通过Layer3合同公开；Search选择源移动后进入对手窗口，每个放弃/使用都由Host从严格后继重新枚举。真实双敌离战证明首项放弃后只剩第二敌人，首项致死后移动者死亡且第二窗口消失；声明窗口无效时执行路径失败关闭。该证据只覆盖显式`legacy_free_strike`模式的一名移动模型；当前MKIV离战仍不产生Free Strike。Unit多模型、精确离开近战范围的中断点、强制位移后的剩余路线、完整Chance和伤害转移继续保留债务。

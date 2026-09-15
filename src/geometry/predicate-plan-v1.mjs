@@ -76,6 +76,29 @@ function validateHostPlan(hostPlan = {}) {
     if (!obstacle.obstacleKey) issues.push(`obstacle_${index}_key_missing`);
     issues.push(...primitiveIssues(obstacle.primitive, `obstacle_${index}_primitive`));
   }
+  for (const [index, proof] of (
+    hostPlan.configurationObstacleExclusionProofs || []
+  ).entries()) {
+    if (!proof.obstacleKey || !proof.blockerPieceKey) {
+      issues.push(`obstacle_exclusion_${index}_identity_missing`);
+    }
+    issues.push(...primitiveIssues(
+      proof.primitive,
+      `obstacle_exclusion_${index}_primitive`,
+    ));
+    const signedDistanceIn = Number(proof.actorStartSignedDistanceIn);
+    const lowerBoundIn = Number(proof.startToObstacleDistanceLowerBoundIn);
+    if (!Number.isFinite(signedDistanceIn) ||
+        !Number.isFinite(lowerBoundIn) || lowerBoundIn < 0 ||
+        Number(proof.movementAllowanceIn) !== Number(hostPlan.movementAllowanceIn) ||
+        proof.unreachableWithinMovementAllowanceProven !== true ||
+        proof.unreachabilityTheoremKey !==
+          "rectifiable_path_length_lower_bounded_by_endpoint_euclidean_distance_v1" ||
+        proof.exactWithinScope !== true ||
+        !(lowerBoundIn > Number(hostPlan.movementAllowanceIn) + 0.001)) {
+      issues.push(`obstacle_exclusion_${index}_distance_certificate_invalid`);
+    }
+  }
   for (const [index, eventRegion] of (hostPlan.eventRegions || []).entries()) {
     if (!eventRegion.eventRegionKey) issues.push(`event_region_${index}_key_missing`);
     issues.push(...primitiveIssues(eventRegion.primitive, `event_region_${index}_primitive`));
@@ -219,6 +242,9 @@ export function buildWarmachineGeometryPredicatePlanV1(inputState = {}, options 
     actionType: String(hostPlan.actionType || options.actionType || "advance"),
     predicates: normalizedPredicates,
     configurationObstacles: stableGraphValue(hostPlan.configurationObstacles || []),
+    configurationObstacleExclusionProofs: stableGraphValue(
+      hostPlan.configurationObstacleExclusionProofs || [],
+    ),
     eventRegions: stableGraphValue(hostPlan.eventRegions || []),
     wildcardDebts: stableGraphValue(hostPlan.wildcardDebts || []),
     pathCoordinateQuantumIn: Number(hostPlan.pathCoordinateQuantumIn || 0),
@@ -248,7 +274,7 @@ export function buildWarmachineGeometryPredicatePlanV1(inputState = {}, options 
     ruleBehaviorQuotientComplete: false,
     strategyQuotientAuthority: false,
     claimBoundary:
-      "This Search receipt verifies and binds the Engine movement predicate plan without reimplementing geometry. It is an initial event-surface declaration, not a finite cell partition, complete path domain, transition-stability proof, Q_rule completion receipt, Q_goal strategy certificate, legal action or Chance distribution.",
+      "This Search receipt verifies and binds the Engine movement predicate plan without reimplementing geometry, including signed proofs for model exclusions beyond the complete movement allowance. It is an initial event-surface declaration, not a finite cell partition, complete path domain, transition-stability proof, Q_rule completion receipt, Q_goal strategy certificate, legal action or Chance distribution.",
   });
   return {
     ...core,

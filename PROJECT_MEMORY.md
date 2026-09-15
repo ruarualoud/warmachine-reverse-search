@@ -1,5 +1,13 @@
 # Project Memory
 
+- 2026-09-15 durable geometry-interface invariant: when Engine omits a model
+  obstacle because a signed start-distance lower bound exceeds the complete
+  movement allowance, Search must validate and preserve that exclusion proof
+  rather than retaining only the parent plan hash. The proof removes only that
+  unreachable collision obstacle; independent reaction surfaces, reachable
+  obstacles, path classes and transition stability remain separate fail-closed
+  obligations.
+
 - 2026-09-15 durable movement-reaction geometry invariant: an enemy model is
   always a possible base-collision obstacle but is not automatically a movement
   reaction source. Geometry partition debt is justified only by an eligible

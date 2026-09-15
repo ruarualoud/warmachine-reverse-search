@@ -75,6 +75,30 @@ assert.notEqual(
 );
 assert.equal(differentHistory.ruleBehaviorContextHash, open.ruleBehaviorContextHash);
 
+const distantModel = buildWarmachineGeometryPredicatePlanV1(state({
+  stateKey: "search-predicate-plan-distant-model",
+  pieces: [
+    piece("mover", 10, 10),
+    piece("distant-enemy", 40, 40, { sideKey: "player2" }),
+  ],
+}), {
+  actorPieceKey: "mover",
+  actionType: "advance",
+  strategyContext: completeStrategyContext,
+});
+assert.equal(distantModel.configurationObstacles.length, 0);
+assert.deepEqual(
+  distantModel.configurationObstacleExclusionProofs.map((row) =>
+    row.blockerPieceKey),
+  ["distant-enemy"],
+  "Search must preserve the Host proof that a distant model exclusion cannot intersect the movement domain",
+);
+assert.equal(
+  distantModel.configurationObstacleExclusionProofs[0]
+    .unreachableWithinMovementAllowanceProven,
+  true,
+);
+
 const obstacleState = state({
   terrain: [{
     terrainKey: "rotated-wall",
