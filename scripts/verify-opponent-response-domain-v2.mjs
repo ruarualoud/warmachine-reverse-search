@@ -73,6 +73,24 @@ function counterchargeRoom() {
   };
 }
 
+function defensiveStrikeRoom() {
+  const room = counterchargeRoom();
+  room.id = "search-opponent-response-domain-v2-defensive-strike-chance";
+  room.tokens.reactor.x = 14;
+  room.tokens.reactor.maxMeleeRange = 2;
+  room.tokens.reactor.specialRules = ["Defensive Strike"];
+  room.tokens.reactor.attackProfiles = [{
+    profileKey: "defensive-strike-blade",
+    name: "Defensive Strike Blade",
+    mode: "melee",
+    rangeIn: 2,
+    power: 14,
+    attackStat: 7,
+    attackStatKind: "MAT",
+  }];
+  return room;
+}
+
 function twoCounterchargeRoom() {
   const room = counterchargeRoom();
   room.id = "search-opponent-response-domain-v2-sequential";
@@ -342,6 +360,54 @@ assert.ok(BigInt(domain.declaredFiniteChoiceCandidateCount) > 1n);
 assert.equal(domain.requirementRows[0].options[0].choice, "decline");
 assert.ok(domain.requirementRows[0].options.some((option) =>
   option.choice === "use" && option.destinationOptionId));
+
+const defensiveStrikeState = buildWarmachineRulesV1StateFromLayer3Room(
+  defensiveStrikeRoom(),
+);
+const defensiveStrikeEnumeration = enumerateRulesV1Actions(defensiveStrikeState);
+const defensiveStrikeAction = defensiveStrikeEnumeration.actions.find((candidate) =>
+  candidate.actorPieceKey === "mover" &&
+  candidate.metadata?.reactionResolutionRequirements?.some((row) =>
+    row.ruleKey === "defensive_strike"));
+assert.ok(defensiveStrikeAction, "a real strict movement action must expose Defensive Strike");
+const defensiveStrikeDomain = buildWarmachineOpponentResponseDomainV2(
+  defensiveStrikeAction,
+  defensiveStrikeEnumeration,
+);
+assert.equal(defensiveStrikeDomain.requirementCount, 1);
+assert.equal(defensiveStrikeDomain.destinationParameterDomainComplete, true);
+assert.equal(defensiveStrikeDomain.reactionChanceOutcomeDomainComplete, true,
+  "one plain no-destination Defensive Strike must expose exact attack/damage Chance rather than one sampled roll");
+const defensiveStrikeUseOptions = defensiveStrikeDomain.requirementRows[0].options.filter((option) =>
+  option.choice === "use");
+assert.equal(defensiveStrikeUseOptions.length, 1,
+  "Chance classes must remain nested below one opponent use choice rather than becoming adversarial choices");
+assert.equal(defensiveStrikeUseOptions.every((option) => option.chanceOutcomeExact === true), true);
+assert.ok(defensiveStrikeUseOptions[0].chanceModel.classCount > 1);
+assert.equal(defensiveStrikeUseOptions[0].chanceModel.massNumerator,
+  defensiveStrikeUseOptions[0].chanceModel.massDenominator);
+const defensiveStrikeReceipt = advanceWarmachineOpponentResponseWorklistV2(
+  defensiveStrikeState,
+  defensiveStrikeAction.actionKey,
+  { candidateBudget: 10000 },
+);
+assert.equal(defensiveStrikeReceipt.declaredFiniteChoiceProductComplete, true);
+assert.equal(defensiveStrikeReceipt.reactionChanceOutcomeDomainComplete, true);
+assert.equal(defensiveStrikeReceipt.opponentResponseDomainComplete, true);
+assert.equal(defensiveStrikeReceipt.strictRejectedCount, "0");
+assert.equal(defensiveStrikeReceipt.pendingSpecialResolutionCount, "0");
+assert.equal(defensiveStrikeReceipt.strictAcceptedCount,
+  defensiveStrikeReceipt.declaredFiniteChoiceCandidateCount);
+assert.equal(defensiveStrikeReceipt.completionDebts.includes(
+  "opponent_reaction_chance_distribution_pending"), false);
+const defensiveStrikeUseSample = defensiveStrikeReceipt.acceptedSamples.find((sample) =>
+  sample.selectedOptions.some((option) => option.choice === "use"));
+assert.ok(defensiveStrikeUseSample);
+assert.equal(defensiveStrikeUseSample.successorChanceDistribution.reduce((sum, branch) =>
+  sum + branch.numerator, 0),
+defensiveStrikeUseSample.successorChanceDistribution[0].denominator);
+assert.equal(defensiveStrikeUseSample.successorChanceDistribution.every((branch) =>
+  branch.strictRejectedReason === ""), true);
 
 const activationDomain = exhaustWarmachineCompleteActivationDomainV2(state, {
   pageLimit: 12,

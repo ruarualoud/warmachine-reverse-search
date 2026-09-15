@@ -8,6 +8,8 @@ import {
   normalizeRulesV1State,
   strictOpponentReactionRequirementsForAction,
 } from "../warmachine-host-runtime.mjs";
+import { buildWarmachineExactActionChanceClasses } from
+  "./chance-outcomes-v1.mjs";
 
 export const WARMACHINE_OPPONENT_RESPONSE_DOMAIN_V2_SCHEMA =
   "warmachine_opponent_response_domain_v2";
@@ -67,7 +69,124 @@ function damageTransferOptions(requirement = {}) {
   }));
 }
 
-function localResponseOptions(requirement = {}) {
+function pieceRuleRows(piece = {}) {
+  return [
+    ...array(piece.specialRules),
+    ...array(piece.rules),
+    ...array(piece.abilities),
+    ...array(piece.statusEffects),
+  ].filter(Boolean);
+}
+
+function normalizedRuleIdentity(rule = null) {
+  const value = typeof rule === "string"
+    ? rule
+    : rule?.ruleKey || rule?.key || rule?.name || rule?.label || "";
+  return String(value).trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+}
+
+function plainReactionChanceExpansion(requirement = {}, state = {}) {
+  const detail = requirement.requirement || {};
+  const attackProfileKey = String(detail.attackProfileKey || "");
+  if (!attackProfileKey) {
+    return {
+      exactComplete: true,
+      chanceRequired: false,
+      reasons: [],
+      classes: [{
+        classKey: "deterministic-nonattack-reaction",
+        numerator: 1,
+        denominator: 1,
+        strictRollOutcome: {},
+      }],
+    };
+  }
+  const reactor = array(state.pieces).find((piece) =>
+    piece.pieceKey === requirement.ownerPieceKey) || null;
+  const target = array(state.pieces).find((piece) =>
+    piece.pieceKey === requirement.targetPieceKey) || null;
+  const reasons = [];
+  if (requirement.requiresDestination || detail.damageDiceCountDependsOnDestination === true) {
+    reasons.push("reaction_destination_can_change_attack_resolution");
+  }
+  if (!reactor || !target) reasons.push("reaction_actor_or_target_not_bound");
+  if (!detail.attackResolution || typeof detail.attackResolution !== "object") {
+    reasons.push("reaction_attack_resolution_missing");
+  }
+  if (array(detail.atomDiagnostics).length || detail.sourceContractMismatch) {
+    reasons.push("reaction_rule_source_not_exact");
+  }
+  if (array(detail.attackProfile?.specialRules).length) {
+    reasons.push("reaction_weapon_special_rules_present");
+  }
+  const grantingRuleKey = normalizedRuleIdentity(requirement.ruleKey);
+  const additionalReactorRules = [
+    ...array(reactor?.specialRules),
+    ...array(reactor?.rules),
+    ...array(reactor?.abilities),
+  ].filter((rule) => normalizedRuleIdentity(rule) !== grantingRuleKey);
+  if (additionalReactorRules.length || array(reactor?.statusEffects).length) {
+    reasons.push("reaction_actor_additional_rules_or_statuses_present");
+  }
+  if (target && pieceRuleRows(target).length) {
+    reasons.push("reaction_target_rules_or_statuses_present");
+  }
+  if (reasons.length) {
+    return { exactComplete: false, chanceRequired: true, reasons: uniqueSorted(reasons), classes: [] };
+  }
+  const syntheticAction = {
+    actionKey: `reaction-chance:${requirement.choiceKey}:${requirement.targetPieceKey}`,
+    actionType: "reaction_attack_chance_probe",
+    actorPieceKey: requirement.ownerPieceKey,
+    targetPieceKey: requirement.targetPieceKey,
+    metadata: {
+      attackProfile: detail.attackProfile || {},
+      attackResolution: detail.attackResolution,
+      specialRuleAnalysis: { unresolvedRuleKeys: [], ruleAtomDiagnostics: [] },
+      attackProfileExecutableEffects: [],
+      ruleAtomDiagnostics: [],
+    },
+  };
+  const model = buildWarmachineExactActionChanceClasses(syntheticAction, { state });
+  return {
+    exactComplete: model.exactComplete === true,
+    chanceRequired: true,
+    reasons: uniqueSorted(model.reasons || []),
+    classes: model.exactComplete === true ? array(model.classes) : [],
+  };
+}
+
+function exactReactionUseOptions(requirement = {}, baseOption = {}, state = {}) {
+  const chance = plainReactionChanceExpansion(requirement, state);
+  if (!chance.exactComplete) {
+    return [{
+      ...baseOption,
+      chanceOutcomeExact: false,
+      chanceReasons: chance.reasons,
+    }];
+  }
+  return [{
+    ...baseOption,
+    chanceOutcomeExact: true,
+    chanceRequired: chance.chanceRequired,
+    chanceModel: stableGraphValue({
+      exactComplete: true,
+      classCount: chance.classes.length,
+      massNumerator: chance.classes.reduce((sum, chanceClass) =>
+        sum + Number(chanceClass.numerator || 0), 0),
+      massDenominator: Number(chance.classes[0]?.denominator || 1),
+      classes: chance.classes.map((chanceClass) => ({
+        classKey: String(chanceClass.classKey || ""),
+        numerator: Number(chanceClass.numerator || 0),
+        denominator: Number(chanceClass.denominator || 1),
+        strictRollOutcome: stableGraphValue(chanceClass.strictRollOutcome || {}),
+      })),
+    }),
+    chanceReasons: [],
+  }];
+}
+
+function localResponseOptions(requirement = {}, state = {}) {
   if (requirement.kind === "damage_transfer") {
     return damageTransferOptions(requirement);
   }
@@ -93,11 +212,11 @@ function localResponseOptions(requirement = {}) {
     }
     return rows;
   }
-  rows.push({
+  rows.push(...exactReactionUseOptions(requirement, {
     optionKey: `${requirement.kind}:use`,
     choice: "use",
     payload: { use: true },
-  });
+  }, state));
   return rows;
 }
 
@@ -134,7 +253,7 @@ export function buildWarmachineOpponentResponseDomainV2(
   const issues = [];
   const bucketChoiceKeys = new Set();
   const rows = requirements.map((requirement, index) => {
-    const options = localResponseOptions(requirement);
+    const options = localResponseOptions(requirement, state);
     const bucket = responseBucket(requirement);
     const projectionKey = `${bucket}:${String(requirement.choiceKey || "")}`;
     if (!requirement.choiceKey) {
@@ -164,14 +283,14 @@ export function buildWarmachineOpponentResponseDomainV2(
       responseBucket: bucket,
       options,
       localOptionCount: options.length,
+      reactionChanceOutcomeDomainComplete: requirements.length === 1 && options
+        .filter((option) => option.choice === "use")
+        .every((option) => option.chanceOutcomeExact === true),
       originalRequirement: requirement,
     });
   });
   const candidateCount = rows.reduce((product, row) =>
     product * BigInt(row.localOptionCount), 1n);
-  const hasReactionAttackUse = rows.some((row) =>
-    row.kind !== "damage_transfer" && row.options.some((option) =>
-      option.choice === "use"));
   const destinationParameterDomainComplete = rows.every((row) =>
     !row.requiresDestination);
   const damageTransferResolutionComplete = rows.every((row) =>
@@ -189,7 +308,8 @@ export function buildWarmachineOpponentResponseDomainV2(
     finiteDeclaredChoiceProductWellFormed,
     destinationParameterDomainComplete,
     reactionOrderDomainComplete,
-    reactionChanceOutcomeDomainComplete: !hasReactionAttackUse,
+    reactionChanceOutcomeDomainComplete: rows.every((row) =>
+      row.kind === "damage_transfer" || row.reactionChanceOutcomeDomainComplete === true),
     damageTransferResolutionComplete,
     opponentQuantifier: "opponent_and",
     chanceMassAssigned: false,
@@ -216,6 +336,7 @@ function selectedOptionsAtOffset(domain = {}, offset = 0n) {
       ruleKey: row.ruleKey,
       choiceKey: row.choiceKey,
       responseBucket: row.responseBucket,
+      targetPieceKey: row.targetPieceKey,
       option: row.options[optionIndex],
     };
   });
@@ -246,6 +367,7 @@ function initialCheckpoint(domain = {}) {
     strictAcceptedCount: "0",
     strictRejectedCount: "0",
     pendingSpecialResolutionCount: "0",
+    strictChanceBranchExecutionCount: "0",
     acceptedSamples: [],
     rejectedSamples: [],
   });
@@ -260,7 +382,8 @@ function checkpointValid(checkpoint = {}, domain = {}) {
     /^\d+$/.test(String(checkpoint.nextCandidateOffset || "")) &&
     /^\d+$/.test(String(checkpoint.strictAcceptedCount ?? "")) &&
     /^\d+$/.test(String(checkpoint.strictRejectedCount ?? "")) &&
-    /^\d+$/.test(String(checkpoint.pendingSpecialResolutionCount ?? ""));
+    /^\d+$/.test(String(checkpoint.pendingSpecialResolutionCount ?? "")) &&
+    /^\d+$/.test(String(checkpoint.strictChanceBranchExecutionCount ?? ""));
 }
 
 function sealCheckpoint(checkpoint = {}) {
@@ -271,6 +394,10 @@ function sealCheckpoint(checkpoint = {}) {
 
 function increment(checkpoint = {}, key = "") {
   checkpoint[key] = (BigInt(checkpoint[key] || "0") + 1n).toString();
+}
+
+function incrementBy(checkpoint = {}, key = "", amount = 0) {
+  checkpoint[key] = (BigInt(checkpoint[key] || "0") + BigInt(amount)).toString();
 }
 
 export function advanceWarmachineOpponentResponseWorklistV2(
@@ -305,37 +432,108 @@ export function advanceWarmachineOpponentResponseWorklistV2(
   let consumed = 0;
   while (cursor < total && consumed < candidateBudget) {
     const selectedOptions = selectedOptionsAtOffset(domain, cursor);
-    const choices = humanReactionChoices(selectedOptions);
     const damageTransferPending = selectedOptions.some((selected) =>
       selected.kind === "damage_transfer");
     let transition = null;
+    let branchTransitions = [];
+    let successorChanceDistribution = [];
     let status = "pending_special_resolution";
     if (!damageTransferPending) {
-      const strictAction = buildWarmachineRulesV1ActionWithStrictRngOutcome(
-        action,
-        {
-          room: {
-            id: `opponent-response-v2-${domain.opponentResponseDomainHash}-${cursor}`,
-            game: {
-              round: state.turnNumber,
-              turnNumber: state.turnNumber,
-              activeSideKey: state.activeSideKey,
+      const exactChanceSelection = domain.reactionChanceOutcomeDomainComplete === true
+        ? selectedOptions.find((selected) =>
+            selected.option.choice === "use" &&
+            selected.option.chanceOutcomeExact === true &&
+            selected.option.chanceModel?.exactComplete === true)
+        : null;
+      const chanceClasses = exactChanceSelection
+        ? array(exactChanceSelection.option.chanceModel.classes)
+        : [null];
+      for (const [chanceIndex, chanceClass] of chanceClasses.entries()) {
+        const branchSelectedOptions = selectedOptions.map((selected) => {
+          if (selected !== exactChanceSelection || !chanceClass) return selected;
+          return {
+            ...selected,
+            option: {
+              ...selected.option,
+              payload: {
+                ...(selected.option.payload || {}),
+                ...stableGraphValue(chanceClass.strictRollOutcome || {}),
+              },
             },
+          };
+        });
+        const choices = humanReactionChoices(branchSelectedOptions);
+        const strictAction = buildWarmachineRulesV1ActionWithStrictRngOutcome(
+          action,
+          {
+            room: {
+              id: `opponent-response-v2-${domain.opponentResponseDomainHash}-${cursor}-chance-${chanceIndex}`,
+              game: {
+                round: state.turnNumber,
+                turnNumber: state.turnNumber,
+                activeSideKey: state.activeSideKey,
+              },
+            },
+            sourceContext: {
+              rulesV1State: state,
+              rulesV1Enumeration: enumeration,
+            },
+            selectedActionKey: action.actionKey,
+            reactionResolutionPolicy: "bot_confirmed",
+            humanReactionChoices: choices,
           },
-          sourceContext: {
-            rulesV1State: state,
-            rulesV1Enumeration: enumeration,
-          },
-          selectedActionKey: action.actionKey,
-          reactionResolutionPolicy: "bot_confirmed",
-          humanReactionChoices: choices,
-        },
-      );
-      transition = applyRulesV1Action(state, {
-        ...strictAction,
-        __warmachineTrustedRulesV1Enumeration: enumeration,
-      });
-      status = transition.ok === true ? "strict_accepted" : "strict_rejected";
+        );
+        const strictRollOutcome = strictAction.metadata?.strictRollOutcome || {};
+        for (const selected of branchSelectedOptions.filter((entry) =>
+          entry.option.chanceOutcomeExact === true && entry.kind !== "damage_transfer")) {
+          const exactPayload = {
+            reactivePieceKey: selected.choiceKey,
+            targetPieceKey: selected.targetPieceKey,
+            ruleKey: selected.ruleKey,
+            ...stableGraphValue(selected.option.payload || {}),
+          };
+          strictRollOutcome[selected.responseBucket] ||= {};
+          strictRollOutcome[selected.responseBucket][selected.choiceKey] = exactPayload;
+        }
+        strictAction.metadata = {
+          ...(strictAction.metadata || {}),
+          strictRollOutcome,
+        };
+        const branchTransition = applyRulesV1Action(state, {
+          ...strictAction,
+          __warmachineTrustedRulesV1Enumeration: enumeration,
+        });
+        branchTransitions.push({ chanceClass, transition: branchTransition });
+      }
+      transition = branchTransitions[0]?.transition || null;
+      status = branchTransitions.every((entry) => entry.transition?.ok === true)
+        ? "strict_accepted"
+        : "strict_rejected";
+      incrementBy(checkpoint, "strictChanceBranchExecutionCount", branchTransitions.length);
+      if (exactChanceSelection) {
+        const bySuccessor = new Map();
+        for (const { chanceClass, transition: branchTransition } of branchTransitions) {
+          const accepted = branchTransition?.ok === true;
+          const successorKey = accepted
+            ? warmachineRuleBehaviorStateHashV1(branchTransition.nextState)
+            : `rejected:${String(branchTransition?.reason || "unknown")}`;
+          const prior = bySuccessor.get(successorKey) || {
+            successorRuleBehaviorStateHash: accepted ? successorKey : "",
+            strictRejectedReason: accepted ? "" : String(branchTransition?.reason || ""),
+            numerator: 0,
+            denominator: Number(chanceClass?.denominator || 1),
+            chanceClassKeys: [],
+          };
+          prior.numerator += Number(chanceClass?.numerator || 0);
+          prior.chanceClassKeys.push(String(chanceClass?.classKey || ""));
+          bySuccessor.set(successorKey, prior);
+        }
+        successorChanceDistribution = [...bySuccessor.values()]
+          .map((entry) => ({ ...entry, chanceClassKeys: uniqueSorted(entry.chanceClassKeys) }))
+          .sort((left, right) =>
+            String(left.successorRuleBehaviorStateHash || left.strictRejectedReason)
+              .localeCompare(String(right.successorRuleBehaviorStateHash || right.strictRejectedReason)));
+      }
     }
     const decision = stableGraphValue({
       candidateOffset: cursor.toString(),
@@ -347,14 +545,21 @@ export function advanceWarmachineOpponentResponseWorklistV2(
         destinationOptionId: selected.option.destinationOptionId || "",
         actionKey: selected.option.actionKey || "",
         recipientPieceKey: selected.option.recipientPieceKey || "",
+        chanceOutcomeExact: selected.option.chanceOutcomeExact === true,
+        chanceClassCount: Number(selected.option.chanceModel?.classCount || 0),
+        chanceMassNumerator: selected.option.chanceModel?.massNumerator ?? null,
+        chanceMassDenominator: selected.option.chanceModel?.massDenominator ?? null,
       })),
       status,
-      transitionReason: String(transition?.reason || ""),
-      successorRuleBehaviorStateHash: transition?.ok === true
+      transitionReason: uniqueSorted(branchTransitions.map((entry) =>
+        String(entry.transition?.reason || ""))).filter(Boolean).join(","),
+      successorRuleBehaviorStateHash: branchTransitions.length === 1 && transition?.ok === true
         ? warmachineRuleBehaviorStateHashV1(transition.nextState)
         : "",
-      transitionEventTypes: uniqueSorted(array(transition?.events).map((event) =>
-        event.eventType)),
+      successorChanceDistribution,
+      chanceBranchExecutionCount: branchTransitions.length,
+      transitionEventTypes: uniqueSorted(branchTransitions.flatMap((entry) =>
+        array(entry.transition?.events).map((event) => event.eventType))),
     });
     checkpoint.strictDecisionLedgerHash = stableGraphHash(stableGraphValue({
       previousStrictDecisionLedgerHash: checkpoint.strictDecisionLedgerHash,
@@ -426,6 +631,7 @@ export function advanceWarmachineOpponentResponseWorklistV2(
     strictAcceptedCount: checkpoint.strictAcceptedCount,
     strictRejectedCount: checkpoint.strictRejectedCount,
     pendingSpecialResolutionCount: checkpoint.pendingSpecialResolutionCount,
+    strictChanceBranchExecutionCount: checkpoint.strictChanceBranchExecutionCount,
     strictDecisionLedgerHash: checkpoint.strictDecisionLedgerHash,
     acceptedSamples: checkpoint.acceptedSamples,
     rejectedSamples: checkpoint.rejectedSamples,
