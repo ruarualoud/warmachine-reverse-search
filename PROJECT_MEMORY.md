@@ -1,5 +1,16 @@
 # Project Memory
 
+- 2026-09-15 durable sequential enemy-enter reaction invariant: when one moved
+  model opens multiple optional Countercharge/Admonition/Pursuit reactions, the
+  Engine owns an explicit opponent decision window and re-enumerates eligibility
+  after each accepted decline/use response. Search advances that Host window one
+  response at a time and retains the concrete successor state; it must not treat
+  the old Cartesian product as an adaptive response tree. Malformed, stale or
+  owner-ambiguous declared windows fail closed. This proof is limited to exactly
+  one moved model: multi-model Unit/simultaneous placement, Free Strike, damage
+  transfer, complete reaction Chance and other compound protocols remain open in
+  Ticket 20a.2.
+
 - 2026-09-15 durable focused-receipt scope invariant: the immutable Engine
   `296/296` source receipt preserves its complete `1188`-file certification
   closure, but Search currentness is determined by the certified

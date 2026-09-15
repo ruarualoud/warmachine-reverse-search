@@ -12,7 +12,8 @@ Part of: ../map.md
 以下为本工单剩余开发及新增验收，当前全部待实现/待验收，不因写入计划计完成。
 
 - [x] 20a：从Host输出当前窗口的决策方、可用离散选项、参数域、稳定游标和未闭合原因；复用既有response domain，而非把少数destination probes称为完整回应。
-- [ ] 20a：按状态顺序兑现回应；前一个回应改变资格、资源、活模型或时点后重新查询下一窗口。只有依赖证明允许时，才能一次性展开独立选择的笛卡尔积。
+- [x] 20a.1：单个移动主体触发的敌方进入反应按状态顺序兑现；前一个回应后由Host重新计算剩余资格、目的地、活模型和时点，不再将多个Countercharge静态笛卡尔积冒充顺序域。
+- [ ] 20a.2：把同一顺序窗口协议扩展到多模型Unit/同时落位、Free Strike、伤害转移及其它复合回应；只有依赖证明允许时，才能一次性展开独立选择的笛卡尔积。
 - [ ] 20b：闭合声明任务的连续位置/路线、Unit联合攻击和激活顺序；有限见证、量化域穷尽、物理连续等价三个证书分别输出。
 - [ ] 验收包含有/无合法decline、同一终点不同反应路径、回应后新增/消失选项、多个同窗选择顺序及随机结果之后才能决定的参数；缺任一轴时保持unresolved。
 - [ ] 20a的研究接口可供21a先用保守区间，不能冒充20最终完成。原下方六项是20b的闭包路线；最终完成仍受23规则认证和全部传播义务约束。
@@ -60,7 +61,7 @@ Implementation design: `docs/continuous-action-domain-v1.md`
 ## Current Evidence
 
 - 2026-09-11 20a当前窗口收据：`current-decision-window-domain-v1` 从单次Host枚举保留全部accepted/rejected动作对象，输出Host的`decisionSideKey`、动作族、已声明离散参数、连续坐标债务、逐动作对手回应域摘要和内容绑定分页游标。它现直接消费Host的strict continuation/activation window合同，选中一个Host动作后严格执行并从后继状态重新枚举，不授权将响应做静态笛卡尔积。现有`micro_single_advance_moves_model`执行烟雾将`10`个Host动作按`3 + 7`稳定分页，选择`runner:pass:v1`后重枚举到`1`个后继选项，决策方为`player1`且账目守恒；当前Engine总收据未认证，因此正确保持`currentWindowStrictComplete=false`、`strategyValuePublicationAllowed=false`。多个同时回应的中间Host状态/优先级仍是本工单第二项债务。
-- 2026-09-11 多回应fail-closed证据：同一`advance`同时触发两个Countercharge时，Host动作元数据包含`2`个需求，现有声明选项产品为`48`个候选，但动作前没有strict continuation flag或中间Host状态。新窗口收据因此输出`sequentialResponsePrefixStateAvailable=false`、`dynamicEligibilityReevaluationComplete=false`、`independentCartesianExpansionAuthorized=false`，并保留`multiple_response_host_prefix_state_unavailable`。Engine内部能按显式完整顺序执行一条组合，但这只证明该组合路线，不证明后续回应候选域完备。
+- 2026-09-15 单移动主体多回应纵切：Engine新增可恢复的`enemyEnterReactionWindow`，并通过Layer3严格继续窗口合同公开。源移动落地后，Host只枚举当前仍合法的下一项Countercharge/Defensive Strike/Admonition/Pursuit放弃或使用动作；每次选择后从更新状态重新计算剩余反应和目的地，再以封存源输入恢复动作后半段。Search当前窗口会主动采用该协议并返回哈希绑定的`successorState`。双Countercharge实际证明：放弃第一项后仅第二反应者保留；第一项使用并击杀移动者后第二窗口消失。旧单反应`9/9`、Bot反应桥和Host handoff均保持通过。该能力仅认证单移动主体；Unit多模型/同时落位、Free Strike、伤害转移、连续目的地穷尽和精确Chance仍是20a.2/20b债务。
 
 - Engine `npm run verify:movement-geometry-predicate-plan`：来源绑定的 advance/run 谓词、三类地形几何、模型障碍、路径债务、输入顺序不变性和真实 strict advance。
 - Engine `npm run verify:movement-geometry-endpoint`：由 Engine 自己对任意量化终点求值全部 Host 谓词与事件区域，覆盖矩形、圆、旋转圆角矩形、模型底盘边界、粗糙地形签名、无效输入和无 Chance 质量；该收据只分类终点，不声称路径可达。

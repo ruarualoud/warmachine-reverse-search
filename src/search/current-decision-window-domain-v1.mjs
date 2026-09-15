@@ -5,6 +5,7 @@ import {
   WARMACHINE_STRICT_ACTIVATION_WINDOW_CONTRACT,
   WARMACHINE_STRICT_CONTINUATION_WINDOW_CONTRACT,
   applyRulesV1Action,
+  buildWarmachineRulesV1ActionWithStrictRngOutcome,
   enumerateRulesV1Actions,
   normalizeRulesV1State,
   strictExternalDecisionBoundaryFromEnumeration,
@@ -157,7 +158,8 @@ function responseSummary(action = {}, enumeration = {}, windowContext = {}) {
     enumeration,
     windowContext,
   );
-  const sequentialResponsePrefixStateAvailable = domain.requirementCount <= 1;
+  const sequentialResponsePrefixStateAvailable = domain.requirementCount <= 1 ||
+    action.metadata?.sequentialEnemyEnterReactionWindowSupported === true;
   return stableGraphValue({
     opponentResponseDomainHash: domain.opponentResponseDomainHash,
     requirementCount: domain.requirementCount,
@@ -179,6 +181,11 @@ function responseSummary(action = {}, enumeration = {}, windowContext = {}) {
     sequentialResponsePrefixStateAvailable,
     dynamicEligibilityReevaluationComplete:
       sequentialResponsePrefixStateAvailable,
+    sequentialReactionWindowSupported:
+      action.metadata?.sequentialEnemyEnterReactionWindowSupported === true,
+    sequentialReactionWindowScope: String(
+      action.metadata?.sequentialEnemyEnterReactionWindowScope || "",
+    ),
     independentCartesianExpansionAuthorized: false,
   });
 }
@@ -533,6 +540,61 @@ function selectedActionWithPatch(action = {}, patch = {}) {
   });
 }
 
+function strictCurrentWindowAction(
+  action = {},
+  state = {},
+  enumeration = {},
+) {
+  if (action.metadata?.enemyEnterReactionWindowDecision === true) {
+    const choiceKey = String(action.metadata?.reactionChoiceKey || action.actorPieceKey || "");
+    const use = action.metadata?.reactionChoice === "use";
+    return buildWarmachineRulesV1ActionWithStrictRngOutcome(action, {
+      room: {
+        id: `current-window-reaction-${String(state.stateKey || "state")}`,
+        game: {
+          round: state.turnNumber,
+          turnNumber: state.turnNumber,
+          activeSideKey: state.activeSideKey,
+        },
+      },
+      sourceContext: {
+        rulesV1State: state,
+        rulesV1Enumeration: enumeration,
+      },
+      selectedActionKey: action.actionKey,
+      reactionResolutionPolicy: "bot_confirmed",
+      humanReactionChoices: {
+        reactionOutcomesByReactor: {
+          [choiceKey]: use
+            ? {
+                use: true,
+                destinationOptionId: String(
+                  action.metadata?.destinationOptionId || "",
+                ),
+                destination: action.metadata?.reactionDestination ||
+                  action.destination || null,
+              }
+            : { decline: true },
+        },
+      },
+    });
+  }
+  if (
+    array(action.metadata?.reactionResolutionRequirements).length > 0 &&
+    action.metadata?.sequentialEnemyEnterReactionWindowSupported === true
+  ) {
+    return stableGraphValue({
+      ...action,
+      metadata: {
+        ...(action.metadata || {}),
+        strictSequentialEnemyEnterReactionResolution: true,
+        strictSequentialEnemyEnterReactionOrderPrefix: [],
+      },
+    });
+  }
+  return action;
+}
+
 export function advanceWarmachineCurrentDecisionWindowV1(
   inputState = {},
   selectedActionKey = "",
@@ -546,7 +608,11 @@ export function advanceWarmachineCurrentDecisionWindowV1(
   if (!action) {
     throw new Error("current_decision_window_action_not_host_accepted");
   }
-  const selectedAction = selectedActionWithPatch(action, options.actionPatch || {});
+  const selectedAction = strictCurrentWindowAction(
+    selectedActionWithPatch(action, options.actionPatch || {}),
+    state,
+    enumeration,
+  );
   const transition = applyRulesV1Action(state, {
     ...selectedAction,
     __warmachineTrustedRulesV1Enumeration: enumeration,
@@ -588,6 +654,7 @@ export function advanceWarmachineCurrentDecisionWindowV1(
   });
   return {
     ...core,
+    successorState,
     currentDecisionWindowTransitionHash: stableGraphHash(core),
   };
 }
