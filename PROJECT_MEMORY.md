@@ -1,5 +1,15 @@
 # Project Memory
 
+- 2026-09-15 durable legacy Free Strike path invariant: explicit
+  `legacy_free_strike` movement now computes base-aware melee-range exits along
+  the declared path, interrupts the mover at each exact exit point and resolves
+  different points in path order; the inactive player's supplied order applies
+  only to reactions sharing a point. The interrupt stores traversed and
+  remaining route evidence, and a result that prevents further movement closes
+  later path groups. Current MKIV disengagement is unchanged. Post-hit forced
+  movement that rewrites the remaining route and repeated exits against the
+  same enemy remain fail-closed rather than approximated.
+
 - 2026-09-15 durable atomic multi-model placement boundary: Graveyard Shift
   and Thrall Crafting now retain every rule/reactor/target/event placement
   reaction and use the same opponent-owned adaptive Host window as Unit
