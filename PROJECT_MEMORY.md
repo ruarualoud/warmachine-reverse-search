@@ -8,6 +8,16 @@
   continuous destination, path-class or successor-stability proof; those remain
   independent Ticket 20 obligations.
 
+- 2026-09-15 durable parameterized Pursuit response invariant: Search may add a
+  cent-inch Pursuit destination proposal only when it binds one Host requirement
+  by rule, owner and trigger target and preserves the selected battlegroup model,
+  endpoint and complete path. The proposal is not outcome-complete on admission;
+  one strict Host execution may certify its deterministic successor and remove
+  its Chance debt. Any finite set of accepted proposals still leaves the
+  continuous destination denominator open. The current interface is deliberately
+  limited to one Pursuit requirement; Countercharge, Admonition and compound
+  response scopes need their own contracts.
+
 - 2026-09-15 durable reaction Chance boundary: strict enemy-enter reaction
   requirements must carry the same structured target `specialRuleAnalysis` as
   normal attacks. Search may admit target rules only through that exact semantic

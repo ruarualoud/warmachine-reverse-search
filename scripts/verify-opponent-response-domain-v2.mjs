@@ -424,6 +424,39 @@ assert.equal(pursuitProjectionDomain.reactionChanceOutcomeDomainComplete, true,
   "a Pursuit move with no fall or other outcome requirement has no unresolved Chance axis");
 assert.equal(pursuitProjectionDomain.destinationParameterDomainComplete, false,
   "deterministic reaction execution must not falsely close its continuous destination domain");
+const pursuitParameterizedDomain = buildWarmachineOpponentResponseDomainV2(
+  pursuitProjectionAction,
+  enumeration,
+  {
+    parameterizedDestinationProposals: [{
+      proposalKey: "pursuit-two-segment-search-proposal",
+      ruleKey: "pursuit",
+      ownerPieceKey: "reactor",
+      targetPieceKey: "mover",
+      selectedMovedModelPieceKey: "reactor",
+      destination: { xIn: 16, yIn: 9 },
+      movementPathPoints: [
+        { xIn: 14, yIn: 8 },
+        { xIn: 15, yIn: 8 },
+        { xIn: 16, yIn: 9 },
+      ],
+    }],
+  },
+);
+const pursuitParameterizedUse = pursuitParameterizedDomain.requirementRows[0].options.find((option) =>
+  option.parameterizedDestinationProposalKey === "pursuit-two-segment-search-proposal");
+assert.ok(pursuitParameterizedUse,
+  "Search must retain an exact parameterized Pursuit path for strict Engine validation");
+assert.equal(pursuitParameterizedUse.payload.selectedMovedModelPieceKey, "reactor");
+assert.deepEqual(pursuitParameterizedUse.payload.movementPathPoints, [
+  { xIn: 14, yIn: 8 },
+  { xIn: 15, yIn: 8 },
+  { xIn: 16, yIn: 9 },
+]);
+assert.equal(pursuitParameterizedUse.chanceOutcomeExact, false,
+  "a Search-proposed route cannot claim its reaction outcome complete before strict execution");
+assert.equal(pursuitParameterizedDomain.reactionChanceOutcomeDomainComplete, false);
+assert.equal(pursuitParameterizedDomain.destinationParameterDomainComplete, false);
 
 const defensiveStrikeState = buildWarmachineRulesV1StateFromLayer3Room(
   defensiveStrikeRoom(),

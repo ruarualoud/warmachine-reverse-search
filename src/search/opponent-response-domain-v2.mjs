@@ -26,6 +26,27 @@ function uniqueSorted(values = []) {
   return [...new Set(values.map(String).filter(Boolean))].sort();
 }
 
+function finiteQuantizedPoint(value = {}) {
+  const xIn = Number(value?.xIn);
+  const yIn = Number(value?.yIn);
+  if (!Number.isFinite(xIn) || !Number.isFinite(yIn) ||
+      Math.abs(xIn * 100 - Math.round(xIn * 100)) > 1e-8 ||
+      Math.abs(yIn * 100 - Math.round(yIn * 100)) > 1e-8) {
+    return null;
+  }
+  return {
+    xIn: Number(xIn.toFixed(2)),
+    yIn: Number(yIn.toFixed(2)),
+  };
+}
+
+function samePoint(left = {}, right = {}) {
+  return Math.hypot(
+    Number(left.xIn) - Number(right.xIn),
+    Number(left.yIn) - Number(right.yIn),
+  ) <= 0.001;
+}
+
 function validReceipt(value = {}, hashKey = "") {
   const hash = String(value[hashKey] || "");
   if (!hash) return false;
@@ -175,7 +196,77 @@ function exactReactionUseOptions(requirement = {}, baseOption = {}, state = {}) 
   }];
 }
 
-function localResponseOptions(requirement = {}, state = {}) {
+function normalizeParameterizedDestinationProposals(options = {}) {
+  const issues = [];
+  const seenKeys = new Set();
+  const rows = array(options.parameterizedDestinationProposals).map((proposal, index) => {
+    const proposalKey = String(proposal?.proposalKey || "");
+    const ruleKey = String(proposal?.ruleKey || "");
+    const ownerPieceKey = String(
+      proposal?.ownerPieceKey || proposal?.reactivePieceKey || "",
+    );
+    const targetPieceKey = String(proposal?.targetPieceKey || "");
+    const choiceKey = String(proposal?.choiceKey || "");
+    const selectedMovedModelPieceKey = String(
+      proposal?.selectedMovedModelPieceKey || "",
+    );
+    const movementPathPoints = array(proposal?.movementPathPoints)
+      .map(finiteQuantizedPoint);
+    const destination = finiteQuantizedPoint(proposal?.destination);
+    const prefix = `parameterized_destination_proposal_${index}`;
+    if (!proposalKey) issues.push(`${prefix}_key_missing`);
+    if (proposalKey && seenKeys.has(proposalKey)) {
+      issues.push(`${prefix}_key_duplicate:${proposalKey}`);
+    }
+    seenKeys.add(proposalKey);
+    if (!ruleKey || !ownerPieceKey || !targetPieceKey) {
+      issues.push(`${prefix}_requirement_identity_missing`);
+    }
+    if (ruleKey && ruleKey !== "pursuit") {
+      issues.push(`${prefix}_rule_not_supported:${ruleKey}`);
+    }
+    if (!selectedMovedModelPieceKey) {
+      issues.push(`${prefix}_selected_moved_model_missing`);
+    }
+    if (!movementPathPoints.length || movementPathPoints.some((point) => !point)) {
+      issues.push(`${prefix}_path_invalid_or_not_cent_inch_quantized`);
+    }
+    if (!destination) {
+      issues.push(`${prefix}_destination_invalid_or_not_cent_inch_quantized`);
+    } else if (movementPathPoints.length &&
+        movementPathPoints.every(Boolean) &&
+        !samePoint(movementPathPoints.at(-1), destination)) {
+      issues.push(`${prefix}_path_destination_mismatch`);
+    }
+    return stableGraphValue({
+      proposalKey,
+      ruleKey,
+      ownerPieceKey,
+      targetPieceKey,
+      choiceKey,
+      selectedMovedModelPieceKey,
+      destination,
+      movementPathPoints: movementPathPoints.filter(Boolean),
+    });
+  });
+  return { rows, issues: uniqueSorted(issues) };
+}
+
+function parameterizedProposalMatchesRequirement(proposal = {}, requirement = {}) {
+  if (proposal.choiceKey &&
+      proposal.choiceKey !== String(requirement.choiceKey || "")) {
+    return false;
+  }
+  return proposal.ruleKey === String(requirement.ruleKey || "") &&
+    proposal.ownerPieceKey === String(requirement.ownerPieceKey || "") &&
+    proposal.targetPieceKey === String(requirement.targetPieceKey || "");
+}
+
+function localResponseOptions(
+  requirement = {},
+  state = {},
+  parameterizedDestinationProposals = [],
+) {
   if (requirement.kind === "damage_transfer") {
     return damageTransferOptions(requirement);
   }
@@ -201,6 +292,7 @@ function localResponseOptions(requirement = {}, state = {}) {
       rows.push({
         optionKey: `${requirement.kind}:use:${String(destination.optionId || "")}`,
         choice: "use",
+        optionSource: "host_declared_destination_probe",
         destinationOptionId: String(destination.optionId || ""),
         destination: destination.destination || null,
         payload: {
@@ -219,6 +311,35 @@ function localResponseOptions(requirement = {}, state = {}) {
         chanceReasons: deterministicNonAttackDestination
           ? []
           : ["reaction_destination_attack_or_outcome_chance_unresolved"],
+      });
+    }
+    const existingPayloadHashes = new Set(rows
+      .filter((row) => row.choice === "use")
+      .map((row) => stableGraphHash(stableGraphValue(row.payload || {}))));
+    for (const proposal of parameterizedDestinationProposals) {
+      const payload = stableGraphValue({
+        use: true,
+        selectedMovedModelPieceKey: proposal.selectedMovedModelPieceKey,
+        destination: proposal.destination,
+        movementPathPoints: proposal.movementPathPoints,
+      });
+      const payloadHash = stableGraphHash(payload);
+      if (existingPayloadHashes.has(payloadHash)) continue;
+      existingPayloadHashes.add(payloadHash);
+      rows.push({
+        optionKey: `${requirement.kind}:use:parameterized:${proposal.proposalKey}`,
+        choice: "use",
+        optionSource: "search_parameterized_destination_proposal",
+        destinationOptionId: `parameterized:${proposal.proposalKey}`,
+        parameterizedDestinationProposalKey: proposal.proposalKey,
+        destination: proposal.destination,
+        payload,
+        chanceOutcomeExact: false,
+        chanceRequired: false,
+        chanceRequirementUnknown: true,
+        chanceReasons: [
+          "parameterized_reaction_destination_outcome_requires_strict_execution",
+        ],
       });
     }
     return rows;
@@ -261,10 +382,26 @@ export function buildWarmachineOpponentResponseDomainV2(
     { rulesV1State: state, rulesV1Enumeration: enumeration },
     state.activeSideKey,
   );
-  const issues = [];
+  const parameterizedDestinationProposals =
+    normalizeParameterizedDestinationProposals(options);
+  const issues = [...parameterizedDestinationProposals.issues];
+  if (parameterizedDestinationProposals.rows.length && requirements.length !== 1) {
+    issues.push("parameterized_destination_proposals_require_single_reaction_scope");
+  }
+  for (const proposal of parameterizedDestinationProposals.rows) {
+    const matchCount = requirements.filter((requirement) =>
+      parameterizedProposalMatchesRequirement(proposal, requirement)).length;
+    if (matchCount !== 1) {
+      issues.push(
+        `parameterized_destination_proposal_requirement_match_count:${proposal.proposalKey}:${matchCount}`,
+      );
+    }
+  }
   const bucketChoiceKeys = new Set();
   const rows = requirements.map((requirement, index) => {
-    const options = localResponseOptions(requirement, state);
+    const matchedProposals = parameterizedDestinationProposals.rows.filter((proposal) =>
+      parameterizedProposalMatchesRequirement(proposal, requirement));
+    const options = localResponseOptions(requirement, state, matchedProposals);
     const bucket = responseBucket(requirement);
     const projectionKey = `${bucket}:${String(requirement.choiceKey || "")}`;
     if (!requirement.choiceKey) {
@@ -294,6 +431,7 @@ export function buildWarmachineOpponentResponseDomainV2(
       responseBucket: bucket,
       options,
       localOptionCount: options.length,
+      parameterizedDestinationProposalCount: matchedProposals.length,
       reactionChanceOutcomeDomainComplete: requirements.length === 1 && options
         .filter((option) => option.choice === "use")
         .every((option) => option.chanceOutcomeExact === true),
@@ -307,6 +445,11 @@ export function buildWarmachineOpponentResponseDomainV2(
   const damageTransferResolutionComplete = rows.every((row) =>
     row.kind !== "damage_transfer");
   const reactionOrderDomainComplete = rows.length <= 1;
+  const declaredDestinationProbeChanceOutcomeDomainComplete = rows.every((row) =>
+    row.kind === "damage_transfer" || row.options
+      .filter((option) => option.choice === "use" &&
+        !option.parameterizedDestinationProposalKey)
+      .every((option) => option.chanceOutcomeExact === true));
   const chanceMassAssigned = rows.some((row) => row.options.some((option) =>
     option.chanceRequired === true &&
     option.chanceOutcomeExact === true &&
@@ -319,18 +462,21 @@ export function buildWarmachineOpponentResponseDomainV2(
     actingSideKey: String(state.activeSideKey || ""),
     requirementRows: rows,
     requirementCount: rows.length,
+    parameterizedDestinationProposalCount:
+      parameterizedDestinationProposals.rows.length,
     declaredFiniteChoiceCandidateCount: candidateCount.toString(),
     finiteDeclaredChoiceProductWellFormed,
     destinationParameterDomainComplete,
     reactionOrderDomainComplete,
     reactionChanceOutcomeDomainComplete: rows.every((row) =>
       row.kind === "damage_transfer" || row.reactionChanceOutcomeDomainComplete === true),
+    declaredDestinationProbeChanceOutcomeDomainComplete,
     damageTransferResolutionComplete,
     opponentQuantifier: "opponent_and",
     chanceMassAssigned,
     validationIssues: uniqueSorted(issues),
     claimBoundary:
-      "This domain preserves every opponent-owned requirement projected by the current Host and every declared finite use/decline, destination-probe or damage-transfer option. It does not treat the current finite destination probes as a complete continuous destination domain, does not invent alternate reaction priority orders, and does not replace reaction attack dice with decision probability. Those remain independent completion debts.",
+      "This domain preserves every opponent-owned requirement projected by the current Host, every declared finite use/decline, destination-probe or damage-transfer option, and structurally bound cent-inch parameterized destination proposals awaiting strict Host execution. It does not treat Host probes or Search proposals as a complete continuous destination domain, does not invent alternate reaction priority orders, and does not replace reaction attack dice with decision probability. Those remain independent completion debts.",
   });
   return {
     ...core,
@@ -383,6 +529,9 @@ function initialCheckpoint(domain = {}) {
     strictRejectedCount: "0",
     pendingSpecialResolutionCount: "0",
     strictChanceBranchExecutionCount: "0",
+    parameterizedDestinationProposalExecutionCount: "0",
+    parameterizedDestinationProposalExactOutcomeCount: "0",
+    parameterizedDestinationProposalUnresolvedCount: "0",
     acceptedSamples: [],
     rejectedSamples: [],
   });
@@ -398,7 +547,16 @@ function checkpointValid(checkpoint = {}, domain = {}) {
     /^\d+$/.test(String(checkpoint.strictAcceptedCount ?? "")) &&
     /^\d+$/.test(String(checkpoint.strictRejectedCount ?? "")) &&
     /^\d+$/.test(String(checkpoint.pendingSpecialResolutionCount ?? "")) &&
-    /^\d+$/.test(String(checkpoint.strictChanceBranchExecutionCount ?? ""));
+    /^\d+$/.test(String(checkpoint.strictChanceBranchExecutionCount ?? "")) &&
+    /^\d+$/.test(String(
+      checkpoint.parameterizedDestinationProposalExecutionCount ?? "",
+    )) &&
+    /^\d+$/.test(String(
+      checkpoint.parameterizedDestinationProposalExactOutcomeCount ?? "",
+    )) &&
+    /^\d+$/.test(String(
+      checkpoint.parameterizedDestinationProposalUnresolvedCount ?? "",
+    ));
 }
 
 function sealCheckpoint(checkpoint = {}) {
@@ -425,7 +583,14 @@ export function advanceWarmachineOpponentResponseWorklistV2(
   const action = array(enumeration.actions).find((candidate) =>
     candidate.actionKey === actionKey) || null;
   if (!action) throw new Error("opponent_response_action_not_in_current_host_enumeration");
-  const domain = buildWarmachineOpponentResponseDomainV2(action, enumeration);
+  const domain = buildWarmachineOpponentResponseDomainV2(
+    action,
+    enumeration,
+    {
+      parameterizedDestinationProposals:
+        options.parameterizedDestinationProposals,
+    },
+  );
   if (!domain.finiteDeclaredChoiceProductWellFormed) {
     throw new Error(`opponent_response_domain_invalid:${domain.validationIssues.join(",")}`);
   }
@@ -560,6 +725,8 @@ export function advanceWarmachineOpponentResponseWorklistV2(
         destinationOptionId: selected.option.destinationOptionId || "",
         actionKey: selected.option.actionKey || "",
         recipientPieceKey: selected.option.recipientPieceKey || "",
+        parameterizedDestinationProposalKey:
+          selected.option.parameterizedDestinationProposalKey || "",
         chanceOutcomeExact: selected.option.chanceOutcomeExact === true,
         chanceClassCount: Number(selected.option.chanceModel?.classCount || 0),
         chanceMassNumerator: selected.option.chanceModel?.massNumerator ?? null,
@@ -576,6 +743,25 @@ export function advanceWarmachineOpponentResponseWorklistV2(
       transitionEventTypes: uniqueSorted(branchTransitions.flatMap((entry) =>
         array(entry.transition?.events).map((event) => event.eventType))),
     });
+    const parameterizedSelections = selectedOptions.filter((selected) =>
+      selected.option.parameterizedDestinationProposalKey);
+    incrementBy(
+      checkpoint,
+      "parameterizedDestinationProposalExecutionCount",
+      parameterizedSelections.length,
+    );
+    if (parameterizedSelections.length) {
+      const exactDeterministicOutcome = status === "strict_accepted" &&
+        branchTransitions.length === 1 &&
+        branchTransitions[0]?.transition?.ok === true;
+      incrementBy(
+        checkpoint,
+        exactDeterministicOutcome
+          ? "parameterizedDestinationProposalExactOutcomeCount"
+          : "parameterizedDestinationProposalUnresolvedCount",
+        parameterizedSelections.length,
+      );
+    }
     checkpoint.strictDecisionLedgerHash = stableGraphHash(stableGraphValue({
       previousStrictDecisionLedgerHash: checkpoint.strictDecisionLedgerHash,
       decision,
@@ -603,11 +789,26 @@ export function advanceWarmachineOpponentResponseWorklistV2(
     BigInt(checkpoint.strictRejectedCount) +
     BigInt(checkpoint.pendingSpecialResolutionCount);
   const accountingConserved = accounted === cursor;
+  const parameterizedDestinationProposalOutcomeDomainComplete =
+    domain.parameterizedDestinationProposalCount === 0 || (
+      declaredFiniteChoiceProductComplete &&
+      BigInt(checkpoint.parameterizedDestinationProposalExecutionCount) ===
+        BigInt(domain.parameterizedDestinationProposalCount) &&
+      BigInt(checkpoint.parameterizedDestinationProposalExactOutcomeCount) ===
+        BigInt(domain.parameterizedDestinationProposalCount) &&
+      BigInt(checkpoint.parameterizedDestinationProposalUnresolvedCount) === 0n
+    );
+  const reactionChanceOutcomeDomainComplete =
+    domain.reactionChanceOutcomeDomainComplete || (
+      domain.parameterizedDestinationProposalCount > 0 &&
+      domain.declaredDestinationProbeChanceOutcomeDomainComplete === true &&
+      parameterizedDestinationProposalOutcomeDomainComplete
+    );
   const opponentResponseDomainComplete =
     declaredFiniteChoiceProductComplete &&
     domain.destinationParameterDomainComplete &&
     domain.reactionOrderDomainComplete &&
-    domain.reactionChanceOutcomeDomainComplete &&
+    reactionChanceOutcomeDomainComplete &&
     domain.damageTransferResolutionComplete &&
     BigInt(checkpoint.strictRejectedCount) === 0n &&
     BigInt(checkpoint.pendingSpecialResolutionCount) === 0n;
@@ -621,7 +822,7 @@ export function advanceWarmachineOpponentResponseWorklistV2(
     ...(!domain.reactionOrderDomainComplete
       ? ["opponent_reaction_priority_order_domain_pending"]
       : []),
-    ...(!domain.reactionChanceOutcomeDomainComplete
+    ...(!reactionChanceOutcomeDomainComplete
       ? ["opponent_reaction_chance_distribution_pending"]
       : []),
     ...(!domain.damageTransferResolutionComplete
@@ -639,6 +840,8 @@ export function advanceWarmachineOpponentResponseWorklistV2(
     actionKey: domain.actionKey,
     opponentQuantifier: "opponent_and",
     requirementCount: domain.requirementCount,
+    parameterizedDestinationProposalCount:
+      domain.parameterizedDestinationProposalCount,
     declaredFiniteChoiceCandidateCount:
       domain.declaredFiniteChoiceCandidateCount,
     examinedCandidateCount: cursor.toString(),
@@ -647,6 +850,13 @@ export function advanceWarmachineOpponentResponseWorklistV2(
     strictRejectedCount: checkpoint.strictRejectedCount,
     pendingSpecialResolutionCount: checkpoint.pendingSpecialResolutionCount,
     strictChanceBranchExecutionCount: checkpoint.strictChanceBranchExecutionCount,
+    parameterizedDestinationProposalExecutionCount:
+      checkpoint.parameterizedDestinationProposalExecutionCount,
+    parameterizedDestinationProposalExactOutcomeCount:
+      checkpoint.parameterizedDestinationProposalExactOutcomeCount,
+    parameterizedDestinationProposalUnresolvedCount:
+      checkpoint.parameterizedDestinationProposalUnresolvedCount,
+    parameterizedDestinationProposalOutcomeDomainComplete,
     strictDecisionLedgerHash: checkpoint.strictDecisionLedgerHash,
     acceptedSamples: checkpoint.acceptedSamples,
     rejectedSamples: checkpoint.rejectedSamples,
@@ -654,8 +864,7 @@ export function advanceWarmachineOpponentResponseWorklistV2(
     destinationParameterDomainComplete:
       domain.destinationParameterDomainComplete,
     reactionOrderDomainComplete: domain.reactionOrderDomainComplete,
-    reactionChanceOutcomeDomainComplete:
-      domain.reactionChanceOutcomeDomainComplete,
+    reactionChanceOutcomeDomainComplete,
     damageTransferResolutionComplete:
       domain.damageTransferResolutionComplete,
     opponentResponseDomainComplete,
@@ -664,7 +873,7 @@ export function advanceWarmachineOpponentResponseWorklistV2(
     completionDebts,
     resumeCheckpoint: sealedCheckpoint,
     claimBoundary:
-      "Completion of this worklist exhausts only the Host-declared finite response option product for one action. The complete opponent response domain additionally requires continuous reaction destinations, legal priority orders, exact Chance distributions and compound damage-transfer execution wherever applicable.",
+      "Completion of this worklist exhausts only the Host-declared finite response options plus any explicitly supplied parameterized destination proposals for one action. Every proposal is passed to the strict Host, but neither accepted proposals nor finite probes close the continuous destination domain. Complete opponent response additionally requires a certified continuous denominator, legal priority orders, exact Chance distributions and compound damage-transfer execution wherever applicable.",
   });
   return {
     ...core,
