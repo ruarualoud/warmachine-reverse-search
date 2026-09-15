@@ -170,6 +170,12 @@ function buildPursuitReactionEndpointDomain(
     configurationObstacleExclusionProofs: stableGraphValue(
       searchPredicatePlan?.configurationObstacleExclusionProofs || [],
     ),
+    actorSpecialRuleDispositions: stableGraphValue(
+      hostReceipt.actorSpecialRuleDispositions || [],
+    ),
+    actorKeywordDispositions: stableGraphValue(
+      hostReceipt.actorKeywordDispositions || [],
+    ),
     endpointDomain: stableGraphValue(hostReceipt.endpointDomain || {}),
     canonicalPathFamily: String(hostReceipt.canonicalPathFamily || ""),
     theoremKey: String(hostReceipt.theoremKey || ""),

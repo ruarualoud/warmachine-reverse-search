@@ -12,9 +12,11 @@
   selected eligible battlegroup model proves only that every admitted
   cent-inch endpoint has a canonical straight strict Pursuit path in the bound
   open state. Search must account for every other eligible selected-model
-  subdomain separately. It may not turn one model's endpoint legality into a
-  complete reaction domain, path-class partition, transition-stability claim
-  or strategy equivalence.
+  subdomain separately. The current Ashmael fixture now certifies both Ashmael
+  and `jack-in` and preserves their rule/identity-surface evidence, so selected-
+  model endpoint legality is complete for that exact state. This still does not
+  prove the continuous nonstraight path-class partition, transition stability,
+  the complete reaction domain or strategy equivalence.
 
 - 2026-09-15 durable movement-reaction geometry invariant: an enemy model is
   always a possible base-collision obstacle but is not automatically a movement

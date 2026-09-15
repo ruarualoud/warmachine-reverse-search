@@ -624,11 +624,18 @@ assert.ok(currentPursuitAction, "current target advance must expose Pursuit");
 const currentPursuitDomain = buildWarmachineOpponentResponseDomainV2(
   currentPursuitAction,
   currentPursuitEnumeration,
-  { parameterizedPursuitSelectedMovedModelPieceKeys: ["jack-in"] },
+  {
+    parameterizedPursuitSelectedMovedModelPieceKeys: [
+      "ashmael",
+      "jack-in",
+    ],
+  },
 );
-assert.equal(currentPursuitDomain.parameterizedPursuitReactionEndpointDomains.length, 1);
+assert.equal(currentPursuitDomain.parameterizedPursuitReactionEndpointDomains.length, 2);
 const jackPursuitEndpointDomain =
-  currentPursuitDomain.parameterizedPursuitReactionEndpointDomains[0];
+  currentPursuitDomain.parameterizedPursuitReactionEndpointDomains.find((row) =>
+    row.selectedMovedModelPieceKey === "jack-in");
+assert.ok(jackPursuitEndpointDomain);
 assert.equal(jackPursuitEndpointDomain.selectedMovedModelPieceKey, "jack-in");
 assert.equal(jackPursuitEndpointDomain.destinationParameterLegalityComplete, true);
 assert.equal(jackPursuitEndpointDomain.transitionStable, false);
@@ -637,12 +644,39 @@ assert.deepEqual(
     .map((proof) => proof.blockerPieceKey),
   ["ashmael", "target"],
 );
+const ashmaelPursuitEndpointDomain =
+  currentPursuitDomain.parameterizedPursuitReactionEndpointDomains.find((row) =>
+    row.selectedMovedModelPieceKey === "ashmael");
+assert.ok(ashmaelPursuitEndpointDomain);
+assert.equal(
+  ashmaelPursuitEndpointDomain.destinationParameterLegalityComplete,
+  true,
+);
+const ashmaelRuleDispositionByKey = new Map(
+  ashmaelPursuitEndpointDomain.actorSpecialRuleDispositions.map((row) => [
+    row.ruleKey,
+    row.disposition,
+  ]),
+);
+for (const [ruleKey, disposition] of [
+  ["dual_attack", "exact_nonmovement_rule"],
+  ["gunfighter", "exact_nonmovement_rule"],
+  ["pathfinder", "movement_relevant_inactive_in_bound_context"],
+  ["stealth", "exact_nonmovement_rule"],
+]) {
+  assert.equal(ashmaelRuleDispositionByKey.get(ruleKey), disposition);
+}
+assert.equal(
+  ashmaelPursuitEndpointDomain.actorKeywordDispositions.every((row) =>
+    row.disposition === "identity_only_in_bound_context"),
+  true,
+);
 assert.equal(currentPursuitDomain.requestedDestinationParameterLegalityComplete, true);
-assert.equal(currentPursuitDomain.destinationParameterLegalityComplete, false,
-  "certifying the jack must not silently certify the still-eligible Ashmael subdomain");
+assert.equal(currentPursuitDomain.destinationParameterLegalityComplete, true,
+  "every eligible selected-model endpoint legality subdomain is now certified");
 assert.deepEqual(
   currentPursuitDomain.requirementRows[0].uncertifiedEligibleMovedModelPieceKeys,
-  ["ashmael"],
+  [],
 );
 assert.equal(currentPursuitDomain.destinationParameterDomainComplete, false,
   "endpoint reachability does not prove path/transition equivalence");
