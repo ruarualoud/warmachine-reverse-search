@@ -97,7 +97,10 @@ const obstacleState = state({
   }],
   pieces: [
     piece("mover", 10, 10),
-    piece("enemy", 14, 10, { sideKey: "player2" }),
+    piece("enemy", 14, 10, {
+      sideKey: "player2",
+      specialRules: ["Countercharge"],
+    }),
   ],
 });
 const obstacle = buildWarmachineGeometryPredicatePlanV1(obstacleState, {

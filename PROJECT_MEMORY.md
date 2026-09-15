@@ -1,5 +1,13 @@
 # Project Memory
 
+- 2026-09-15 durable movement-reaction geometry invariant: an enemy model is
+  always a possible base-collision obstacle but is not automatically a movement
+  reaction source. Geometry partition debt is justified only by an eligible
+  Defensive Strike, Countercharge or Admonition reactor, or by a moved model's
+  currently triggerable Pursuit status. Removing this false wildcard closes no
+  continuous destination, path-class or successor-stability proof; those remain
+  independent Ticket 20 obligations.
+
 - 2026-09-15 durable reaction Chance boundary: strict enemy-enter reaction
   requirements must carry the same structured target `specialRuleAnalysis` as
   normal attacks. Search may admit target rules only through that exact semantic
