@@ -1,5 +1,14 @@
 # Project Memory
 
+- 2026-09-15 durable reaction Chance boundary: strict enemy-enter reaction
+  requirements must carry the same structured target `specialRuleAnalysis` as
+  normal attacks. Search may admit target rules only through that exact semantic
+  payload; raw card/rule names are not execution evidence. One no-destination
+  Defensive Strike against a current-data Mechanithrall now keeps opponent
+  use/decline above an exact attack/damage/Tough Chance distribution. Unknown,
+  diagnosed, additional source, weapon-special and destination-dependent cases
+  remain fail-closed.
+
 - 2026-09-15 durable legacy Free Strike path invariant: explicit
   `legacy_free_strike` movement now computes base-aware melee-range exits along
   the declared path, interrupts the mover at each exact exit point and resolves

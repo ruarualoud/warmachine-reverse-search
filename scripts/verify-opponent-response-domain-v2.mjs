@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 import {
   applyRulesV1Action,
   buildWarmachineRulesV1StateFromLayer3Room,
   enumerateRulesV1Actions,
+  resolveWarmachineHostPath,
 } from "../src/warmachine-host-runtime.mjs";
 import {
   advanceWarmachineOpponentResponseWorklistV2,
@@ -15,6 +17,15 @@ import {
 } from "../src/search/current-decision-window-domain-v1.mjs";
 import { exhaustWarmachineCompleteActivationDomainV2 } from
   "../src/search/complete-activation-domain-v2.mjs";
+
+const HOST_DATA = JSON.parse(fs.readFileSync(
+  resolveWarmachineHostPath("prototype/data/warmachine-lite-data.json"),
+  "utf8",
+));
+const MECHANITHRALL_SWARM_CARD = HOST_DATA.cards.find((card) =>
+  card.id === "e1cb65eb-6d1b-419f-a6c1-ba7a7c332e2b");
+const MECHANITHRALL_SWARM_MODEL = MECHANITHRALL_SWARM_CARD?.models?.find((model) =>
+  model.id === "50778cd0-136b-4e5d-9876-1d2bbf4d3d91");
 
 function counterchargeRoom() {
   return {
@@ -88,6 +99,24 @@ function defensiveStrikeRoom() {
     attackStat: 7,
     attackStatKind: "MAT",
   }];
+  return room;
+}
+
+function defensiveStrikeToughRoom() {
+  const room = defensiveStrikeRoom();
+  room.id = "search-opponent-response-domain-v2-defensive-strike-tough-chance";
+  Object.assign(room.tokens.mover, {
+    label: "Mechanithrall Swarm Grunt",
+    cardId: MECHANITHRALL_SWARM_CARD.id,
+    cardName: MECHANITHRALL_SWARM_CARD.name,
+    modelId: MECHANITHRALL_SWARM_MODEL.id,
+    unitModelName: MECHANITHRALL_SWARM_MODEL.name,
+    cardSnapshot: MECHANITHRALL_SWARM_CARD,
+    modelRole: "grunt",
+    modelType: "trooper",
+    isWarrior: true,
+    damage: { maxBoxes: 1, boxesRemaining: 1 },
+  });
   return room;
 }
 
@@ -408,6 +437,31 @@ assert.equal(defensiveStrikeUseSample.successorChanceDistribution.reduce((sum, b
 defensiveStrikeUseSample.successorChanceDistribution[0].denominator);
 assert.equal(defensiveStrikeUseSample.successorChanceDistribution.every((branch) =>
   branch.strictRejectedReason === ""), true);
+
+const defensiveStrikeToughState = buildWarmachineRulesV1StateFromLayer3Room(
+  defensiveStrikeToughRoom(),
+);
+const defensiveStrikeToughEnumeration = enumerateRulesV1Actions(defensiveStrikeToughState);
+const defensiveStrikeToughAction = defensiveStrikeToughEnumeration.actions.find((candidate) =>
+  candidate.actorPieceKey === "mover" &&
+  candidate.metadata?.reactionResolutionRequirements?.some((row) =>
+    row.ruleKey === "defensive_strike"));
+assert.ok(defensiveStrikeToughAction,
+  "a real Mechanithrall movement must expose Defensive Strike against its Tough target");
+const defensiveStrikeToughDomain = buildWarmachineOpponentResponseDomainV2(
+  defensiveStrikeToughAction,
+  defensiveStrikeToughEnumeration,
+);
+assert.equal(defensiveStrikeToughDomain.reactionChanceOutcomeDomainComplete, true,
+  "exact Defensive Strike Chance must retain the current-data Mechanithrall Tough die");
+const defensiveStrikeToughUse = defensiveStrikeToughDomain.requirementRows[0].options.find((option) =>
+  option.choice === "use");
+assert.ok(defensiveStrikeToughUse);
+assert.deepEqual(new Set(defensiveStrikeToughUse.chanceModel.classes
+  .map((chanceClass) => chanceClass.strictRollOutcome?.toughDie)
+  .filter(Number.isFinite)), new Set([1, 2, 3, 4, 5, 6]));
+assert.equal(defensiveStrikeToughUse.chanceModel.massNumerator,
+  defensiveStrikeToughUse.chanceModel.massDenominator);
 
 const activationDomain = exhaustWarmachineCompleteActivationDomainV2(state, {
   pageLimit: 12,

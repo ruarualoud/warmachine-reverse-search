@@ -69,15 +69,6 @@ function damageTransferOptions(requirement = {}) {
   }));
 }
 
-function pieceRuleRows(piece = {}) {
-  return [
-    ...array(piece.specialRules),
-    ...array(piece.rules),
-    ...array(piece.abilities),
-    ...array(piece.statusEffects),
-  ].filter(Boolean);
-}
-
 function normalizedRuleIdentity(rule = null) {
   const value = typeof rule === "string"
     ? rule
@@ -128,9 +119,6 @@ function plainReactionChanceExpansion(requirement = {}, state = {}) {
   if (additionalReactorRules.length || array(reactor?.statusEffects).length) {
     reasons.push("reaction_actor_additional_rules_or_statuses_present");
   }
-  if (target && pieceRuleRows(target).length) {
-    reasons.push("reaction_target_rules_or_statuses_present");
-  }
   if (reasons.length) {
     return { exactComplete: false, chanceRequired: true, reasons: uniqueSorted(reasons), classes: [] };
   }
@@ -142,9 +130,10 @@ function plainReactionChanceExpansion(requirement = {}, state = {}) {
     metadata: {
       attackProfile: detail.attackProfile || {},
       attackResolution: detail.attackResolution,
-      specialRuleAnalysis: { unresolvedRuleKeys: [], ruleAtomDiagnostics: [] },
+      specialRuleAnalysis: detail.specialRuleAnalysis || {},
       attackProfileExecutableEffects: [],
-      ruleAtomDiagnostics: [],
+      ruleAtomEffects: array(detail.attackResolution?.ruleAtomEffects),
+      ruleAtomDiagnostics: array(detail.attackResolution?.ruleAtomDiagnostics),
     },
   };
   const model = buildWarmachineExactActionChanceClasses(syntheticAction, { state });
