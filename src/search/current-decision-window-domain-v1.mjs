@@ -693,11 +693,26 @@ export function advanceWarmachineCurrentDecisionWindowV1(
   if (!action) {
     throw new Error("current_decision_window_action_not_host_accepted");
   }
-  const selectedAction = strictCurrentWindowAction(
-    selectedActionWithPatch(action, options.actionPatch || {}),
+  const actionPatch = options.actionPatch || {};
+  const generatedAction = strictCurrentWindowAction(
+    selectedActionWithPatch(action, actionPatch),
     state,
     enumeration,
   );
+  const suppliedStrictRollOutcome = actionPatch.metadata?.strictRollOutcome;
+  const selectedAction = suppliedStrictRollOutcome &&
+      typeof suppliedStrictRollOutcome === "object"
+    ? stableGraphValue({
+        ...generatedAction,
+        metadata: {
+          ...(generatedAction.metadata || {}),
+          strictRollOutcome: {
+            ...(generatedAction.metadata?.strictRollOutcome || {}),
+            ...suppliedStrictRollOutcome,
+          },
+        },
+      })
+    : generatedAction;
   const transition = applyRulesV1Action(state, {
     ...selectedAction,
     __warmachineTrustedRulesV1Enumeration: enumeration,

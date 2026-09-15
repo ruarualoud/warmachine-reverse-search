@@ -55,6 +55,7 @@
     "verify:frontier-continuation-parallel": "node scripts/verify-strict-policy-probability-and-min-v2.mjs",
     "verify:strict-policy-step": "node scripts/verify-strict-policy-step-v1.mjs",
     "verify:opponent-response-domain": "node scripts/verify-opponent-response-domain-v2.mjs",
+    "verify:free-strike-forced-push-layer3": "node scripts/verify-free-strike-forced-push-layer3-v1.mjs",
     "verify:unit-combat-action-attack-slot-domain": "node scripts/verify-unit-combat-action-attack-slot-domain-v1.mjs",
     "verify:lazy-actions": "node scripts/verify-lazy-action-cursor-parity.mjs",
     "verify:complete-activation-domain": "node scripts/verify-complete-activation-domain-v2.mjs",

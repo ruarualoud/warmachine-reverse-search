@@ -6,9 +6,15 @@
   different points in path order; the inactive player's supplied order applies
   only to reactions sharing a point. The interrupt stores traversed and
   remaining route evidence, and a result that prevents further movement closes
-  later path groups. Current MKIV disengagement is unchanged. Post-hit forced
-  movement that rewrites the remaining route and repeated exits against the
-  same enemy remain fail-closed rather than approximated.
+  later path groups. Its attack roll receives the legacy `+2`, does not also
+  receive Back Strike, and its damage is boosted. For one non-Unit model making
+  a pure `advance` or `run`, Drag/Skewer may now push at the interrupt and hand
+  a stop-only continuation window to the mover's controller; stopping preserves
+  the pushed position. A caller-supplied exact roll/choice outcome must be
+  overlaid after Layer3 deterministic fallback generation or the fallback can
+  erase the real response. Current MKIV disengagement is unchanged. A nonzero
+  remaining route, charge/Unit movement, repeated same-enemy exits and compound
+  timing remain fail-closed rather than approximated.
 
 - 2026-09-15 durable atomic multi-model placement boundary: Graveyard Shift
   and Thrall Crafting now retain every rule/reactor/target/event placement
