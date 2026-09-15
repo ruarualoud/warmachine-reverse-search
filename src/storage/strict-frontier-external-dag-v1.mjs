@@ -158,6 +158,7 @@ export function persistWarmachineStrictFrontierExternalDagV1(
       cursor: label.cursor,
       adversarialContextKey: label.adversarialContextKey,
       continuationKey: label.continuationKey,
+      chanceResponseWork: label.chanceResponseWork || null,
       trainingProvenance: { source: "strict-frontier-v3", trainingTruth: false },
       claimBoundary: "This object is the immutable semantic route-label identity. Mutable incoming mass, solve status, interval and expansion evidence live in the content-addressed report snapshot and checkpoint ledger.",
     };
@@ -242,6 +243,7 @@ export function persistWarmachineStrictFrontierExternalDagV1(
     cumulativeProbability: label.cumulativeProbability,
     incomingProbabilityContributions: label.incomingProbabilityContributions,
     reason: label.reason,
+    chanceResponseWork: label.chanceResponseWork || null,
   })).filter((entry) => entry.stateId);
   const unresolvedIds = new Set();
   for (const label of report.labels || []) {

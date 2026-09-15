@@ -228,6 +228,7 @@ export async function runWarmachineStrictFrontierContinuationBatchParallelV1(
     perspectiveSideKey: ancestorReport.perspectiveSideKey,
     continuationDepthIncrement: prepared.continuationDepthIncrement,
     maximumEvaluatedStatesPerContinuation: prepared.maximumEvaluatedStatesPerContinuation,
+    deferChanceResponseExecution: prepared.deferChanceResponseExecution,
     lowProbabilityThreshold: prepared.threshold,
   };
   const supervisor = startWarmachineFrontierContinuationSupervisorV1(

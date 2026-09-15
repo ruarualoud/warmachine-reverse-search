@@ -17,6 +17,8 @@ import { executeWarmachineExactPostResponseChanceV1 } from
   "./post-response-chance-execution-v1.mjs";
 
 export const WARMACHINE_STRICT_POLICY_STEP_V1_SCHEMA = "warmachine_strict_policy_step_v1";
+export const WARMACHINE_CHANCE_RESPONSE_WORK_V1_SCHEMA =
+  "warmachine_chance_response_work_v1";
 
 function terminalOutcome(value) {
   const normalized = String(value || "");
@@ -47,6 +49,243 @@ function terminalStep(base, outcome, reason, extra = {}) {
   };
 }
 
+function buildChanceResponseWorkCursor(
+  action,
+  chance,
+  chanceClass,
+  responseSet,
+  response,
+  decision,
+) {
+  const identity = {
+    schemaVersion: WARMACHINE_CHANCE_RESPONSE_WORK_V1_SCHEMA,
+    actionKey: String(action.actionKey || ""),
+    chanceModelHash: stableGraphHash(stableGraphValue(chance)),
+    chanceClassKey: String(chanceClass.classKey || ""),
+    chanceClassHash: stableGraphHash(stableGraphValue(chanceClass)),
+    responseSetHash: String(responseSet.responseSetHash || ""),
+    responseKey: String(response.responseKey || ""),
+    responseActionKey: String(response.actionKey || ""),
+    nextCursor: String(decision.nextPolicyCursor ?? ""),
+    actionPatch: stableGraphValue(decision.actionPatch || {}),
+  };
+  return {
+    ...identity,
+    workKey: `chance-response-work-${stableGraphHash(identity, 32)}`,
+  };
+}
+
+function resolveChanceResponseWork(work, action, chance, responseSet) {
+  if (work?.schemaVersion !== WARMACHINE_CHANCE_RESPONSE_WORK_V1_SCHEMA) {
+    return { ok: false, reason: "chance_response_work_schema_invalid" };
+  }
+  if (String(action.actionKey || "") !== String(work.actionKey || "") ||
+      stableGraphHash(stableGraphValue(chance)) !== String(work.chanceModelHash || "") ||
+      String(responseSet.responseSetHash || "") !== String(work.responseSetHash || "")) {
+    return { ok: false, reason: "chance_response_work_source_drift" };
+  }
+  const chanceClass = (chance.classes || []).find((candidate) =>
+    candidate.classKey === work.chanceClassKey) || null;
+  const response = (responseSet.responses || []).find((candidate) =>
+    candidate.responseKey === work.responseKey) || null;
+  if (!chanceClass || !response ||
+      stableGraphHash(stableGraphValue(chanceClass)) !== String(work.chanceClassHash || "") ||
+      String(response.actionKey || "") !== String(work.responseActionKey || "")) {
+    return { ok: false, reason: "chance_response_work_member_drift" };
+  }
+  const expectedWork = buildChanceResponseWorkCursor(
+    action,
+    chance,
+    chanceClass,
+    responseSet,
+    response,
+    {
+      nextPolicyCursor: work.nextCursor,
+      actionPatch: work.actionPatch,
+    },
+  );
+  if (expectedWork.workKey !== work.workKey) {
+    return { ok: false, reason: "chance_response_work_hash_mismatch" };
+  }
+  return { ok: true, chanceClass, response };
+}
+
+function executePreparedChanceResponse({
+  scoped,
+  action,
+  response,
+  chanceClass,
+  routeKey,
+  depth,
+  cursor,
+  actionPatch,
+  classifyResult,
+  reportProgress,
+}) {
+  if (!response.action) {
+    return {
+      strictRejectedResponseCount: 0,
+      preparedResponse: {
+        responseKey: response.responseKey,
+        actionKey: response.actionKey,
+        choice: response.choice,
+        recipientPieceKey: response.recipientPieceKey,
+        transitionAccepted: false,
+        reason: "opponent_response_action_missing_from_strict_enumeration",
+        resultStateHash: "",
+        outcome: "unresolved",
+        outcomeReason: "opponent_response_action_missing_from_strict_enumeration",
+        receiptHash: "",
+        runtimeReceipt: null,
+        terminalEvents: [],
+        executedState: null,
+      },
+    };
+  }
+  reportProgress("response_execution_start", {
+    chanceClassKey: chanceClass.classKey,
+    responseKey: response.responseKey,
+  });
+  const postResponseExecution = executeWarmachineExactPostResponseChanceV1(
+    scoped,
+    action,
+    response,
+    chanceClass,
+    {
+      routeKey: `${routeKey}:${depth}:${chanceClass.classKey}:${response.responseKey}`,
+      actionPatch,
+      onProgress: (detail) => reportProgress("response_execution_progress", {
+        chanceClassKey: chanceClass.classKey,
+        responseKey: response.responseKey,
+        detail,
+      }),
+    },
+  );
+  reportProgress("response_execution_complete", {
+    chanceClassKey: chanceClass.classKey,
+    responseKey: response.responseKey,
+    exactComplete: postResponseExecution.exactComplete,
+    outcomeCount: postResponseExecution.outcomes.length,
+  });
+  if (!postResponseExecution.exactComplete) {
+    return {
+      strictRejectedResponseCount: 0,
+      preparedResponse: {
+        responseKey: response.responseKey,
+        actionKey: response.action.actionKey,
+        choice: response.choice,
+        recipientPieceKey: response.recipientPieceKey,
+        transitionAccepted: false,
+        reason: (postResponseExecution.chance.reasons || []).join(",") ||
+          "post_response_chance_not_exact",
+        resultStateHash: "",
+        outcome: "unresolved",
+        outcomeReason: "post_response_chance_not_exact",
+        receiptHash: "",
+        runtimeReceipt: null,
+        terminalEvents: [],
+        executedState: null,
+        postResponseChanceExactComplete: false,
+        postResponseChance: stableGraphValue(postResponseExecution.chance),
+        postResponseOutcomes: [],
+      },
+    };
+  }
+  let strictRejectedResponseCount = 0;
+  const postResponseOutcomes = postResponseExecution.outcomes.map((entry) => {
+    const executed = entry.executed;
+    const postResponseChanceClass = entry.postResponseChanceClass;
+    if (!executed.ok) {
+      strictRejectedResponseCount += 1;
+      return {
+        classKey: postResponseChanceClass.classKey,
+        probabilityNumerator: postResponseChanceClass.numerator,
+        probabilityDenominator: postResponseChanceClass.denominator,
+        transitionAccepted: false,
+        reason: executed.reason || "strict_response_transition_rejected",
+        resultStateHash: "",
+        outcome: "unresolved",
+        outcomeReason: executed.reason || "strict_response_transition_rejected",
+        receiptHash: executed.receipt?.receiptHash || "",
+        runtimeReceipt: executed.receipt || null,
+        terminalEvents: stableGraphValue(terminalEvents(executed.transition.events || [])),
+        executedState: null,
+        strictRollOutcome: stableGraphValue(postResponseChanceClass.strictRollOutcome),
+      };
+    }
+    const successorState = executed.normalizedState || normalizeRulesV1State(executed.state);
+    const classification = classifyResult({
+      state: successorState,
+      events: executed.transition.events || [],
+      action: response.action,
+      baseAction: action,
+      chanceClass,
+      postResponseChanceClass,
+      response,
+      cursor,
+      depth,
+    }) || { outcome: "continue" };
+    return {
+      classKey: postResponseChanceClass.classKey,
+      probabilityNumerator: postResponseChanceClass.numerator,
+      probabilityDenominator: postResponseChanceClass.denominator,
+      transitionAccepted: true,
+      reason: "",
+      resultStateHash: stableGraphHash(successorState),
+      outcome: terminalOutcome(classification.outcome) || "continue",
+      outcomeReason: String(classification.reason || ""),
+      receiptHash: executed.receipt?.receiptHash || "",
+      runtimeReceipt: executed.receipt || null,
+      terminalEvents: stableGraphValue(terminalEvents(executed.transition.events || [])),
+      executedState: successorState,
+      strictRollOutcome: stableGraphValue(postResponseChanceClass.strictRollOutcome),
+    };
+  });
+  const transitionAccepted = postResponseOutcomes.every((entry) =>
+    entry.transitionAccepted === true);
+  const semanticVector = postResponseOutcomes.map((entry) => ({
+    classKey: entry.classKey,
+    probabilityNumerator: entry.probabilityNumerator,
+    probabilityDenominator: entry.probabilityDenominator,
+    transitionAccepted: entry.transitionAccepted,
+    reason: entry.reason,
+    resultStateHash: entry.resultStateHash,
+    outcome: entry.outcome,
+    outcomeReason: entry.outcomeReason,
+    terminalEvents: entry.terminalEvents,
+  }));
+  return {
+    strictRejectedResponseCount,
+    preparedResponse: {
+      responseKey: response.responseKey,
+      actionKey: response.action.actionKey,
+      choice: response.choice,
+      recipientPieceKey: response.recipientPieceKey,
+      transitionAccepted,
+      reason: transitionAccepted
+        ? ""
+        : postResponseOutcomes.find((entry) => !entry.transitionAccepted)?.reason ||
+          "strict_response_transition_rejected",
+      resultStateHash: transitionAccepted ? stableGraphHash(semanticVector) : "",
+      outcome: "post_response_chance",
+      outcomeReason: "",
+      receiptHash: postResponseOutcomes.length === 1
+        ? postResponseOutcomes[0].receiptHash
+        : "",
+      runtimeReceipt: postResponseOutcomes.length === 1
+        ? postResponseOutcomes[0].runtimeReceipt
+        : null,
+      terminalEvents: [],
+      executedState: postResponseOutcomes.length === 1
+        ? postResponseOutcomes[0].executedState
+        : null,
+      postResponseChanceExactComplete: true,
+      postResponseChance: stableGraphValue(postResponseExecution.chance),
+      postResponseOutcomes,
+    },
+  };
+}
+
 export function expandWarmachineStrictPolicyStepV1(
   stateInput = {},
   selectPolicyAction,
@@ -62,6 +301,7 @@ export function expandWarmachineStrictPolicyStepV1(
   const cursor = String(rawOptions.cursor ?? depth);
   const routeKey = String(rawOptions.routeKey || "strict-policy-step");
   const perspectiveSideKey = String(rawOptions.perspectiveSideKey || state.activeSideKey || "");
+  const chanceResponseWork = rawOptions.chanceResponseWork || null;
   const reportProgress = (stage, detail = {}) => rawOptions.onProgress?.({
     stage,
     depth,
@@ -137,7 +377,7 @@ export function expandWarmachineStrictPolicyStepV1(
     actionType: String(action.actionType || ""),
     actorPieceKey: String(action.actorPieceKey || ""),
     targetPieceKey: String(action.targetPieceKey || ""),
-    nextCursor: String(decision.nextPolicyCursor ?? depth + 1),
+    nextCursor: String(chanceResponseWork?.nextCursor ?? decision.nextPolicyCursor ?? depth + 1),
   };
 
   if (decision.deterministicAction === true) {
@@ -237,6 +477,186 @@ export function expandWarmachineStrictPolicyStepV1(
     responseCount: responseSet.responses.length,
     responseSetComplete: responseSet.responseSetComplete,
   });
+
+  if (chanceResponseWork) {
+    if (String(decision.nextPolicyCursor ?? "") !== String(chanceResponseWork.nextCursor || "") ||
+        stableGraphHash(stableGraphValue(decision.actionPatch || {})) !==
+          stableGraphHash(stableGraphValue(chanceResponseWork.actionPatch || {}))) {
+      return unresolvedStep(base, "chance_response_work_policy_drift", {
+        action: actionAudit,
+        chanceAudit,
+      });
+    }
+    const resolvedWork = resolveChanceResponseWork(
+      chanceResponseWork,
+      action,
+      chance,
+      responseSet,
+    );
+    if (!resolvedWork.ok) {
+      return unresolvedStep(base, resolvedWork.reason, { action: actionAudit, chanceAudit });
+    }
+    const executedWork = executePreparedChanceResponse({
+      scoped,
+      action,
+      response: resolvedWork.response,
+      chanceClass: resolvedWork.chanceClass,
+      routeKey,
+      depth,
+      cursor,
+      actionPatch: chanceResponseWork.actionPatch || {},
+      classifyResult,
+      reportProgress,
+    });
+    const preparedResponse = executedWork.preparedResponse;
+    return {
+      ...base,
+      stepType: "chance",
+      strictRejectedResponseCount: executedWork.strictRejectedResponseCount,
+      action: actionAudit,
+      chanceResponseWork: stableGraphValue(chanceResponseWork),
+      chanceAudit: {
+        ...chanceAudit,
+        classCount: 1,
+        massNumerator: 1,
+        massDenominator: 1,
+        equivalenceHash: `chance-response-work-${chanceResponseWork.workKey}`,
+        equivalenceGroupCount: 1,
+        mergedClassCount: 0,
+        equivalenceMassConserved: true,
+      },
+      responseSet: {
+        ownerSideKey: "",
+        decisionKind: "resolved_chance_response_work",
+        responseSetComplete: true,
+        responseCount: 1,
+      },
+      groups: [{
+        groupKey: `resolved-${chanceResponseWork.workKey}`,
+        numerator: 1,
+        denominator: 1,
+        classCount: 1,
+        chanceClassKeys: [resolvedWork.chanceClass.classKey],
+        classEvidence: [{
+          chanceClassKey: resolvedWork.chanceClass.classKey,
+          numerator: 1,
+          denominator: 1,
+          strictRollOutcome: stableGraphValue(resolvedWork.chanceClass.strictRollOutcome),
+          responseEvidence: [{
+            responseKey: `resolved-${resolvedWork.response.responseKey}`,
+            actionKey: preparedResponse.actionKey,
+            receiptHash: preparedResponse.receiptHash,
+            transitionAccepted: preparedResponse.transitionAccepted,
+            resultStateHash: preparedResponse.resultStateHash,
+            reason: preparedResponse.reason,
+            postResponseOutcomes: (preparedResponse.postResponseOutcomes || []).map((outcome) => ({
+              classKey: outcome.classKey,
+              receiptHash: outcome.receiptHash,
+              transitionAccepted: outcome.transitionAccepted,
+              resultStateHash: outcome.resultStateHash,
+              reason: outcome.reason,
+            })),
+          }],
+        }],
+        responses: [{
+          responseKey: `resolved-${resolvedWork.response.responseKey}`,
+          actionKey: preparedResponse.actionKey,
+          choice: preparedResponse.choice,
+          recipientPieceKey: preparedResponse.recipientPieceKey,
+          transitionAccepted: preparedResponse.transitionAccepted,
+          reason: preparedResponse.reason,
+          state: preparedResponse.executedState,
+          stateHash: preparedResponse.resultStateHash,
+          outcome: preparedResponse.outcome,
+          outcomeReason: preparedResponse.outcomeReason,
+          receiptHash: preparedResponse.receiptHash,
+          runtimeReceipts: (preparedResponse.postResponseOutcomes || [])
+            .map((outcome) => outcome.runtimeReceipt).filter(Boolean),
+          terminalEvents: preparedResponse.terminalEvents,
+          postResponseChanceExactComplete:
+            preparedResponse.postResponseChanceExactComplete !== false,
+          postResponseChance: preparedResponse.postResponseChance,
+          postResponseOutcomes: preparedResponse.postResponseOutcomes,
+          equivalentExecutionEvidence: [{
+            chanceClassKey: resolvedWork.chanceClass.classKey,
+            responseKey: resolvedWork.response.responseKey,
+            actionKey: preparedResponse.actionKey,
+            transitionAccepted: preparedResponse.transitionAccepted,
+            reason: preparedResponse.reason,
+            stateHash: preparedResponse.resultStateHash,
+            receiptHash: preparedResponse.receiptHash,
+            postResponseOutcomeEvidence: (preparedResponse.postResponseOutcomes || [])
+              .map((outcome) => ({
+                classKey: outcome.classKey,
+                transitionAccepted: outcome.transitionAccepted,
+                reason: outcome.reason,
+                stateHash: outcome.resultStateHash,
+                receiptHash: outcome.receiptHash,
+              })),
+          }],
+        }],
+      }],
+    };
+  }
+
+  if (rawOptions.deferChanceResponseExecution === true) {
+    const groups = chance.classes.map((chanceClass) => ({
+      groupKey: `deferred-chance-class-${stableGraphHash({
+        actionKey: action.actionKey,
+        chanceClassKey: chanceClass.classKey,
+      }, 24)}`,
+      numerator: chanceClass.numerator,
+      denominator: chanceClass.denominator,
+      classCount: 1,
+      chanceClassKeys: [chanceClass.classKey],
+      classEvidence: [{
+        chanceClassKey: chanceClass.classKey,
+        numerator: chanceClass.numerator,
+        denominator: chanceClass.denominator,
+        strictRollOutcome: stableGraphValue(chanceClass.strictRollOutcome),
+        responseEvidence: [],
+      }],
+      responses: responseSet.responses.map((response) => ({
+        responseKey: response.responseKey,
+        actionKey: response.actionKey,
+        choice: response.choice,
+        recipientPieceKey: response.recipientPieceKey,
+        transitionAccepted: Boolean(response.action),
+        reason: response.action
+          ? ""
+          : "opponent_response_action_missing_from_strict_enumeration",
+        workCursor: buildChanceResponseWorkCursor(
+          action,
+          chance,
+          chanceClass,
+          responseSet,
+          response,
+          decision,
+        ),
+      })),
+    }));
+    return {
+      ...base,
+      stepType: "chance_worklist",
+      action: actionAudit,
+      chanceAudit: {
+        ...chanceAudit,
+        equivalenceHash: "deferred_until_chance_response_execution",
+        equivalenceGroupCount: groups.length,
+        mergedClassCount: 0,
+        equivalenceMassConserved:
+          BigInt(String(chance.massNumerator)) === BigInt(String(chance.massDenominator)),
+      },
+      responseSet: {
+        ownerSideKey: responseSet.ownerSideKey,
+        decisionKind: responseSet.decisionKind,
+        responseSetComplete: responseSet.responseSetComplete,
+        responseCount: responseSet.responses.length,
+      },
+      groups,
+    };
+  }
+
   const preparedChanceClasses = [];
   let strictRejectedResponseCount = 0;
   for (const chanceClass of chance.classes) {

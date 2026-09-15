@@ -193,6 +193,7 @@ function semanticLabelIdentity(label = {}) {
     cursor: label.cursor,
     adversarialContextKey: label.adversarialContextKey,
     continuationKey: label.continuationKey,
+    chanceResponseWorkKey: String(label.chanceResponseWork?.workKey || ""),
   };
 }
 
@@ -508,6 +509,7 @@ export function stitchWarmachineStrictFrontierRuntimeCheckpointsV1(
       incomingEdgeKeys: label.incomingEdgeKeys,
       status: label.status,
       reason: label.reason,
+      chanceResponseWork: label.chanceResponseWork || null,
     };
   }).sort((left, right) => left.depth - right.depth ||
     left.labelKey.localeCompare(right.labelKey));

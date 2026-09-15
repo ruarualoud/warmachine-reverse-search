@@ -17,6 +17,7 @@ function semanticIdentity(value = {}) {
     cursor: String(value.cursor ?? ""),
     adversarialContextKey: String(value.adversarialContextKey || ""),
     continuationKey: String(value.continuationKey || ""),
+    chanceResponseWorkKey: String(value.chanceResponseWork?.workKey || ""),
   };
 }
 
@@ -48,23 +49,57 @@ function rootResponseSchedulingContext(ancestorReport = {}) {
     [label.labelKey, label]));
   const edges = new Map((ancestorReport.edges || []).map((edge) =>
     [edge.edgeKey, edge]));
+  const childLabelKeysByParent = new Map();
+  for (const edge of edges.values()) {
+    if (!edge.parentLabelKey || !edge.childLabelKey) continue;
+    const children = childLabelKeysByParent.get(edge.parentLabelKey) || [];
+    children.push(edge.childLabelKey);
+    childLabelKeysByParent.set(edge.parentLabelKey, children);
+  }
   const root = labels.get(ancestorReport.rootLabelKey);
   const byAdversarialContext = new Map();
+  const queue = [];
   for (const group of root?.expansion?.groups || []) {
     for (const response of group.responses || []) {
       for (const branch of response.branches || []) {
         const edge = edges.get(branch.edgeKey);
         const child = labels.get(edge?.childLabelKey);
-        const contextKey = String(child?.adversarialContextKey || "");
-        if (!contextKey) continue;
-        byAdversarialContext.set(contextKey, {
+        if (!child) continue;
+        queue.push({
+          labelKey: child.labelKey,
+          context: {
           groupKey: String(group.groupKey || ""),
           groupProbability: group.conditionalProbability || { numerator: "0", denominator: "1" },
           responseKey: String(response.responseKey || ""),
           selectedUpperResponse:
             String(response.responseKey || "") === String(group.selectedUpperResponseKey || ""),
+          },
         });
       }
+    }
+  }
+  const contextByLabelKey = new Map();
+  while (queue.length) {
+    const current = queue.shift();
+    const existing = contextByLabelKey.get(current.labelKey);
+    if (existing) {
+      if (stableGraphHash(existing) !== stableGraphHash(current.context)) {
+        throw new Error(`continuation_root_response_ancestry_conflict:${current.labelKey}`);
+      }
+      continue;
+    }
+    contextByLabelKey.set(current.labelKey, current.context);
+    const label = labels.get(current.labelKey);
+    const contextKey = String(label?.adversarialContextKey || "");
+    if (contextKey) {
+      const prior = byAdversarialContext.get(contextKey);
+      if (prior && stableGraphHash(prior) !== stableGraphHash(current.context)) {
+        throw new Error(`continuation_root_response_context_conflict:${contextKey}`);
+      }
+      byAdversarialContext.set(contextKey, current.context);
+    }
+    for (const childLabelKey of childLabelKeysByParent.get(current.labelKey) || []) {
+      queue.push({ labelKey: childLabelKey, context: current.context });
     }
   }
   return byAdversarialContext;
@@ -77,8 +112,11 @@ function scheduledEntryOrder(mode, schedulingContext) {
     const rightContext = schedulingContext.get(String(right.adversarialContextKey || ""));
     const leftSelected = leftContext?.selectedUpperResponse === true ? 0 : 1;
     const rightSelected = rightContext?.selectedUpperResponse === true ? 0 : 1;
+    const leftWork = left.chanceResponseWork?.workKey ? 0 : 1;
+    const rightWork = right.chanceResponseWork?.workKey ? 0 : 1;
     return leftSelected - rightSelected ||
       Number(right.depth) - Number(left.depth) ||
+      leftWork - rightWork ||
       compareProbabilityDescending(
         leftContext?.groupProbability,
         rightContext?.groupProbability,
@@ -225,6 +263,7 @@ export function prepareWarmachineStrictFrontierContinuationBatchV1(
   const maximumEvaluatedStatesPerContinuation = Math.max(1, Number(
     rawOptions.maximumEvaluatedStatesPerContinuation ?? 1,
   ));
+  const deferChanceResponseExecution = rawOptions.deferChanceResponseExecution === true;
   const threshold = String(
     rawOptions.lowProbabilityThreshold ?? ancestorReport.lowProbabilityThreshold ?? "0",
   );
@@ -239,6 +278,7 @@ export function prepareWarmachineStrictFrontierContinuationBatchV1(
     selected,
     continuationDepthIncrement,
     maximumEvaluatedStatesPerContinuation,
+    deferChanceResponseExecution,
     threshold,
     thresholdIsolation,
     schedulingMode,
@@ -265,6 +305,7 @@ export function evaluateWarmachineStrictFrontierContinuationEntryV1(
       rootAdversarialContextKey: entry.adversarialContextKey,
       initialContinuationKey: entry.continuationKey,
       initialCumulativeProbability: entry.cumulativeProbability,
+      initialChanceResponseWork: entry.chanceResponseWork || null,
       inputStateAlreadyNormalized: true,
       maximumDepth: Number(entry.depth) + Math.max(1, Number(
         rawOptions.continuationDepthIncrement ?? 1,
@@ -273,6 +314,7 @@ export function evaluateWarmachineStrictFrontierContinuationEntryV1(
         rawOptions.maximumEvaluatedStatesPerContinuation ?? 1,
       )),
       lowProbabilityThreshold: String(rawOptions.lowProbabilityThreshold ?? "0"),
+      deferChanceResponseExecution: rawOptions.deferChanceResponseExecution === true,
       includeRuntimeCheckpoint: true,
       ...(typeof rawOptions.onProgress === "function"
         ? { onProgress: rawOptions.onProgress }
@@ -302,6 +344,7 @@ export function finalizeWarmachineStrictFrontierContinuationBatchV1(
     selected = [],
     continuationDepthIncrement,
     maximumEvaluatedStatesPerContinuation,
+    deferChanceResponseExecution,
     threshold,
     thresholdIsolation,
     schedulingMode,
@@ -363,6 +406,7 @@ export function finalizeWarmachineStrictFrontierContinuationBatchV1(
     unselectedSuppliedLabelKeys: ordered.slice(selected.length).map((entry) => entry.labelKey),
     continuationDepthIncrement,
     maximumEvaluatedStatesPerContinuation,
+    deferChanceResponseExecution,
     lowProbabilityThreshold: threshold,
     thresholdIsolation,
     schedulingMode,
@@ -377,7 +421,7 @@ export function finalizeWarmachineStrictFrontierContinuationBatchV1(
     strictRejectedDeterministicEdgeCount: report.strictRejectedDeterministicEdgeCount,
     probabilityInterval: report.probabilityInterval,
     exactComplete: report.exactComplete,
-    claimBoundary: "This scheduler advances only an explicitly bounded subset of restored budget-deferred labels. Canonical mode preserves the historical canonical key order. Root-upper-response mode prioritizes the root's currently selected upper-bound response, then higher root Chance mass and deeper descendants; it changes work order only and never drops a label or proves dominance. The scheduler restores exact depth, cursor, adversarial context, continuation suffix and cumulative Chance mass, then immutable-stitches strict continuations. A nonzero threshold may run independently across multiple roots only when their adversarial contexts are pairwise disjoint; repeated contexts still require a batch-wide same-layer merge. Unselected and newly deferred labels remain resumable; scheduling order is not a strategy score or optimality claim.",
+    claimBoundary: "This scheduler advances only an explicitly bounded subset of restored budget-deferred labels. Canonical mode preserves the historical canonical key order. Root-upper-response mode prioritizes the root's currently selected upper-bound response, then deeper descendants, already-partitioned Chance-response work, root Chance mass and cumulative mass; it changes work order only and never drops a label or proves dominance. The scheduler restores exact depth, cursor, adversarial context, continuation suffix and cumulative Chance mass, then immutable-stitches strict continuations. A nonzero threshold may run independently across multiple roots only when their adversarial contexts are pairwise disjoint; repeated contexts still require a batch-wide same-layer merge. Unselected and newly deferred labels remain resumable; scheduling order is not a strategy score or optimality claim.",
   };
   return {
     ...core,
@@ -408,6 +452,7 @@ export function runWarmachineStrictFrontierContinuationBatchV1(
       perspectiveSideKey: ancestorReport.perspectiveSideKey,
       continuationDepthIncrement: prepared.continuationDepthIncrement,
       maximumEvaluatedStatesPerContinuation: prepared.maximumEvaluatedStatesPerContinuation,
+      deferChanceResponseExecution: prepared.deferChanceResponseExecution,
       lowProbabilityThreshold: prepared.threshold,
       ...(typeof rawOptions.onProgress === "function"
         ? {

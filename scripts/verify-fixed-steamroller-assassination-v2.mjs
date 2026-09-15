@@ -236,6 +236,8 @@ if (probabilityProbe) {
     process.env.WARMACHINE_ASSASSINATION_CONTINUATION_SCHEDULING_MODE ||
       "canonical_v1",
   );
+  const deferChanceResponseExecution =
+    process.env.WARMACHINE_ASSASSINATION_DEFER_CHANCE_RESPONSES !== "0";
   const externalDagOptions = externalDagRoot ? {
     hostReceiptHash: warmachineHost.receipt.receiptHash,
     sourceHash: probabilityCheckpointCacheBindingHash,
@@ -286,6 +288,7 @@ if (probabilityProbe) {
         maximumDepth: probabilityMaximumDepth,
         maximumEvaluatedStates: probabilityMaximumStates,
         lowProbabilityThreshold: probabilityThreshold,
+        deferChanceResponseExecution,
         includeRuntimeCheckpoint: Boolean(externalDagRoot),
         onProgress: (detail) => reportProgress("probability_progress", detail),
       },
@@ -320,6 +323,7 @@ if (probabilityProbe) {
         maximumEvaluatedStatesPerContinuation: 1,
         lowProbabilityThreshold: probabilityThreshold,
         schedulingMode: continuationSchedulingMode,
+        deferChanceResponseExecution,
         ...(continuationWorkerCount === 1
           ? { onProgress: (detail) => reportProgress("continuation_progress", detail) }
           : {}),
@@ -416,7 +420,8 @@ if (probabilityProbe) {
       probabilityThreshold === "0") {
     assert.deepEqual(probability.unresolvedReasons, ["maximum_policy_depth_reached"]);
   }
-  const chanceAudits = probability.stepAudits.filter((audit) => audit.stepType === "chance")
+  const chanceAudits = probability.stepAudits.filter((audit) =>
+    ["chance", "chance_worklist"].includes(audit.stepType))
     .map((audit) => audit.chanceAudit);
   assert.equal(chanceAudits[0]?.actionKey, route.nextAction.actionKey);
   assert.deepEqual(chanceAudits[0]?.preChanceResolvedEffectTypes, [
@@ -440,9 +445,11 @@ if (probabilityProbe) {
           rootAdversarialContextKey: resumeEntry.adversarialContextKey,
           initialContinuationKey: resumeEntry.continuationKey,
           initialCumulativeProbability: resumeEntry.cumulativeProbability,
+          initialChanceResponseWork: resumeEntry.chanceResponseWork || null,
           maximumDepth: resumeEntry.depth + 1,
           maximumEvaluatedStates: 1,
           lowProbabilityThreshold: probabilityThreshold,
+          deferChanceResponseExecution,
         },
       );
       assert.equal(externalDagResume.rootLabelKey, resumeEntry.labelKey);

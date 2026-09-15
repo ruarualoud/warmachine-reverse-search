@@ -1,5 +1,18 @@
 # Project Memory
 
+- 2026-09-16 durable action-internal recovery invariant: an exact stochastic
+  policy action may be partitioned into immutable primary-Chance-by-owned-
+  response work labels before any strict response execution. The parent still
+  sums primary Chance and applies the original owner/opponent quantifier; each
+  work label binds action, chance model/class, response set/member, next cursor
+  and action patch by hash, executes only that response plus conditional post-
+  response Chance, and then rejoins ordinary successor labels. Work identity is
+  part of route-label identity and external-DAG recovery. The real Raptor slam
+  produced `67 x 7 = 469` recoverable labels in about 33 seconds; one restored
+  Vordak-transfer label strictly executed and repersisted in about 27 seconds
+  with zero rejection. This closes the monolithic-action checkpoint blocker,
+  not the remaining action-horizon or full-match denominator.
+
 - 2026-09-16 durable finite-horizon publication boundary: a persisted
   stochastic frontier may be re-solved exactly for the narrower objective
   “does this selected action immediately destroy the target leader” by treating

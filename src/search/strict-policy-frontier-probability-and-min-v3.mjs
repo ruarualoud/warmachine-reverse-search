@@ -238,6 +238,7 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
     outcome: "",
     reason: "",
     thresholdEligible: true,
+    chanceResponseWork: rawOptions.initialChanceResponseWork || null,
   })];
 
   while (rawFrontier.length) {
@@ -302,6 +303,7 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
         reason: "",
         expansion: null,
         runtimeState: representative.state,
+        chanceResponseWork: representative.chanceResponseWork || null,
       };
       labels.set(label.labelKey, label);
 
@@ -334,6 +336,7 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
       reportProgress("policy_step_start", {
         labelKey: label.labelKey,
         depth: label.depth,
+        chanceResponseWorkKey: label.chanceResponseWork?.workKey || "",
       });
       const step = expandWarmachineStrictPolicyStepV1(
         representative.state,
@@ -348,6 +351,8 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
           inputStateHash: label.stateHash,
           classifyState,
           ...(classifyResult ? { classifyResult } : {}),
+          deferChanceResponseExecution: rawOptions.deferChanceResponseExecution === true,
+          chanceResponseWork: label.chanceResponseWork,
           onProgress: (detail) => reportProgress("policy_step_progress", {
             labelKey: label.labelKey,
             depth: label.depth,
@@ -369,6 +374,7 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
         action: step.action || null,
         chanceAudit: step.chanceAudit || null,
         responseSet: step.responseSet || null,
+        chanceResponseWork: step.chanceResponseWork || label.chanceResponseWork || null,
         strictRejectedResponseCount: step.strictRejectedResponseCount || 0,
         strictRejectedDeterministicCount: step.strictRejectedDeterministicCount || 0,
         reason: step.reason || "",
@@ -420,6 +426,104 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
           reason: successor.reason,
           thresholdEligible: !terminalOutcome(successor.outcome),
         }));
+        continue;
+      }
+
+      if (step.stepType === "chance_worklist") {
+        const quantifier = decisionQuantifier(step.responseSet, perspectiveSideKey);
+        const expansionGroups = [];
+        for (const group of step.groups) {
+          const conditional = rational(group.numerator, group.denominator);
+          const groupResponses = [];
+          const responseNodeKey = `frontier-response-${stableGraphHash({
+            parentLabelKey: label.labelKey,
+            actionKey: step.action.actionKey,
+            groupKey: group.groupKey,
+          }, 32)}`;
+          for (const response of group.responses) {
+            const nextContextKey = deriveWarmachineAdversarialContextKeyV1(
+              label.adversarialContextKey,
+              {
+                quantifier,
+                ownerSideKey: step.responseSet.ownerSideKey,
+                decisionKind: step.responseSet.decisionKind,
+                responseNodeKey,
+                responseKey: response.responseKey,
+              },
+            );
+            const edgeKey = `frontier-edge-${stableGraphHash({
+              parentLabelKey: label.labelKey,
+              groupKey: group.groupKey,
+              responseKey: response.responseKey,
+              chanceResponseWorkKey: response.workCursor.workKey,
+            }, 32)}`;
+            edges.set(edgeKey, {
+              edgeKey,
+              edgeType: "chance_owned_response_work",
+              parentLabelKey: label.labelKey,
+              childLabelKey: "",
+              actionKey: step.action.actionKey,
+              adversarialChanceGroupKey: group.groupKey,
+              chanceClassKeys: group.chanceClassKeys,
+              responseKey: response.responseKey,
+              choice: response.choice,
+              recipientPieceKey: response.recipientPieceKey,
+              quantifier,
+              primaryConditionalProbability: probabilityRecord(conditional),
+              postResponseConditionalProbability: probabilityRecord(rational(1n)),
+              conditionalProbability: probabilityRecord(conditional),
+              transitionAccepted: response.transitionAccepted,
+              chanceResponseWorkKey: response.workCursor.workKey,
+              ownedResponsePrecedesPostResponseChance: true,
+            });
+            const contribution = multiply(
+              rational(
+                row.cumulativeProbability.numerator,
+                row.cumulativeProbability.denominator,
+              ),
+              conditional,
+            );
+            nextRawFrontier.push({
+              state: representative.state,
+              stateHash: label.stateHash,
+              cursor: label.cursor,
+              depth: label.depth,
+              adversarialContextKey: nextContextKey,
+              continuationKey: `chance-response-work:${response.workCursor.workKey}`,
+              contribution: probabilityRecord(contribution),
+              incomingEdgeKey: edgeKey,
+              routeKey,
+              outcome: "",
+              reason: "",
+              thresholdEligible: true,
+              chanceResponseWork: response.workCursor,
+            });
+            groupResponses.push({
+              responseKey: response.responseKey,
+              postResponseChanceExactComplete: true,
+              branches: [{
+                edgeKey,
+                postResponseChanceClassKey: "deferred-chance-response-work",
+                conditionalProbability: probabilityRecord(rational(1n)),
+              }],
+            });
+          }
+          expansionGroups.push({
+            groupKey: group.groupKey,
+            chanceClassKeys: group.chanceClassKeys,
+            classEvidence: group.classEvidence,
+            conditionalProbability: probabilityRecord(conditional),
+            responses: groupResponses,
+          });
+        }
+        label.expansion = {
+          expansionType: "chance",
+          actionKey: step.action.actionKey,
+          quantifier,
+          responseSetComplete: step.responseSet.responseSetComplete,
+          groups: expansionGroups,
+          chanceResponseExecutionDeferred: true,
+        };
         continue;
       }
 
@@ -706,10 +810,12 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
     left.depth - right.depth || left.labelKey.localeCompare(right.labelKey));
   const publicEdges = Array.from(edges.values()).map(stableGraphValue).sort((left, right) =>
     left.edgeKey.localeCompare(right.edgeKey));
-  const chanceMassComplete = stepAudits.filter((audit) => audit.stepType === "chance")
+  const chanceMassComplete = stepAudits.filter((audit) =>
+    ["chance", "chance_worklist"].includes(audit.stepType))
     .every((audit) => audit.chanceAudit?.exactComplete === true &&
       audit.chanceAudit?.equivalenceMassConserved === true);
-  const opponentResponseSetComplete = stepAudits.filter((audit) => audit.stepType === "chance")
+  const opponentResponseSetComplete = stepAudits.filter((audit) =>
+    ["chance", "chance_worklist"].includes(audit.stepType))
     .every((audit) => audit.responseSet?.responseSetComplete === true);
   const core = {
     schemaVersion: WARMACHINE_STRICT_POLICY_FRONTIER_PROBABILITY_AND_MIN_V3_SCHEMA,
@@ -769,6 +875,7 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
     incomingEdgeKeys: label.incomingEdgeKeys,
     status: label.status,
     reason: label.reason,
+    chanceResponseWork: label.chanceResponseWork || null,
     state: label.runtimeState,
   })).sort((left, right) => left.depth - right.depth ||
     left.labelKey.localeCompare(right.labelKey));
