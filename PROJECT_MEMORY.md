@@ -25,6 +25,13 @@
   remains unresolved; batch structure is not evidence for another relation or
   a broader cross-runtime faction matrix.
 
+- 2026-09-15 durable multi-relation binding invariant: one shared interaction
+  fixture may bind several relations only when each relation gets its own
+  source-controlled row and a current verifier contains that fixture together
+  with the exact `interactionKey`. Fixture sharing without per-key evidence is
+  not blanket coverage. All referenced verifier scripts and binding compilers
+  are content-bound into the Engine authority.
+
 - 2026-09-15 durable geometry-interface invariant: when Engine omits a model
   obstacle because a signed start-distance lower bound exceeds the complete
   movement allowance, Search must validate and preserve that exclusion proof
