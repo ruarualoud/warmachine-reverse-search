@@ -1,5 +1,15 @@
 # Project Memory
 
+- 2026-09-16 durable finite-horizon publication boundary: a persisted
+  stochastic frontier may be re-solved exactly for the narrower objective
+  “does this selected action immediately destroy the target leader” by treating
+  only alive depth-one continuation leaves as failures for that action horizon.
+  The original continuation interval and every live successor must remain
+  unchanged. Current report `c7c86bd6...ad023` proves value `[0,0]` for
+  Sepsira's selected channeled spell against full-health Nymara across 17 dice
+  classes, 119 adversarial contexts, seven response keys and 449 strict
+  successors; the match interval remains `[0,1]`.
+
 - 2026-09-16 durable fixed-match Chance checkpoint: the current 103-model
   Sepsira six-Swarm versus Nymara route reaches its first stochastic action
   after 60 strict transitions. Its 17 exact dice classes and seven defender
