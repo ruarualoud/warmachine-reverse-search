@@ -401,6 +401,8 @@ export async function loadWarmachineHost(rawOptions = {}) {
     "buildRulesV1UnitCombatActionAttackSlotPlan",
     "buildRulesV1MovementPathProposalPlan",
     "buildRulesV1MovementGeometryPredicatePlan",
+    "buildRulesV1ParameterizedMovementDomainContract",
+    "buildRulesV1ParameterizedPursuitReactionDomainContract",
     "evaluateRulesV1MovementGeometryEndpoint",
     "evaluateRulesV1MovementGeometryPath",
     "materializeRulesV1ParameterizedLifecycleReplacementAction",

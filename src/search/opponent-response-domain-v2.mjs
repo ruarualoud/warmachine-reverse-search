@@ -3,11 +3,15 @@ import { warmachineRuleBehaviorStateHashV1 } from
   "../state/semantic-hash-v1.mjs";
 import {
   applyRulesV1Action,
+  buildRulesV1ParameterizedPursuitReactionDomainContract,
   buildWarmachineRulesV1ActionWithStrictRngOutcome,
   enumerateRulesV1Actions,
   normalizeRulesV1State,
   strictOpponentReactionRequirementsForAction,
+  warmachineHost,
 } from "../warmachine-host-runtime.mjs";
+import { buildWarmachineGeometryPredicatePlanV1 } from
+  "../geometry/predicate-plan-v1.mjs";
 import { buildWarmachineExactActionChanceClasses } from
   "./chance-outcomes-v1.mjs";
 
@@ -17,6 +21,11 @@ export const WARMACHINE_OPPONENT_RESPONSE_WORKLIST_V2_SCHEMA =
   "warmachine_opponent_response_worklist_v2";
 export const WARMACHINE_OPPONENT_RESPONSE_CHECKPOINT_V2_SCHEMA =
   "warmachine_opponent_response_checkpoint_v2";
+export const WARMACHINE_PURSUIT_REACTION_ENDPOINT_DOMAIN_V1_SCHEMA =
+  "warmachine_pursuit_reaction_endpoint_domain_v1";
+
+const HOST_PURSUIT_REACTION_ENDPOINT_THEOREM =
+  "host_open_convex_quantized_pursuit_reaction_straight_path_universal_strict_execution_v1";
 
 function array(value) {
   return Array.isArray(value) ? value : [];
@@ -53,6 +62,139 @@ function validReceipt(value = {}, hashKey = "") {
   const core = { ...value };
   delete core[hashKey];
   return stableGraphHash(core) === hash;
+}
+
+function sameStringSet(left = [], right = []) {
+  return JSON.stringify(uniqueSorted(left)) === JSON.stringify(uniqueSorted(right));
+}
+
+function buildPursuitReactionEndpointDomain(
+  inputState = {},
+  sourceActionKey = "",
+  sourceSpellcasterPieceKey = "",
+  selectedMovedModelPieceKey = "",
+) {
+  const state = normalizeRulesV1State(inputState);
+  const source = buildRulesV1ParameterizedPursuitReactionDomainContract(
+    state,
+    {
+      sourceActionKey,
+      sourceSpellcasterPieceKey,
+      selectedMovedModelPieceKey,
+    },
+  );
+  const hostReceipt = source.parameterizedPursuitReactionDomainContract || {};
+  const hostPredicatePlan = source.predicatePlan || {};
+  const projectedReactionState = source.projectedReactionState || null;
+  const searchPredicatePlan = projectedReactionState
+    ? buildWarmachineGeometryPredicatePlanV1(projectedReactionState, {
+        actorPieceKey: selectedMovedModelPieceKey,
+        actionType: "advance",
+        hostPlan: hostPredicatePlan,
+      })
+    : null;
+  const issues = [];
+  if (hostReceipt.schemaVersion !==
+      "warmachine_parameterized_pursuit_reaction_domain_contract_v1") {
+    issues.push("host_pursuit_parameterized_domain_schema_invalid");
+  }
+  if (!validReceipt(
+    hostReceipt,
+    "parameterizedPursuitReactionDomainContractHash",
+  )) {
+    issues.push("host_pursuit_parameterized_domain_hash_invalid");
+  }
+  if (String(hostReceipt.sourceActionKey || "") !== String(sourceActionKey) ||
+      String(hostReceipt.sourceSpellcasterPieceKey || "") !==
+        String(sourceSpellcasterPieceKey) ||
+      String(hostReceipt.selectedMovedModelPieceKey || "") !==
+        String(selectedMovedModelPieceKey)) {
+    issues.push("host_pursuit_parameterized_domain_binding_mismatch");
+  }
+  if (!array(hostReceipt.eligibleMovedModelPieceKeys)
+      .map(String).includes(String(selectedMovedModelPieceKey))) {
+    issues.push("host_pursuit_parameterized_selected_model_not_eligible");
+  }
+  if (hostReceipt.predicatePlanHash !== hostPredicatePlan.predicatePlanHash ||
+      searchPredicatePlan?.hostPredicatePlanHash !==
+        hostPredicatePlan.predicatePlanHash ||
+      searchPredicatePlan?.hostPredicatePlanHashMatches !== true ||
+      searchPredicatePlan?.ok !== true) {
+    issues.push("host_pursuit_parameterized_predicate_plan_invalid");
+  }
+  if (Number(hostReceipt.endpointDomain?.quantizationIn) !== 0.01 ||
+      !sameStringSet(hostReceipt.endpointDomain?.predicates, [
+        "endpoint_within_board_after_base_inset",
+        "endpoint_within_movement_allowance",
+      ]) ||
+      hostReceipt.canonicalPathFamily !==
+        "straight_segment_from_selected_model_start_to_endpoint") {
+    issues.push("host_pursuit_parameterized_endpoint_contract_invalid");
+  }
+  if (hostReceipt.continuousChoiceKind !== "player_choice_not_chance" ||
+      hostReceipt.chanceMassAssigned !== false) {
+    issues.push("host_pursuit_parameterized_chance_contract_invalid");
+  }
+  if (hostReceipt.ok !== true) {
+    issues.push(...array(hostReceipt.issues).map((issue) =>
+      `host_pursuit_parameterized_not_ok:${String(issue)}`));
+  }
+  if (hostReceipt.strictUniversalReactionActionExecutionComplete !== true ||
+      hostReceipt.theoremKey !== HOST_PURSUIT_REACTION_ENDPOINT_THEOREM ||
+      !hostReceipt.zeroDistanceWitnessReceiptHash ||
+      !hostReceipt.positiveDistanceWitnessReceiptHash) {
+    issues.push("host_pursuit_parameterized_universal_execution_missing");
+  }
+  const validationIssues = uniqueSorted(issues);
+  const destinationParameterLegalityComplete = validationIssues.length === 0;
+  const core = stableGraphValue({
+    schemaVersion: WARMACHINE_PURSUIT_REACTION_ENDPOINT_DOMAIN_V1_SCHEMA,
+    ok: destinationParameterLegalityComplete,
+    inputRuleBehaviorStateHash: warmachineRuleBehaviorStateHashV1(state),
+    sourceActionKey: String(sourceActionKey),
+    sourceActionTargetPieceKey: String(
+      hostReceipt.sourceActionTargetPieceKey || "",
+    ),
+    sourceSpellcasterPieceKey: String(sourceSpellcasterPieceKey),
+    selectedMovedModelPieceKey: String(selectedMovedModelPieceKey),
+    eligibleMovedModelPieceKeys: uniqueSorted(
+      hostReceipt.eligibleMovedModelPieceKeys,
+    ),
+    hostParameterizedPursuitReactionDomainContractHash: String(
+      hostReceipt.parameterizedPursuitReactionDomainContractHash || "",
+    ),
+    hostPredicatePlanHash: String(hostPredicatePlan.predicatePlanHash || ""),
+    searchPredicatePlanReceiptHash: String(
+      searchPredicatePlan?.predicatePlanReceiptHash || "",
+    ),
+    configurationObstacleExclusionProofs: stableGraphValue(
+      searchPredicatePlan?.configurationObstacleExclusionProofs || [],
+    ),
+    endpointDomain: stableGraphValue(hostReceipt.endpointDomain || {}),
+    canonicalPathFamily: String(hostReceipt.canonicalPathFamily || ""),
+    theoremKey: String(hostReceipt.theoremKey || ""),
+    destinationParameterLegalityComplete,
+    transitionStable: false,
+    fullDestinationParameterDomainComplete: false,
+    hostFocusedExecutionReceiptCurrent:
+      warmachineHost.focusedSourceReceipt?.current === true,
+    continuousChoiceKind: "player_choice_not_chance",
+    chanceMassAssigned: false,
+    validationIssues,
+    completionDebts: [
+      ...(destinationParameterLegalityComplete
+        ? []
+        : ["selected_pursuit_endpoint_legality_not_proven"]),
+      "pursuit_path_class_partition_not_proven",
+      "pursuit_transition_stability_not_proven",
+    ],
+    claimBoundary:
+      "This Search receipt validates one Engine-owned open Pursuit endpoint theorem for one selected eligible battlegroup model. It proves one canonical straight strict path exists for every admitted cent-inch endpoint. It does not certify other eligible models, nonstraight path classes, transition stability, strategy equivalence or the complete opponent response domain.",
+  });
+  return {
+    ...core,
+    pursuitReactionEndpointDomainHash: stableGraphHash(core),
+  };
 }
 
 function boundedInteger(value, fallback, maximum = 10000) {
@@ -385,6 +527,33 @@ export function buildWarmachineOpponentResponseDomainV2(
   const parameterizedDestinationProposals =
     normalizeParameterizedDestinationProposals(options);
   const issues = [...parameterizedDestinationProposals.issues];
+  const requestedPursuitMovedModelPieceKeys = uniqueSorted(
+    options.parameterizedPursuitSelectedMovedModelPieceKeys,
+  );
+  const pursuitRequirements = requirements.filter((requirement) =>
+    String(requirement.ruleKey || "") === "pursuit");
+  const parameterizedPursuitCertificationIssues = [];
+  if (requestedPursuitMovedModelPieceKeys.length &&
+      pursuitRequirements.length !== 1) {
+    parameterizedPursuitCertificationIssues.push(
+      "parameterized_pursuit_selected_models_require_single_pursuit_scope",
+    );
+  }
+  const pursuitRequirement = pursuitRequirements.length === 1
+    ? pursuitRequirements[0]
+    : null;
+  const parameterizedPursuitReactionEndpointDomains = pursuitRequirement
+    ? requestedPursuitMovedModelPieceKeys.map((selectedMovedModelPieceKey) =>
+        buildPursuitReactionEndpointDomain(
+          state,
+          action.actionKey,
+          String(
+            pursuitRequirement.requirement?.sourceSpellcasterPieceKey ||
+              pursuitRequirement.ownerPieceKey || "",
+          ),
+          selectedMovedModelPieceKey,
+        ))
+    : [];
   if (parameterizedDestinationProposals.rows.length && requirements.length !== 1) {
     issues.push("parameterized_destination_proposals_require_single_reaction_scope");
   }
@@ -401,7 +570,30 @@ export function buildWarmachineOpponentResponseDomainV2(
   const rows = requirements.map((requirement, index) => {
     const matchedProposals = parameterizedDestinationProposals.rows.filter((proposal) =>
       parameterizedProposalMatchesRequirement(proposal, requirement));
-    const options = localResponseOptions(requirement, state, matchedProposals);
+    const localOptions = localResponseOptions(requirement, state, matchedProposals);
+    const parameterizedEndpointDomains =
+      parameterizedPursuitReactionEndpointDomains.filter((domain) =>
+        domain.sourceActionTargetPieceKey ===
+          String(requirement.targetPieceKey || "") &&
+        domain.sourceSpellcasterPieceKey ===
+          String(requirement.ownerPieceKey || ""));
+    const eligibleMovedModelPieceKeys = uniqueSorted([
+      ...array(requirement.eligibleMovedModelPieceKeys),
+      ...array(requirement.requirement?.eligibleMovedModelPieceKeys),
+    ]);
+    const certifiedMovedModelPieceKeys = uniqueSorted(
+      parameterizedEndpointDomains
+        .filter((domain) => domain.destinationParameterLegalityComplete === true)
+        .map((domain) => domain.selectedMovedModelPieceKey),
+    );
+    const uncertifiedEligibleMovedModelPieceKeys =
+      eligibleMovedModelPieceKeys.filter((pieceKey) =>
+        !certifiedMovedModelPieceKeys.includes(pieceKey));
+    const destinationParameterLegalityComplete =
+      requirement.requiresDestination !== true || (
+        eligibleMovedModelPieceKeys.length > 0 &&
+        uncertifiedEligibleMovedModelPieceKeys.length === 0
+      );
     const bucket = responseBucket(requirement);
     const projectionKey = `${bucket}:${String(requirement.choiceKey || "")}`;
     if (!requirement.choiceKey) {
@@ -411,10 +603,10 @@ export function buildWarmachineOpponentResponseDomainV2(
       issues.push(`opponent_response_choice_projection_collision:${projectionKey}`);
     }
     bucketChoiceKeys.add(projectionKey);
-    if (!options.length) {
+    if (!localOptions.length) {
       issues.push(`opponent_response_local_option_domain_empty:${index}`);
     }
-    if (requirement.requiresDestination && options.length === 1) {
+    if (requirement.requiresDestination && localOptions.length === 1) {
       issues.push(`opponent_response_destination_option_missing:${index}`);
     }
     return stableGraphValue({
@@ -429,10 +621,15 @@ export function buildWarmachineOpponentResponseDomainV2(
       requiresDestination: requirement.requiresDestination === true,
       requiresRecipientChoice: requirement.requiresRecipientChoice === true,
       responseBucket: bucket,
-      options,
-      localOptionCount: options.length,
+      options: localOptions,
+      localOptionCount: localOptions.length,
       parameterizedDestinationProposalCount: matchedProposals.length,
-      reactionChanceOutcomeDomainComplete: requirements.length === 1 && options
+      eligibleMovedModelPieceKeys,
+      certifiedMovedModelPieceKeys,
+      uncertifiedEligibleMovedModelPieceKeys,
+      parameterizedEndpointDomains,
+      destinationParameterLegalityComplete,
+      reactionChanceOutcomeDomainComplete: requirements.length === 1 && localOptions
         .filter((option) => option.choice === "use")
         .every((option) => option.chanceOutcomeExact === true),
       originalRequirement: requirement,
@@ -442,6 +639,14 @@ export function buildWarmachineOpponentResponseDomainV2(
     product * BigInt(row.localOptionCount), 1n);
   const destinationParameterDomainComplete = rows.every((row) =>
     !row.requiresDestination);
+  const destinationParameterLegalityComplete = rows.every((row) =>
+    row.destinationParameterLegalityComplete === true);
+  const requestedDestinationParameterLegalityComplete =
+    requestedPursuitMovedModelPieceKeys.length > 0 &&
+    parameterizedPursuitReactionEndpointDomains.length ===
+      requestedPursuitMovedModelPieceKeys.length &&
+    parameterizedPursuitReactionEndpointDomains.every((domain) =>
+      domain.destinationParameterLegalityComplete === true);
   const damageTransferResolutionComplete = rows.every((row) =>
     row.kind !== "damage_transfer");
   const reactionOrderDomainComplete = rows.length <= 1;
@@ -464,8 +669,14 @@ export function buildWarmachineOpponentResponseDomainV2(
     requirementCount: rows.length,
     parameterizedDestinationProposalCount:
       parameterizedDestinationProposals.rows.length,
+    requestedPursuitMovedModelPieceKeys,
+    parameterizedPursuitReactionEndpointDomains,
+    parameterizedPursuitCertificationIssues:
+      uniqueSorted(parameterizedPursuitCertificationIssues),
     declaredFiniteChoiceCandidateCount: candidateCount.toString(),
     finiteDeclaredChoiceProductWellFormed,
+    requestedDestinationParameterLegalityComplete,
+    destinationParameterLegalityComplete,
     destinationParameterDomainComplete,
     reactionOrderDomainComplete,
     reactionChanceOutcomeDomainComplete: rows.every((row) =>
@@ -476,7 +687,7 @@ export function buildWarmachineOpponentResponseDomainV2(
     chanceMassAssigned,
     validationIssues: uniqueSorted(issues),
     claimBoundary:
-      "This domain preserves every opponent-owned requirement projected by the current Host, every declared finite use/decline, destination-probe or damage-transfer option, and structurally bound cent-inch parameterized destination proposals awaiting strict Host execution. It does not treat Host probes or Search proposals as a complete continuous destination domain, does not invent alternate reaction priority orders, and does not replace reaction attack dice with decision probability. Those remain independent completion debts.",
+      "This domain preserves every opponent-owned requirement projected by the current Host, every declared finite use/decline, destination-probe or damage-transfer option, and structurally bound cent-inch parameterized destination proposals awaiting strict Host execution. A selected Pursuit model may additionally carry an Engine-owned theorem proving canonical straight-path legality for every admitted endpoint; the whole requirement remains incomplete until every eligible model, path class and transition partition is certified. Host probes or Search proposals never close that domain, reaction priority orders are not invented, and reaction attack dice remain Chance rather than decisions.",
   });
   return {
     ...core,
@@ -589,6 +800,8 @@ export function advanceWarmachineOpponentResponseWorklistV2(
     {
       parameterizedDestinationProposals:
         options.parameterizedDestinationProposals,
+      parameterizedPursuitSelectedMovedModelPieceKeys:
+        options.parameterizedPursuitSelectedMovedModelPieceKeys,
     },
   );
   if (!domain.finiteDeclaredChoiceProductWellFormed) {
@@ -819,6 +1032,9 @@ export function advanceWarmachineOpponentResponseWorklistV2(
     ...(!domain.destinationParameterDomainComplete
       ? ["opponent_reaction_continuous_destination_domain_pending"]
       : []),
+    ...(!domain.destinationParameterLegalityComplete
+      ? ["opponent_reaction_destination_parameter_legality_pending"]
+      : []),
     ...(!domain.reactionOrderDomainComplete
       ? ["opponent_reaction_priority_order_domain_pending"]
       : []),
@@ -861,6 +1077,10 @@ export function advanceWarmachineOpponentResponseWorklistV2(
     acceptedSamples: checkpoint.acceptedSamples,
     rejectedSamples: checkpoint.rejectedSamples,
     declaredFiniteChoiceProductComplete,
+    requestedDestinationParameterLegalityComplete:
+      domain.requestedDestinationParameterLegalityComplete,
+    destinationParameterLegalityComplete:
+      domain.destinationParameterLegalityComplete,
     destinationParameterDomainComplete:
       domain.destinationParameterDomainComplete,
     reactionOrderDomainComplete: domain.reactionOrderDomainComplete,

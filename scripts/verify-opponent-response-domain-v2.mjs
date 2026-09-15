@@ -3,8 +3,10 @@ import fs from "node:fs";
 
 import {
   applyRulesV1Action,
+  buildRulesV1ParameterizedPursuitReactionDomainContract,
   buildWarmachineRulesV1StateFromLayer3Room,
   enumerateRulesV1Actions,
+  normalizeRulesV1State,
   resolveWarmachineHostPath,
 } from "../src/warmachine-host-runtime.mjs";
 import {
@@ -26,6 +28,156 @@ const MECHANITHRALL_SWARM_CARD = HOST_DATA.cards.find((card) =>
   card.id === "e1cb65eb-6d1b-419f-a6c1-ba7a7c332e2b");
 const MECHANITHRALL_SWARM_MODEL = MECHANITHRALL_SWARM_CARD?.models?.find((model) =>
   model.id === "50778cd0-136b-4e5d-9876-1d2bbf4d3d91");
+const ASHMAEL_CARD = HOST_DATA.cards.find((card) =>
+  card.id === "c219de4f-711b-40bb-a54a-72cd4d296fec");
+
+function pursuitPiece(overrides = {}) {
+  const sideKey = overrides.sideKey || "player1";
+  return {
+    pieceKey: overrides.pieceKey || "model",
+    label: overrides.label || overrides.pieceKey || "Model",
+    sideKey,
+    controllerSideKey: sideKey,
+    factionKey: sideKey === "player2" ? "cryx" : "dusk",
+    factionId: sideKey === "player2" ? "cryx" : "dusk",
+    modelRole: overrides.modelRole || "warrior",
+    modelType: overrides.modelType || overrides.modelRole || "warrior",
+    cardTypeName: overrides.cardTypeName || "Solo",
+    traits: overrides.traits || ["living", "warrior"],
+    isLiving: overrides.isLiving ?? true,
+    isWarrior: overrides.isWarrior ?? true,
+    position: overrides.position || { xIn: 8, yIn: 10 },
+    baseSizeIn: overrides.baseSizeIn ?? 30 / 25.4,
+    speedIn: overrides.speedIn ?? 6,
+    meleeRangeIn: 2,
+    mat: 7,
+    rat: 7,
+    aat: 8,
+    arc: 8,
+    defense: 12,
+    armor: 16,
+    resourceKind: overrides.resourceKind || "none",
+    resourcePoints: overrides.resourcePoints ?? 0,
+    resourceMax: overrides.resourceMax ?? 0,
+    specialRules: [],
+    statusTags: [],
+    statusEffects: [],
+    activeSupportEffects: [],
+    attackProfiles: overrides.attackProfiles || [],
+    damage: { boxesRemaining: 20, maxBoxes: 20 },
+    ...overrides,
+  };
+}
+
+function currentPursuitReactionState() {
+  const ashmael = pursuitPiece({
+    pieceKey: "ashmael",
+    label: ASHMAEL_CARD.name,
+    cardId: ASHMAEL_CARD.id,
+    cardSnapshot: structuredClone(ASHMAEL_CARD),
+    modelRole: "warcaster",
+    modelType: "warcaster",
+    cardTypeName: "Leader",
+    traits: ["living", "warrior", "warcaster", "spellcaster"],
+    resourceKind: "focus",
+    resourcePoints: 8,
+    resourceMax: 8,
+    controlRangeIn: 16,
+    battlegroupId: "ashmael-bg",
+  });
+  const cohort = pursuitPiece({
+    pieceKey: "jack-in",
+    modelRole: "warjack",
+    modelType: "warjack",
+    cardTypeName: "Warjack",
+    traits: ["construct", "warjack"],
+    isLiving: false,
+    isWarrior: false,
+    isWarjack: true,
+    controllerPieceKey: "ashmael",
+    battlegroupId: "ashmael-bg",
+    resourceKind: "focus",
+    resourceMax: 3,
+    position: { xIn: 8, yIn: 24 },
+    attackProfiles: [{
+      profileKey: "jack-in-blade",
+      name: "Jack In Blade",
+      mode: "melee",
+      rangeIn: 2,
+      power: 12,
+      rof: 1,
+      count: 1,
+      attackStatKind: "MAT",
+      attackStat: 7,
+      specialRules: [],
+    }],
+  });
+  const target = pursuitPiece({
+    pieceKey: "target",
+    sideKey: "player2",
+    position: { xIn: 16, yIn: 10 },
+  });
+  const initial = normalizeRulesV1State({
+    stateKey: "search-current-pursuit-open-domain",
+    activeSideKey: "player1",
+    firstPlayerSideKey: "player1",
+    phaseKey: "activation",
+    turnNumber: 3,
+    strictMode: true,
+    strictRun: true,
+    enforceStrictExecutor: true,
+    ruleAtomRuntimeMode: "authoritative",
+    board: { widthIn: 48, heightIn: 48 },
+    terrain: [],
+    movementPaths: [],
+    commandCards: [],
+    scenario: {
+      zones: [],
+      flags: [],
+      actionObjectives: [],
+      score: { player1: 0, player2: 0 },
+      victoryThreshold: 5,
+    },
+    pieces: [ashmael, cohort, target],
+  });
+  const castEnumeration = enumerateRulesV1Actions(initial, {
+    actorPieceKeys: ["ashmael"],
+    includeRejectedActions: true,
+  });
+  const castAction = castEnumeration.actions.find((action) =>
+    action.actionType === "offensive_spell" &&
+      action.spellName === "Pursuit" &&
+      action.targetPieceKey === "target");
+  assert.ok(castAction, "current Ashmael must enumerate Pursuit");
+  const cast = applyRulesV1Action(castEnumeration.state, {
+    actionKey: castAction.actionKey,
+    strictRollOutcome: { attackDice: [6, 6] },
+    __warmachineTrustedRulesV1Enumeration: castEnumeration,
+  });
+  assert.equal(cast.ok, true, cast.reason);
+  return normalizeRulesV1State({
+    ...cast.nextState,
+    stateKey: "search-current-pursuit-open-domain-enemy-turn",
+    activeSideKey: "player2",
+    phaseKey: "activation",
+    anyTimeActivationWindow: null,
+    combatPurchaseWindow: null,
+    initialAttackWindow: null,
+    unitActivationWindow: null,
+    repositionWindow: null,
+    pieces: cast.nextState.pieces.map((piece) => ({
+      ...piece,
+      activated: piece.sideKey !== "player2",
+      ...(piece.pieceKey === "target" ? {
+        explicitMovementPaths: [{
+          key: "pursuit-trigger",
+          actionType: "advance",
+          points: [piece.position, { xIn: 18, yIn: 10 }],
+        }],
+      } : {}),
+    })),
+  });
+}
 
 function counterchargeRoom() {
   return {
@@ -457,6 +609,43 @@ assert.equal(pursuitParameterizedUse.chanceOutcomeExact, false,
   "a Search-proposed route cannot claim its reaction outcome complete before strict execution");
 assert.equal(pursuitParameterizedDomain.reactionChanceOutcomeDomainComplete, false);
 assert.equal(pursuitParameterizedDomain.destinationParameterDomainComplete, false);
+
+assert.equal(typeof buildRulesV1ParameterizedPursuitReactionDomainContract, "function");
+const currentPursuitState = currentPursuitReactionState();
+const currentPursuitEnumeration = enumerateRulesV1Actions(currentPursuitState, {
+  actorPieceKeys: ["target"],
+  includeRejectedActions: true,
+});
+const currentPursuitAction = currentPursuitEnumeration.actions.find((candidate) =>
+  candidate.actorPieceKey === "target" &&
+    candidate.metadata?.reactionResolutionRequirements?.some((requirement) =>
+      requirement.ruleKey === "pursuit"));
+assert.ok(currentPursuitAction, "current target advance must expose Pursuit");
+const currentPursuitDomain = buildWarmachineOpponentResponseDomainV2(
+  currentPursuitAction,
+  currentPursuitEnumeration,
+  { parameterizedPursuitSelectedMovedModelPieceKeys: ["jack-in"] },
+);
+assert.equal(currentPursuitDomain.parameterizedPursuitReactionEndpointDomains.length, 1);
+const jackPursuitEndpointDomain =
+  currentPursuitDomain.parameterizedPursuitReactionEndpointDomains[0];
+assert.equal(jackPursuitEndpointDomain.selectedMovedModelPieceKey, "jack-in");
+assert.equal(jackPursuitEndpointDomain.destinationParameterLegalityComplete, true);
+assert.equal(jackPursuitEndpointDomain.transitionStable, false);
+assert.deepEqual(
+  jackPursuitEndpointDomain.configurationObstacleExclusionProofs
+    .map((proof) => proof.blockerPieceKey),
+  ["ashmael", "target"],
+);
+assert.equal(currentPursuitDomain.requestedDestinationParameterLegalityComplete, true);
+assert.equal(currentPursuitDomain.destinationParameterLegalityComplete, false,
+  "certifying the jack must not silently certify the still-eligible Ashmael subdomain");
+assert.deepEqual(
+  currentPursuitDomain.requirementRows[0].uncertifiedEligibleMovedModelPieceKeys,
+  ["ashmael"],
+);
+assert.equal(currentPursuitDomain.destinationParameterDomainComplete, false,
+  "endpoint reachability does not prove path/transition equivalence");
 
 const defensiveStrikeState = buildWarmachineRulesV1StateFromLayer3Room(
   defensiveStrikeRoom(),

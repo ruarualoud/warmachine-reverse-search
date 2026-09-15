@@ -19,6 +19,7 @@ export const {
   buildRulesV1MovementGeometryPredicatePlan,
   buildRulesV1MovementPathProposalPlan,
   buildRulesV1ParameterizedMovementDomainContract,
+  buildRulesV1ParameterizedPursuitReactionDomainContract,
   closestPointDistanceIn,
   evaluateRulesV1MovementGeometryEndpoint,
   evaluateRulesV1MovementGeometryPath,
