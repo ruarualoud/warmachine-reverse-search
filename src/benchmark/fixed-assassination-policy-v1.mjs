@@ -58,7 +58,7 @@ export function createWarmachineFixedAssassinationPolicyV1(rawConfig = {}) {
     throw new Error("fixed_assassination_policy_config_incomplete");
   }
   let firstActionAudit = null;
-  const selectPolicyAction = ({ state, cursor }) => {
+  const selectPolicyAction = ({ state, cursor, stateAlreadyNormalized = false, stateHash = "" }) => {
     const target = state.pieces.find((piece) => piece.pieceKey === config.targetPieceKey);
     if (!target || target.destroyed === true || Number(target.damage?.boxesRemaining || 0) <= 0) {
       return { nodeType: "terminal", outcome: "success", reason: "target_leader_destroyed" };
@@ -72,6 +72,8 @@ export function createWarmachineFixedAssassinationPolicyV1(rawConfig = {}) {
     let scoped = null;
     if (warmachineBenchmarkRuntimeWindowActiveV2(state)) {
       scoped = enumerateWarmachineBenchmarkActionsV2(state, {
+        stateAlreadyNormalized,
+        inputStateHash: stateHash,
         targetPieceKeys: [config.targetPieceKey],
         includeUntargetedActions: true,
         actionFamilyKeys: exhaustedCasterActivation
@@ -89,6 +91,8 @@ export function createWarmachineFixedAssassinationPolicyV1(rawConfig = {}) {
         };
       }
       scoped = enumerateWarmachineBenchmarkActionsV2(state, {
+        stateAlreadyNormalized,
+        inputStateHash: stateHash,
         activationGroupKey: channelerGroup.groupKey,
         targetPieceKeys: [config.targetPieceKey],
         includeUntargetedActions: false,

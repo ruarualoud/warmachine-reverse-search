@@ -357,8 +357,10 @@ export function bindWarmachineBenchmarkExplicitMovementPathV2(
 }
 
 export function enumerateWarmachineBenchmarkActionsV2(stateInput = {}, rawScope = {}) {
-  const state = normalizeRulesV1State(stateInput);
-  const inputStateHash = stableGraphHash(state);
+  const state = rawScope.stateAlreadyNormalized === true
+    ? stateInput
+    : normalizeRulesV1State(stateInput);
+  const inputStateHash = String(rawScope.inputStateHash || stableGraphHash(state));
   const inputGameStateHash = warmachineBenchmarkGameStateHashV2(state);
   const runtimeActorKeys = runtimeWindowActive(state) ? runtimeWindowActorPieceKeys(state) : [];
   let actorPieceKeys = Array.isArray(rawScope.actorPieceKeys)

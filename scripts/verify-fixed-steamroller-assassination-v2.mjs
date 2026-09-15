@@ -225,6 +225,10 @@ if (probabilityProbe) {
   const continuationWorkerCount = Math.max(1, Number(
     process.env.WARMACHINE_ASSASSINATION_CONTINUATION_WORKERS || 1,
   ));
+  const continuationTaskTimeoutMs = Math.max(1_000, Number(
+    process.env.WARMACHINE_ASSASSINATION_CONTINUATION_TASK_TIMEOUT_MS ||
+      15 * 60 * 1_000,
+  ));
   const externalDagOptions = externalDagRoot ? {
     hostReceiptHash: warmachineHost.receipt.receiptHash,
     sourceHash: probabilityCheckpointCacheBindingHash,
@@ -308,6 +312,9 @@ if (probabilityProbe) {
         continuationDepthIncrement: 1,
         maximumEvaluatedStatesPerContinuation: 1,
         lowProbabilityThreshold: probabilityThreshold,
+        ...(continuationWorkerCount === 1
+          ? { onProgress: (detail) => reportProgress("continuation_progress", detail) }
+          : {}),
       };
     externalDagContinuationBatch = continuationWorkerCount > 1
       ? await runWarmachineStrictFrontierContinuationBatchParallelV1(
@@ -317,7 +324,7 @@ if (probabilityProbe) {
         {
           ...continuationOptions,
           maximumWorkers: continuationWorkerCount,
-          taskTimeoutMs: 15 * 60 * 1_000,
+          taskTimeoutMs: continuationTaskTimeoutMs,
           livenessProbeIntervalMs: 5_000,
           supervisorStatusPath: path.join(
             externalDagRoot,

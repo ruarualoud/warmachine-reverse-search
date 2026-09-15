@@ -181,6 +181,7 @@ export function evaluateWarmachineStrictFrontierContinuationEntryV1(
       rootAdversarialContextKey: entry.adversarialContextKey,
       initialContinuationKey: entry.continuationKey,
       initialCumulativeProbability: entry.cumulativeProbability,
+      inputStateAlreadyNormalized: true,
       maximumDepth: Number(entry.depth) + Math.max(1, Number(
         rawOptions.continuationDepthIncrement ?? 1,
       )),
@@ -189,6 +190,9 @@ export function evaluateWarmachineStrictFrontierContinuationEntryV1(
       )),
       lowProbabilityThreshold: String(rawOptions.lowProbabilityThreshold ?? "0"),
       includeRuntimeCheckpoint: true,
+      ...(typeof rawOptions.onProgress === "function"
+        ? { onProgress: rawOptions.onProgress }
+        : {}),
       ...(typeof rawOptions.classifyState === "function"
         ? { classifyState: rawOptions.classifyState }
         : {}),
@@ -315,6 +319,14 @@ export function runWarmachineStrictFrontierContinuationBatchV1(
       continuationDepthIncrement: prepared.continuationDepthIncrement,
       maximumEvaluatedStatesPerContinuation: prepared.maximumEvaluatedStatesPerContinuation,
       lowProbabilityThreshold: prepared.threshold,
+      ...(typeof rawOptions.onProgress === "function"
+        ? {
+            onProgress: (detail) => rawOptions.onProgress({
+              labelKey: entry.labelKey,
+              ...detail,
+            }),
+          }
+        : {}),
       ...(typeof rawOptions.classifyState === "function"
         ? { classifyState: rawOptions.classifyState }
         : {}),

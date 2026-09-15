@@ -55,8 +55,9 @@ export function expandWarmachineStrictPolicyStepV1(
   if (typeof selectPolicyAction !== "function") {
     throw new Error("strict_policy_step_selector_required");
   }
-  const state = normalizeRulesV1State(stateInput);
-  const stateHash = stableGraphHash(state);
+  const stateAlreadyNormalized = rawOptions.inputStateAlreadyNormalized === true;
+  const state = stateAlreadyNormalized ? stateInput : normalizeRulesV1State(stateInput);
+  const stateHash = String(rawOptions.inputStateHash || stableGraphHash(state));
   const depth = Math.max(0, Number(rawOptions.depth ?? 0));
   const cursor = String(rawOptions.cursor ?? depth);
   const routeKey = String(rawOptions.routeKey || "strict-policy-step");
@@ -100,7 +101,13 @@ export function expandWarmachineStrictPolicyStepV1(
   }
 
   reportProgress("policy_selection_start");
-  const decision = selectPolicyAction({ state, stateHash, cursor, depth }) || {};
+  const decision = selectPolicyAction({
+    state,
+    stateHash,
+    cursor,
+    depth,
+    stateAlreadyNormalized,
+  }) || {};
   reportProgress("policy_selection_complete", {
     actionKey: decision.actionKey || decision.action?.actionKey || "",
   });
@@ -146,6 +153,8 @@ export function expandWarmachineStrictPolicyStepV1(
       {
         routeKey: `${routeKey}:${depth}:deterministic`,
         actionPatch: decision.actionPatch || {},
+        skipStrictRngForProvablyDeterministicAction: true,
+        onProgress: (detail) => reportProgress("deterministic_execution_progress", detail),
       },
     );
     const reactionRequirements = executed.receipt?.reactionRequirements || [];

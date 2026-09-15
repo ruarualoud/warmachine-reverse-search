@@ -343,6 +343,9 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
           perspectiveSideKey,
           depth: label.depth,
           cursor: label.cursor,
+          inputStateAlreadyNormalized:
+            rawOptions.inputStateAlreadyNormalized === true || label.depth > initialDepth,
+          inputStateHash: label.stateHash,
           classifyState,
           ...(classifyResult ? { classifyResult } : {}),
           onProgress: (detail) => reportProgress("policy_step_progress", {
