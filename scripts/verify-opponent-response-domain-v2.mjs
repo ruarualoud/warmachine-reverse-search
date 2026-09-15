@@ -108,6 +108,40 @@ function twoFreeStrikeRoom() {
   return room;
 }
 
+function sameReactorMultipleRuleState() {
+  const state = simultaneousPlacementDefensiveStrikeState();
+  const mover = structuredClone(state.pieces.find((piece) => piece.pieceKey === "unit-mover"));
+  const reactor = structuredClone(state.pieces.find((piece) => piece.pieceKey === "placement-reactor"));
+  mover.pieceKey = "multi-rule-mover";
+  mover.label = "multi-rule-mover";
+  mover.modelType = "solo";
+  mover.unitGroupId = "";
+  mover.position = { xIn: 5, yIn: 5 };
+  mover.damage = { boxesRemaining: 20, maxBoxes: 20 };
+  reactor.pieceKey = "multi-rule-reactor";
+  reactor.label = "multi-rule-reactor";
+  reactor.position = { xIn: 10, yIn: 5 };
+  reactor.specialRules = ["Defensive Strike", "Admonition"];
+  reactor.attackProfiles = [{
+    profileKey: "multi-rule-reactor-blade",
+    name: "multi-rule-reactor blade",
+    mode: "melee",
+    rangeIn: 1,
+    power: 0,
+    attackStatKind: "MAT",
+    attackStat: 100,
+  }];
+  state.stateKey = "opponent-response-domain-v2-same-reactor-multiple-rules";
+  state.pieces = [mover, reactor];
+  state.movementPaths = [{
+    actorPieceKey: mover.pieceKey,
+    actionType: "advance",
+    key: "same-reactor-multiple-rules",
+    waypoints: [{ xIn: 8.4, yIn: 5 }],
+  }];
+  return state;
+}
+
 function simultaneousPlacementDefensiveStrikeState() {
   const melee = (pieceKey, power = 10) => ({
     profileKey: `${pieceKey}-blade`,
@@ -487,6 +521,50 @@ assert.equal(
   "strict_enemy_enter_reaction_window_invalid",
 );
 assert.equal(staleWindowTransition.nextState, staleWindowTransition.state);
+
+const multiRuleState = sameReactorMultipleRuleState();
+const multiRuleEnumeration = enumerateRulesV1Actions(multiRuleState);
+const multiRuleAction = multiRuleEnumeration.actions.find((candidate) =>
+  candidate.actionKey ===
+    "multi-rule-mover:advance-path:same-reactor-multiple-rules:v1");
+assert.ok(multiRuleAction);
+assert.deepEqual(
+  multiRuleAction.metadata.reactionResolutionRequirements.map((requirement) =>
+    requirement.ruleKey).sort(),
+  ["admonition", "defensive_strike"],
+);
+const multiRuleOpened = advanceWarmachineCurrentDecisionWindowV1(
+  multiRuleState,
+  multiRuleAction.actionKey,
+);
+assert.equal(multiRuleOpened.transitionAccepted, true);
+const defensiveStrikeUse = multiRuleOpened.nextDecisionWindowDomain.optionRows.find((row) =>
+  row.disposition === "host_accepted" &&
+  /defensive-strike/.test(row.actionKey) &&
+  /:use:/.test(row.actionKey));
+assert.ok(defensiveStrikeUse);
+const afterDefensiveStrikeUse = advanceWarmachineCurrentDecisionWindowV1(
+  multiRuleOpened.successorState,
+  defensiveStrikeUse.actionKey,
+);
+assert.equal(afterDefensiveStrikeUse.transitionAccepted, true);
+assert.ok(afterDefensiveStrikeUse.nextDecisionWindowDomain.optionRows
+  .filter((row) => row.disposition === "host_accepted")
+  .every((row) => /admonition/.test(row.actionKey)));
+const admonitionDecline = afterDefensiveStrikeUse.nextDecisionWindowDomain.optionRows.find((row) =>
+  row.disposition === "host_accepted" && /decline/.test(row.actionKey));
+assert.ok(admonitionDecline);
+const afterMultiRuleResolution = advanceWarmachineCurrentDecisionWindowV1(
+  afterDefensiveStrikeUse.successorState,
+  admonitionDecline.actionKey,
+);
+assert.equal(afterMultiRuleResolution.transitionAccepted, true);
+assert.ok(!afterMultiRuleResolution.nextStrictContinuationWindowFlags.includes(
+  "strictEnemyEnterReactionWindowOnly",
+));
+assert.ok(afterMultiRuleResolution.successorState.pieces.find((piece) =>
+  piece.pieceKey === "multi-rule-reactor")?.ruleAtomState?.oncePerTurnUseKeys?.some((key) =>
+  key.startsWith("defensive_strike_enemy_enters_melee_basic_melee_once_turn:")));
 
 const placementState = simultaneousPlacementDefensiveStrikeState();
 const placementEnumeration = enumerateRulesV1Actions(placementState);

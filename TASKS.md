@@ -2,11 +2,17 @@
 
 恢复开发先读 [docs/AGENT_TASK_GUIDE.md](docs/AGENT_TASK_GUIDE.md)，再按当前ticket内清单执行。规范由Engine维护，修正计划/工作台接入由本仓库维护。
 
+## 2026-09-15 Ticket 20特殊整批放置回应纵切
+
+- [x] Graveyard Shift与Thrall Crafting已复用目标级动态Host窗口：所有新模型先原子进入状态，再由非主动方从当前合法的规则/反应者/目标/事件选择中逐项使用或放弃；旧反应者去重不再吞掉同一Defensive Strike可触及的其它新模型。
+- [x] 回放保持源事务：Graveyard Shift最终仍是一整队五名模型，Thrall Crafting只在完成回放中支付一次尸体并提交一次每回合使用。同一反应者拥有Defensive Strike与Admonition时，历史按规则分别保存，不会因后一项覆盖前一项。
+- [x] 原有Graveyard Shift门通过`211`条断言，Thrall Crafting门通过当前数据、原子支付、Layer3及证明闭包，Search对手回应门通过同反应者多规则回放。危险地形伤害与可选敌方反应同批出现时，当前明确失败关闭并保留主动方/非主动方触发排序债务；不刷新全局收据。
+
 ## 2026-09-15 Ticket 20 Unit同时落位回应纵切
 
 - [x] Unit正常移动已按真实时序进入动态Host窗口：选中模型先移动，其余模型全部落位后，Host按“规则+反应者+目标+事件”公开每个当前选择，不再让同一Defensive Strike反应者把第二个落位目标从候选中覆盖掉。
 - [x] 现有对手回应验证证明两个落位目标同时可见；放弃第一个后第二个仍可选，随后使用Defensive Strike只移除被选目标并关闭该反应者本回合后续同规则机会。旧静态笛卡尔投影仍诚实报告反应者键碰撞，只有动态Host窗口被认证为可执行。
-- [x] Engine现有反应门`24/24`及Search现有对手回应门各通过一次。该纵切只关闭Unit正常移动的同时落位子域；特殊整队放置、精确Free Strike中断点/剩余路线、中断/同时/次级伤害转移和完整Chance仍留在20a.2c，不刷新全局收据。
+- [x] Engine现有反应门`24/24`及Search现有对手回应门各通过一次。该纵切只关闭Unit正常移动的同时落位子域；下一纵切已扩展到Graveyard Shift与Thrall Crafting的无竞争整批放置。精确Free Strike中断点/剩余路线、危险地形与反应同触发排序、中断/同时/次级伤害转移和完整Chance仍留在20a.2c，不刷新全局收据。
 
 ## 2026-09-15 Ticket 23.10 focused receipt scope correction
 

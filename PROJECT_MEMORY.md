@@ -1,5 +1,16 @@
 # Project Memory
 
+- 2026-09-15 durable atomic multi-model placement boundary: Graveyard Shift
+  and Thrall Crafting now retain every rule/reactor/target/event placement
+  reaction and use the same opponent-owned adaptive Host window as Unit
+  simultaneous placement. All created models are present before reaction
+  choice; source payment/use is committed only by the completed replay.
+  Sequential history is nested by reactor and rule so one model's Defensive
+  Strike and Admonition cannot overwrite one another. A batch that combines
+  hazard damage with optional enemy reactions remains fail-closed because the
+  complete active-player/nonactive-player triggered-effect ordering and
+  recheck protocol is not yet modeled; array order is not authority.
+
 - 2026-09-15 durable simultaneous Unit-placement reaction invariant: Unit
   normal movement advances the selected trooper first and places all remaining
   troopers simultaneously; every placement must exist before enemy-enter
