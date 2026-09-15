@@ -5,6 +5,7 @@
 ## 2026-09-15 Ticket 23.9 dynamic interaction handoff boundary
 
 - [x] Record Engine report `4b01a293...21669` as the first current automatically derived interaction denominator. Its initial nine semantic-to-primitive catalogue debts are now closed through seven existing shared builders; relation-specific evidence remains unresolved, so the report stays `ready=false`. It is not a Search parity result and does not authorize values, pruning, Skill/training or online execution.
+- [x] Record the first exact proof-binding increment at Engine report `59d4fd37...711c3`. Four source-controlled bindings close exactly eight Stealth/True Sight/spray/Witch Mark obligations and expose those exact rows for audit; the authority now binds the manifest and every referenced oracle/verifier source and fails closed on deletion, wrong obligation, incomplete evidence or content drift. Remaining Engine debt is `61` semantic, `448` state, `1521` atom and `38` multi-rule-hook obligations.
 - [ ] After relation-specific Engine proofs close, bind the exact dynamic interaction report hash into the Search composite receipt and task-local rule-closure report. Cross-runtime interface scenarios remain limited to Cryx/Nyrro plus neutral shared-contract witnesses; no Fortress King or unrelated-faction matrix is required for this handoff.
 
 ## 2026-09-15 Ticket 20 移动反应几何债务校准

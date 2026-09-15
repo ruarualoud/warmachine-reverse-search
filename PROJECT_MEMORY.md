@@ -9,6 +9,13 @@
   separate from cross-runtime interface validation, which remains scoped to
   the current Cryx/Nyrro task plus neutral shared-contract witnesses.
 
+- 2026-09-15 durable relation-proof invariant: a derived semantic, state,
+  atom-interaction or hook-order obligation becomes closed only through a
+  source-controlled binding naming that exact obligation and current evidence.
+  Generic interaction-role fixtures remain candidates, atom `relatedRuleKeys`
+  are declared concept endpoints rather than required same-name atoms, and any
+  missing/changed binding or evidence source invalidates the Engine authority.
+
 - 2026-09-15 durable geometry-interface invariant: when Engine omits a model
   obstacle because a signed start-distance lower bound exceeds the complete
   movement allowance, Search must validate and preserve that exclusion proof
