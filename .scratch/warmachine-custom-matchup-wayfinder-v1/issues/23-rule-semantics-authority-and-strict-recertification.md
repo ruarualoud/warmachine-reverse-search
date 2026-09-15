@@ -244,7 +244,7 @@ OfficialRuleSource
 
 ### Slice 23.9: 自动关联闭包、性质测试与变异门
 
-进度（2026-09-15）：已完成动态关联分母及前四批精确证据绑定。旧 `67` 节点手写图降为历史诊断；当前报告 `32307ec8...caac` 从 `149` 条语义、`1140` 个原子、`1354` 个 hook/consumer、显式关联声明和状态读写关系自动派生 `65` 条语义关系、`450` 条读写关系、`1523` 条原子关联及 `49` 个 hook 并发组。全部 `9` 个语义到原语目录缺口已通过七个既有共享 builder 闭合。新增来源受控的 relation-proof manifest，前八个 binding 只关闭其明确点名的 `16` 条 Stealth/True Sight/spray/Witch Mark/回合持续时间/Dual Attack/Gunfighter及森林/LOS体积见证 obligation，并在报告中保留可审计的已闭合行；23.1-23.4 四份聚焦语义收据改为版本控制文件，干净 checkout 不依赖本机 `build/` 缓存。删除声明/consumer/source/binding、错绑 obligation 和证据不完整六类 mutation 均被捕获，绑定表及其 oracle/verifier 证据漂移也使权威失效。原子 `relatedRuleKeys` 现作为声明的概念端点，不再错误要求同名原子，但不因此自动获得证明。剩余 `57/444/1521` 关系及 `38` 个多规则 hook 组仍保持未决；现有 Dual Attack/Gunfighter verifier 分别测试二者，没有证明二者同时作用，互相关联边保留未决。LOS增量只证明 Cryx/Nyrro 均会调用的共享核心，不扩展接口势力范围。Authority `ecd9c057...c9c4` 证明八个证据源均为当前版本，同时保留十二条全局 fail-closed 原因。23.9 父纵切和 Ticket 23 不晋级。
+进度（2026-09-15）：已完成动态关联分母、前四批手工精确证据及首个确定性单关系原子批次。旧 `67` 节点手写图降为历史诊断；当前报告 `1d303a53...c7f8` 从 `149` 条语义、`1140` 个原子、`1354` 个 hook/consumer、显式关联声明和状态读写关系自动派生 `65` 条语义关系、`450` 条读写关系、`1523` 条原子关联及 `49` 个 hook 并发组。全部 `9` 个语义到原语目录缺口已通过七个既有共享 builder 闭合。前八个手工 binding 关闭其明确点名的 `16` 条 Stealth/True Sight/spray/Witch Mark/回合持续时间/Dual Attack/Gunfighter及森林/LOS体积见证 obligation；新增来源受控账本又关闭 `704` 条“单原子、单关系、单共享夹具、消费者四角色完整且当前脚本含该夹具字面量”的精确原子 obligation。每行分别封存义务、声明、消费者投影和脚本哈希；不满足形状的 `436` 个原子不自动晋级。交互门现含七类 killed mutation，Authority `5ee51d6c...c853` 绑定九个证据源、`244` 个当前验证脚本及三个关联编译源码。原子 `relatedRuleKeys` 仍只是声明概念端点，不会自动获得证明。剩余 `57/444/817` 关系及 `38` 个多规则 hook 组保持未决；其中多关系、多夹具、动态生成夹具及 Dual Attack/Gunfighter 未组合场景都必须另给精确证据。LOS和批量结构证明不扩展 Cryx/Nyrro加共享核心的跨运行时接口势力范围。23.9 父纵切和 Ticket 23 不晋级。
 
 - 从语义状态读写、钩子、优先级、抑制、替换、持续时间和动作资格生成 interaction obligations。
 - 对冲突边生成必要的单规则、两两、关键三规则和跨阶段场景，不依赖人工记忆关联。

@@ -16,6 +16,15 @@
   are declared concept endpoints rather than required same-name atoms, and any
   missing/changed binding or evidence source invalidates the Engine authority.
 
+- 2026-09-15 durable atom-relation batch invariant: mechanical exact binding is
+  allowed only for an atom with one declared relation, one shared interaction
+  fixture across complete four-role consumer contracts, and a current verifier
+  containing that exact fixture literal. Each source-controlled row seals the
+  exact obligation, declaration, consumer projection and verifier hash. A
+  multi-relation, multi-fixture, generated-fixture or incomplete-contract atom
+  remains unresolved; batch structure is not evidence for another relation or
+  a broader cross-runtime faction matrix.
+
 - 2026-09-15 durable geometry-interface invariant: when Engine omits a model
   obstacle because a signed start-distance lower bound exceeds the complete
   movement allowance, Search must validate and preserve that exclusion proof
