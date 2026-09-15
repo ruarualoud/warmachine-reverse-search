@@ -2,6 +2,8 @@ import { stableGraphHash, stableGraphValue } from
   "../graph/typed-facts-v2.mjs";
 import { guardWarmachineActionWithTaskLocalRuleClosureV1 } from
   "../contracts/task-local-action-rule-guard-v1.mjs";
+import { buildWarmachineSearchActionFootprint } from
+  "./action-dependency-v1.mjs";
 import { warmachineRuleBehaviorStateHashV1 } from
   "../state/semantic-hash-v1.mjs";
 import {
@@ -143,6 +145,11 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
     const optionRow = array(currentWindow.optionRows).find((row) =>
       row.disposition === "host_accepted" &&
       row.actionKey === candidate.actionKey) || null;
+    const actionFootprint = buildWarmachineSearchActionFootprint(
+      rootState,
+      candidate,
+    );
+    const actionDomainUnresolvedReasons = array(optionRow?.unresolvedReasons);
     const dependencyGuardRejected =
       optionRow?.taskLocalRuleGuard?.disposition === "rules_unknown";
     if (dependencyGuardRejected) {
@@ -157,8 +164,13 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
         transitionReason: "task_local_rule_dependency_unresolved",
         dependencyGuardRejected: true,
         taskLocalRuleGuard: optionRow.taskLocalRuleGuard,
+        actionFootprint,
+        actionDomainUnresolvedReasons,
+        branchTransitionComplete: false,
+        immediateResponseDomainResolved: false,
         eventTypes: [],
         terminalEvents: [],
+        terminalEventsTrusted: false,
         queryValueInterval: binaryInterval(0, 1),
         successorStateHash: "",
         successorStoredState: null,
@@ -194,6 +206,16 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
       transitionRuleGuard?.disposition === "rules_unknown";
     const accepted = hostTransitionAccepted &&
       !transitionDependencyGuardRejected;
+    const immediateResponseDomainResolved = !actionDomainUnresolvedReasons
+      .some((reason) => [
+        "opponent_response_domain_unresolved",
+        "multiple_response_host_prefix_state_unavailable",
+      ].includes(reason));
+    const chanceDomainResolved = actionFootprint.chance.required !== true;
+    const branchTransitionComplete = accepted &&
+      immediateResponseDomainResolved &&
+      chanceDomainResolved &&
+      actionFootprint.conservativeComplete === true;
     let successorStateHash = "";
     let successorStoredState = null;
     let successorWindow = null;
@@ -255,17 +277,22 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
         : String(transition.reason || ""),
       dependencyGuardRejected: transitionDependencyGuardRejected,
       taskLocalRuleGuard: transitionRuleGuard,
+      actionFootprint,
+      actionDomainUnresolvedReasons,
+      branchTransitionComplete,
+      immediateResponseDomainResolved,
       eventTypes: array(transition.events).map((event) =>
         String(event.eventType || "")),
       terminalEvents: terminalEvents(transition.events),
-      queryValueInterval: transitionDependencyGuardRejected
+      terminalEventsTrusted: branchTransitionComplete,
+      queryValueInterval: !branchTransitionComplete
         ? binaryInterval(0, 1)
         : frontierInterval(transition.events, querySideKey),
       successorStateHash,
       successorStoredState,
       successorWindow,
       deeperContinuationResolved: false,
-      chanceDomainResolved: false,
+      chanceDomainResolved,
     });
     edges.push({ ...core, edgeReceiptHash: stableGraphHash(core) });
     rawOptions.onProgress?.({
@@ -294,6 +321,16 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
     ...(!pageExhausted ? ["current_window_page_not_exhausted"] : []),
     ...(ruleDependencyUnresolvedCount > 0
       ? ["task_local_rule_dependency_unresolved"]
+      : []),
+    ...(edges.some((edge) => edge.actionFootprint?.chance?.required === true)
+      ? ["successor_chance_domain_unexpanded"]
+      : []),
+    ...(edges.some((edge) => !edge.immediateResponseDomainResolved)
+      ? ["successor_response_domain_unexpanded"]
+      : []),
+    ...(edges.some((edge) =>
+      edge.actionFootprint?.conservativeComplete !== true)
+      ? ["successor_action_footprint_unresolved"]
       : []),
     "successor_continuation_domain_unexpanded",
     "successor_chance_domain_unexpanded",
@@ -339,6 +376,8 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
     edges,
     transitionFailureCount,
     ruleDependencyUnresolvedCount,
+    untrustedTerminalWitnessCount: edges.filter((edge) =>
+      edge.terminalEvents.length > 0 && !edge.terminalEventsTrusted).length,
     acceptedDenominatorConserved:
       nextIndex + (acceptedActions.length - nextIndex) ===
         acceptedActions.length,
@@ -352,7 +391,7 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
     effectiveStrategyQuotientComplete: false,
     strategyValuePublicationAllowed: false,
     claimBoundary:
-      "This frontier strict-applies one stable page of actions from one Host enumeration and re-enumerates every accepted successor. The owner quantifier and all omitted rows are preserved. Applied Host scopes, deeper adaptive continuations, complete opponent turns and Chance remain unresolved; one-ply success is not a complete strategy DAG or game value.",
+      "This frontier strict-applies one stable page of actions from one Host enumeration and re-enumerates every accepted successor. The owner quantifier and all omitted rows are preserved. A terminal event is value-trusted only when rule dependencies, the action footprint, immediate responses and Chance are complete; otherwise it is retained solely as a witness and the edge remains [0,1]. Applied Host scopes, deeper adaptive continuations and complete opponent turns remain unresolved; one-ply success is not a complete strategy DAG or game value.",
   });
   return {
     ...core,
