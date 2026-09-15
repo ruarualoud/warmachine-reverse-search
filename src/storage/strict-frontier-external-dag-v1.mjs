@@ -367,8 +367,19 @@ export function restoreWarmachineStrictFrontierExternalDagV1(rootPath, rawOption
   const maximumEagerFrontierStates = lazyRuntimePayloads
     ? Math.max(0, Math.floor(Number(rawOptions.maximumEagerFrontierStates ?? 0)))
     : Number.POSITIVE_INFINITY;
-  const eagerLabelKeys = new Set(orderedInFlightEntries
-    .slice(0, maximumEagerFrontierStates).map((entry) => entry.labelKey));
+  const requestedEagerLabelKeys = Array.isArray(rawOptions.eagerFrontierLabelKeys)
+    ? rawOptions.eagerFrontierLabelKeys.map(String)
+    : [];
+  const knownLabelKeys = new Set(orderedInFlightEntries.map((entry) => entry.labelKey));
+  const unknownEagerLabelKeys = requestedEagerLabelKeys.filter((labelKey) =>
+    !knownLabelKeys.has(labelKey));
+  if (unknownEagerLabelKeys.length) {
+    throw new Error(`strict_frontier_eager_label_unknown:${unknownEagerLabelKeys[0]}`);
+  }
+  const eagerLabelKeys = new Set(requestedEagerLabelKeys.length
+    ? requestedEagerLabelKeys
+    : orderedInFlightEntries
+      .slice(0, maximumEagerFrontierStates).map((entry) => entry.labelKey));
   const restoredStateById = new Map();
   const restoredStateHashById = new Map();
   const restoreState = (stateId) => {

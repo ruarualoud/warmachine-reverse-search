@@ -34,6 +34,61 @@ function canonicalEntryOrder(left, right) {
     String(left.labelKey).localeCompare(String(right.labelKey));
 }
 
+function compareProbabilityDescending(left = {}, right = {}) {
+  const leftNumerator = BigInt(left.numerator ?? 0);
+  const leftDenominator = BigInt(left.denominator ?? 1);
+  const rightNumerator = BigInt(right.numerator ?? 0);
+  const rightDenominator = BigInt(right.denominator ?? 1);
+  const compared = leftNumerator * rightDenominator - rightNumerator * leftDenominator;
+  return compared > 0n ? -1 : compared < 0n ? 1 : 0;
+}
+
+function rootResponseSchedulingContext(ancestorReport = {}) {
+  const labels = new Map((ancestorReport.labels || []).map((label) =>
+    [label.labelKey, label]));
+  const edges = new Map((ancestorReport.edges || []).map((edge) =>
+    [edge.edgeKey, edge]));
+  const root = labels.get(ancestorReport.rootLabelKey);
+  const byAdversarialContext = new Map();
+  for (const group of root?.expansion?.groups || []) {
+    for (const response of group.responses || []) {
+      for (const branch of response.branches || []) {
+        const edge = edges.get(branch.edgeKey);
+        const child = labels.get(edge?.childLabelKey);
+        const contextKey = String(child?.adversarialContextKey || "");
+        if (!contextKey) continue;
+        byAdversarialContext.set(contextKey, {
+          groupKey: String(group.groupKey || ""),
+          groupProbability: group.conditionalProbability || { numerator: "0", denominator: "1" },
+          responseKey: String(response.responseKey || ""),
+          selectedUpperResponse:
+            String(response.responseKey || "") === String(group.selectedUpperResponseKey || ""),
+        });
+      }
+    }
+  }
+  return byAdversarialContext;
+}
+
+function scheduledEntryOrder(mode, schedulingContext) {
+  if (mode !== "root_upper_response_depth_first_v1") return canonicalEntryOrder;
+  return (left, right) => {
+    const leftContext = schedulingContext.get(String(left.adversarialContextKey || ""));
+    const rightContext = schedulingContext.get(String(right.adversarialContextKey || ""));
+    const leftSelected = leftContext?.selectedUpperResponse === true ? 0 : 1;
+    const rightSelected = rightContext?.selectedUpperResponse === true ? 0 : 1;
+    return leftSelected - rightSelected ||
+      Number(right.depth) - Number(left.depth) ||
+      compareProbabilityDescending(
+        leftContext?.groupProbability,
+        rightContext?.groupProbability,
+      ) ||
+      String(leftContext?.groupKey || "").localeCompare(String(rightContext?.groupKey || "")) ||
+      compareProbabilityDescending(left.cumulativeProbability, right.cumulativeProbability) ||
+      canonicalEntryOrder(left, right);
+  };
+}
+
 function depthDistribution(entries = []) {
   const counts = new Map();
   for (const entry of entries) {
@@ -106,6 +161,42 @@ function assertBatchEntryState(entry, runtimeEntry, stateHashByObject) {
   }
 }
 
+export function planWarmachineStrictFrontierContinuationBatchV1(
+  ancestorReport = {},
+  restoredEntries = [],
+  rawOptions = {},
+) {
+  if (!ancestorReport.reportHash) throw new Error("continuation_batch_ancestor_report_required");
+  const ancestorLabelByKey = new Map((ancestorReport.labels || []).map((label) =>
+    [label.labelKey, label]));
+  const uniqueEntries = new Map();
+  for (const entry of Array.isArray(restoredEntries) ? restoredEntries : []) {
+    if (uniqueEntries.has(entry.labelKey)) {
+      throw new Error(`continuation_batch_duplicate_label:${entry.labelKey}`);
+    }
+    assertBatchEntryMetadata(entry, ancestorReport, ancestorLabelByKey.get(entry.labelKey));
+    uniqueEntries.set(entry.labelKey, entry);
+  }
+  const schedulingMode = String(rawOptions.schedulingMode || "canonical_v1");
+  if (!["canonical_v1", "root_upper_response_depth_first_v1"]
+    .includes(schedulingMode)) {
+    throw new Error(`continuation_batch_scheduling_mode_unknown:${schedulingMode}`);
+  }
+  const schedulingContext = rootResponseSchedulingContext(ancestorReport);
+  const ordered = Array.from(uniqueEntries.values()).sort(
+    scheduledEntryOrder(schedulingMode, schedulingContext),
+  );
+  const maximumContinuationLabels = Math.max(0, Number(
+    rawOptions.maximumContinuationLabels ?? ordered.length,
+  ));
+  return {
+    ordered,
+    selected: ordered.slice(0, maximumContinuationLabels),
+    schedulingMode,
+    schedulingContextCount: schedulingContext.size,
+  };
+}
+
 export function prepareWarmachineStrictFrontierContinuationBatchV1(
   ancestorReport = {},
   ancestorRuntimeCheckpoint = {},
@@ -116,23 +207,14 @@ export function prepareWarmachineStrictFrontierContinuationBatchV1(
       ancestorRuntimeCheckpoint.reportHash !== ancestorReport.reportHash) {
     throw new Error("continuation_batch_ancestor_binding_mismatch");
   }
-  const ancestorLabelByKey = new Map((ancestorReport.labels || []).map((label) =>
-    [label.labelKey, label]));
   const runtimeEntryByKey = new Map((ancestorRuntimeCheckpoint.stateEntries || []).map((entry) =>
     [entry.labelKey, entry]));
-  const uniqueEntries = new Map();
-  for (const entry of Array.isArray(restoredEntries) ? restoredEntries : []) {
-    if (uniqueEntries.has(entry.labelKey)) {
-      throw new Error(`continuation_batch_duplicate_label:${entry.labelKey}`);
-    }
-    assertBatchEntryMetadata(entry, ancestorReport, ancestorLabelByKey.get(entry.labelKey));
-    uniqueEntries.set(entry.labelKey, entry);
-  }
-  const ordered = Array.from(uniqueEntries.values()).sort(canonicalEntryOrder);
-  const maximumContinuationLabels = Math.max(0, Number(
-    rawOptions.maximumContinuationLabels ?? ordered.length,
-  ));
-  const selected = ordered.slice(0, maximumContinuationLabels);
+  const planned = planWarmachineStrictFrontierContinuationBatchV1(
+    ancestorReport,
+    restoredEntries,
+    rawOptions,
+  );
+  const { ordered, selected, schedulingMode, schedulingContextCount } = planned;
   const stateHashByObject = new WeakMap();
   for (const entry of selected) {
     assertBatchEntryState(entry, runtimeEntryByKey.get(entry.labelKey), stateHashByObject);
@@ -159,6 +241,8 @@ export function prepareWarmachineStrictFrontierContinuationBatchV1(
     maximumEvaluatedStatesPerContinuation,
     threshold,
     thresholdIsolation,
+    schedulingMode,
+    schedulingContextCount,
   };
 }
 
@@ -220,6 +304,8 @@ export function finalizeWarmachineStrictFrontierContinuationBatchV1(
     maximumEvaluatedStatesPerContinuation,
     threshold,
     thresholdIsolation,
+    schedulingMode,
+    schedulingContextCount,
   } = prepared;
   if (!selected.length) {
     const core = {
@@ -232,6 +318,8 @@ export function finalizeWarmachineStrictFrontierContinuationBatchV1(
       remainingResumableLabelKeys:
         ancestorRuntimeCheckpoint.resumableLabelKeys?.slice().sort() || [],
       continuationReportHashes: [],
+      schedulingMode,
+      schedulingContextCount,
       reportHash: ancestorReport.reportHash,
       runtimeCheckpointHash: ancestorRuntimeCheckpoint.checkpointHash,
       noWork: true,
@@ -277,6 +365,8 @@ export function finalizeWarmachineStrictFrontierContinuationBatchV1(
     maximumEvaluatedStatesPerContinuation,
     lowProbabilityThreshold: threshold,
     thresholdIsolation,
+    schedulingMode,
+    schedulingContextCount,
     continuationReportHashes: orderedContinuationReports.map((row) => row.reportHash).sort(),
     reportHash: report.reportHash,
     runtimeCheckpointHash: runtimeCheckpoint.checkpointHash,
@@ -287,7 +377,7 @@ export function finalizeWarmachineStrictFrontierContinuationBatchV1(
     strictRejectedDeterministicEdgeCount: report.strictRejectedDeterministicEdgeCount,
     probabilityInterval: report.probabilityInterval,
     exactComplete: report.exactComplete,
-    claimBoundary: "This scheduler advances only a canonical, explicitly bounded subset of restored budget-deferred labels. It restores exact depth, cursor, adversarial context, continuation suffix and cumulative Chance mass, then immutable-stitches strict continuations. A nonzero threshold may run independently across multiple roots only when their adversarial contexts are pairwise disjoint; repeated contexts still require a batch-wide same-layer merge. Unselected and newly deferred labels remain resumable; scheduling order is not a strategy score or optimality claim.",
+    claimBoundary: "This scheduler advances only an explicitly bounded subset of restored budget-deferred labels. Canonical mode preserves the historical canonical key order. Root-upper-response mode prioritizes the root's currently selected upper-bound response, then higher root Chance mass and deeper descendants; it changes work order only and never drops a label or proves dominance. The scheduler restores exact depth, cursor, adversarial context, continuation suffix and cumulative Chance mass, then immutable-stitches strict continuations. A nonzero threshold may run independently across multiple roots only when their adversarial contexts are pairwise disjoint; repeated contexts still require a batch-wide same-layer merge. Unselected and newly deferred labels remain resumable; scheduling order is not a strategy score or optimality claim.",
   };
   return {
     ...core,

@@ -355,6 +355,18 @@ function groupedDamageClasses(resolution = {}) {
   };
 }
 
+function powerAttackDisplacementChance(action = {}) {
+  const actionType = String(action.actionType || "");
+  const kind = actionType === "slam_power_attack"
+    ? "slam"
+    : actionType === "throw_power_attack"
+      ? "throw"
+      : "";
+  return kind
+    ? { kind, values: [1, 2, 3, 4, 5, 6], denominator: 6 }
+    : { kind: "", values: [null], denominator: 1 };
+}
+
 function randomRofChanceModel(action = {}) {
   if (String(action.actionType || "") !== "declare_random_rof_ranged_attacks") return null;
   const requirements = arrayValues(action.metadata?.randomRofRequirements);
@@ -1200,16 +1212,19 @@ export function buildWarmachineExactActionChanceClasses(action = {}, rawOptions 
   const damage = groupedDamageClasses(resolution);
   const damageLocationValues = chanceDimensions.damageLocationValues;
   const toughDieValues = chanceDimensions.toughDieValues;
+  const powerAttackDisplacement = powerAttackDisplacementChance(action);
   const target = actionTargetFromState(action, rawOptions.state || null);
   const targetBoxesRemaining = Number(target?.boxesRemaining ?? target?.damage?.boxesRemaining);
   const staticDamage = numeric(resolution.staticDamage, 0);
   const commonDenominator = attack.outcomeCount * damage.outcomeCount *
-    damageLocationValues.length * toughDieValues.length;
+    damageLocationValues.length * toughDieValues.length *
+    powerAttackDisplacement.denominator;
   const classes = [];
   for (const attackClass of attack.groups) {
     if (!attackClass.hit) {
       const numerator = attackClass.multiplicity * damage.outcomeCount *
-        damageLocationValues.length * toughDieValues.length;
+        damageLocationValues.length * toughDieValues.length *
+        powerAttackDisplacement.denominator;
       const strictRollOutcome = {
         attackDice: attackClass.representativeDice,
       };
@@ -1232,35 +1247,40 @@ export function buildWarmachineExactActionChanceClasses(action = {}, rawOptions 
       const retainedToughDieValues = toughRollRequired ? toughDieValues : [null];
       const omittedLocationMultiplicity = damageLocationRequired ? 1 : damageLocationValues.length;
       const omittedToughMultiplicity = toughRollRequired ? 1 : toughDieValues.length;
-      for (const damageColumn of retainedDamageLocationValues) {
-        for (const toughDie of retainedToughDieValues) {
-          const strictRollOutcome = {
-            attackDice: attackClass.representativeDice,
-            damageDice: damageClass.representativeDice,
-            ...(damageLocationRequired ? {
-              damageColumn,
-              damageBranch: damageColumn,
-            } : {}),
-            ...(chanceDimensions.controllerDamageGridSideResolved === true &&
-              chanceDimensions.controllerDamageGridSideRequired ? {
-              damageGridSide: chanceDimensions.selectedDamageGridSide,
-            } : {}),
-            ...(toughRollRequired ? { toughDie } : {}),
-          };
-          classes.push({
-            classKey: `chance-${stableHash({ strictRollOutcome, hit: true })}`,
-            hit: true,
-            damageSum: damageClass.sum,
-            resolvedDamage,
-            damageLocationRequired,
-            toughRollRequired,
-            postDamageAttackerChoiceRequired: resolvedDamage > 0 &&
-              chanceDimensions.postDamageAttackerChoiceRequired === true,
-            numerator: attackClass.multiplicity * damageClass.multiplicity *
-              omittedLocationMultiplicity * omittedToughMultiplicity,
-            denominator: commonDenominator,
-            strictRollOutcome,
-          });
+      for (const displacementDistanceIn of powerAttackDisplacement.values) {
+        for (const damageColumn of retainedDamageLocationValues) {
+          for (const toughDie of retainedToughDieValues) {
+            const strictRollOutcome = {
+              attackDice: attackClass.representativeDice,
+              damageDice: damageClass.representativeDice,
+              ...(powerAttackDisplacement.kind ? {
+                [`${powerAttackDisplacement.kind}DistanceIn`]: displacementDistanceIn,
+              } : {}),
+              ...(damageLocationRequired ? {
+                damageColumn,
+                damageBranch: damageColumn,
+              } : {}),
+              ...(chanceDimensions.controllerDamageGridSideResolved === true &&
+                chanceDimensions.controllerDamageGridSideRequired ? {
+                damageGridSide: chanceDimensions.selectedDamageGridSide,
+              } : {}),
+              ...(toughRollRequired ? { toughDie } : {}),
+            };
+            classes.push({
+              classKey: `chance-${stableHash({ strictRollOutcome, hit: true })}`,
+              hit: true,
+              damageSum: damageClass.sum,
+              resolvedDamage,
+              damageLocationRequired,
+              toughRollRequired,
+              postDamageAttackerChoiceRequired: resolvedDamage > 0 &&
+                chanceDimensions.postDamageAttackerChoiceRequired === true,
+              numerator: attackClass.multiplicity * damageClass.multiplicity *
+                omittedLocationMultiplicity * omittedToughMultiplicity,
+              denominator: commonDenominator,
+              strictRollOutcome,
+            });
+          }
         }
       }
     }
@@ -1282,8 +1302,14 @@ export function buildWarmachineExactActionChanceClasses(action = {}, rawOptions 
     postChanceDecisionEffectTypes,
     provablyInactiveSuccessorEffectTypes,
     chanceDimensions,
-    orderingPolicy: "hit_then_high_damage_first_for_early_terminal_witnesses_only",
-    claimBoundary: "Exact mass covers the primary attack roll, damage roll, damage column or branch, and Tough die. Exact pre-chance targeting, attack and damage modifiers are already consumed by the strict action resolution; deterministic Tough survival and Killing Spree successor windows are resolved after each chance class. All other modeled special or secondary random effects remain rejected.",
+    powerAttackDisplacementChance: powerAttackDisplacement.kind ? {
+      kind: powerAttackDisplacement.kind,
+      support: powerAttackDisplacement.values,
+      denominator: powerAttackDisplacement.denominator,
+      conditionalOnHit: true,
+    } : null,
+    orderingPolicy: "hit_then_high_damage_then_power_attack_distance_for_early_terminal_witnesses_only",
+    claimBoundary: "Exact mass covers the primary attack roll, damage roll, conditional slam/throw displacement d6, damage column or branch, and Tough die. A missed power attack merges all six unused displacement outcomes back into the miss class. Exact pre-chance targeting, attack and damage modifiers are already consumed by the strict action resolution; deterministic Tough survival and Killing Spree successor windows are resolved after each chance class. All other modeled special or secondary random effects remain rejected.",
   };
 }
 

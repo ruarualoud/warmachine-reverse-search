@@ -17,7 +17,10 @@ import { buildWarmachineTypedInteractionGraphV2 } from
   "../src/graph/typed-interaction-graph-v2.mjs";
 import { certifyWarmachineExecutedTerminalRouteStrictV2 } from
   "../src/reverse/strict-route-witness-v2.mjs";
-import { runWarmachineStrictFrontierContinuationBatchV1 } from
+import {
+  planWarmachineStrictFrontierContinuationBatchV1,
+  runWarmachineStrictFrontierContinuationBatchV1,
+} from
   "../src/search/frontier-continuation-batch-v1.mjs";
 import { runWarmachineStrictFrontierContinuationBatchParallelV1 } from
   "../src/search/frontier-continuation-parallel-v1.mjs";
@@ -229,6 +232,10 @@ if (probabilityProbe) {
     process.env.WARMACHINE_ASSASSINATION_CONTINUATION_TASK_TIMEOUT_MS ||
       15 * 60 * 1_000,
   ));
+  const continuationSchedulingMode = String(
+    process.env.WARMACHINE_ASSASSINATION_CONTINUATION_SCHEDULING_MODE ||
+      "canonical_v1",
+  );
   const externalDagOptions = externalDagRoot ? {
     hostReceiptHash: warmachineHost.receipt.receiptHash,
     sourceHash: probabilityCheckpointCacheBindingHash,
@@ -312,10 +319,28 @@ if (probabilityProbe) {
         continuationDepthIncrement: 1,
         maximumEvaluatedStatesPerContinuation: 1,
         lowProbabilityThreshold: probabilityThreshold,
+        schedulingMode: continuationSchedulingMode,
         ...(continuationWorkerCount === 1
           ? { onProgress: (detail) => reportProgress("continuation_progress", detail) }
           : {}),
       };
+    const plannedContinuation = planWarmachineStrictFrontierContinuationBatchV1(
+      externalDagRestore.report,
+      externalDagRestore.entries,
+      continuationOptions,
+    );
+    if (plannedContinuation.selected.some((entry) => !entry.state)) {
+      externalDagRestore = restoreWarmachineStrictFrontierExternalDagV1(
+        externalDagRoot,
+        {
+          ...externalDagRestoreOptions,
+          maximumEagerFrontierStates: 0,
+          eagerFrontierLabelKeys: plannedContinuation.selected.map((entry) => entry.labelKey),
+        },
+      );
+      assert.equal(externalDagRestore.ok, true);
+      probability = externalDagRestore.report;
+    }
     externalDagContinuationBatch = continuationWorkerCount > 1
       ? await runWarmachineStrictFrontierContinuationBatchParallelV1(
         externalDagRestore.report,
@@ -512,6 +537,8 @@ if (probabilityProbe) {
         externalDagContinuationBatch.selectedDepthDistribution,
       remainingDepthDistribution:
         externalDagContinuationBatch.remainingDepthDistribution,
+      schedulingMode: externalDagContinuationBatch.schedulingMode,
+      schedulingContextCount: externalDagContinuationBatch.schedulingContextCount,
       reportHash: externalDagContinuationBatch.reportHash,
       probabilityInterval: externalDagContinuationBatch.probabilityInterval,
       parallelExecution: compactOutput ? compactParallelExecution : parallelExecution,
