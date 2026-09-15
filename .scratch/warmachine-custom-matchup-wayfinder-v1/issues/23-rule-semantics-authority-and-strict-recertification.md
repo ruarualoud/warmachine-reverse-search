@@ -254,6 +254,8 @@ OfficialRuleSource
 
 ### Slice 23.10: 单一执行权威与跨运行时一致性
 
+进度（2026-09-15）：已关闭 focused receipt 的首个错误失效边界。旧绿矩阵完整保留 `1188` 文件认证闭包；Search 仅从同一不可变收据派生 `1185` 文件执行相关闭包，并固定排除三份不参与运行的 Dusk/势力进度账本。Nyrro 发布后的逐文件对照证明只有这三份账本变化，现有上游门在 Engine `9979b6e` 一次通过；其它任意来源漂移仍失败关闭。该子项避免治理更新重跑 Fortress King 等无关执行验证，但尚未完成 Root/App/Layer3/Search 全 action-key parity 或 23.10 父纵切。
+
 - Root、App、Layer3、Strict Engine 和 Search 只加载同一内容寻址的 Engine 发布物；禁止复制后独立修改执行器。
 - 复合收据绑定规则源、卡牌数据、语义注册表、原语、钩子 DAG、执行源码、oracle、mutation 和 interaction graph。
 - 旧收据不能只使 checkpoint 失效；所有新搜索、skill 和报告入口也必须在 `current=false` 时拒绝 Strict 运行。

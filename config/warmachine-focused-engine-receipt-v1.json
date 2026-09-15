@@ -9,6 +9,13 @@
   "executionSourceReceiptHash": "31b3e43ca5ae8e7afc67fc49f4d0737ba3a9fb12ac23bfdb840c6b149c726788",
   "executionContentClosureHash": "03d079a41bc2008511e05a1942c4c8d35ad3de47be09716638ed064a6865f100",
   "sourceFileCount": 1188,
+  "executionRelevantContentClosureHash": "775d164be441dcb9a64cba34f162299c72f4f366542b7ce564b34109792a5b67",
+  "executionRelevantSourceFileCount": 1185,
+  "executionRelevantExclusionPaths": [
+    "data/function3-rules/warmachine-dusk-army-priority-view-v40049.json",
+    "data/function3-rules/warmachine-faction-priority-ledger-v40049.json",
+    "data/function3-rules/warmachine-priority-faction-development-batches-v40049.json"
+  ],
   "verifierCount": 296,
   "ruleAtomVerifierCount": 243,
   "strictTransitionVerifierCount": 53,
@@ -16,5 +23,5 @@
   "failedVerifierCount": 0,
   "shardCount": 8,
   "gatePassed": true,
-  "claimBoundary": "This reviewed reference binds Search to the Ticket 23 Engine matrix executed at 763ece0. The receipt certifies the declared 296-verifier focused denominator under one stable 1188-file execution-content closure. Search recomputes that content closure locally and fails closed on executable source drift; the execution-time Git revision remains preserved in the immutable Engine receipt without invalidating the evidence after documentation-only commits. It does not prove all cards, interactions, continuous geometry or game states, remaining Ticket 23 slices, strategy value, skill validity or global rules completeness."
+  "claimBoundary": "This reviewed reference binds Search to the Ticket 23 Engine matrix executed at 763ece0. The immutable receipt preserves the complete 1188-file matrix closure; current execution relevance is checked against the same certified records after excluding exactly three non-executing faction-progress ledgers. Changes to those ledgers require their own governance checks but do not invalidate unchanged executor evidence. Any other source drift fails closed. It does not prove all cards, interactions, continuous geometry or game states, remaining Ticket 23 slices, strategy value, skill validity or global rules completeness."
 }

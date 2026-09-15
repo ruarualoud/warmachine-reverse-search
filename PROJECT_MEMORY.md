@@ -1,5 +1,19 @@
 # Project Memory
 
+- 2026-09-15 durable focused-receipt scope invariant: the immutable Engine
+  `296/296` source receipt preserves its complete `1188`-file certification
+  closure, but Search currentness is determined by the certified
+  execution-relevant records. Exactly three fixed faction-progress artifacts
+  (the Dusk army view, faction priority ledger and development-batch ledger)
+  are governance-only and cannot invalidate unchanged executor evidence. The
+  reviewed exclusion set is fixed in both code and config; arbitrary exclusions
+  fail closed. After Nyrro publication, those were the only three changed
+  records, so the `1185`-file execution-relevant closure remains
+  `775d164b...5b67` and the existing upstream gate is current at Engine
+  `9979b6e`. Rule/data/executor/verifier changes outside that exact set still
+  invalidate the focused receipt. Governance completion and global Strict
+  remain separate gates.
+
 - 2026-09-14 durable real-match benchmark boundary: the public 50-point Hysene-versus-Oriax Closed Quarters video is a useful negative-control benchmark, not an exact Nyrro-versus-Cryx or optimal-play proof. Current construction accepts the exact Hysene/Strygon/Sybaris/Vordak/two Riders/Fane Knights roster and rejects the extra Sythyss Prophet; current Nyrro execution can distinguish Fury-bought attacks from condition-gated Murderous Impulse. Full replay must still fail closed because Tales from the Frontlines/Closed Quarters/Muddy Ground and key Orgoth sources are absent and public video cannot certify exact geometry. The 2026-09-15 focused receipt rebind removed the old 679-versus-1188-file infrastructure mismatch, but did not certify those missing semantics. Per-turn recommendations remain evidence-supported hypotheses until Ticket 23/12/20/21/22 recertify the exact domain.
 
 - 2026-09-14 durable terminal-scene-generation boundary: a reasonable Warmachine terminal scene is a receipt-bound symbolic region, not an arbitrary exact coordinate point or one representative fixture. Legality, initial-set reachability, causal goal relevance, policy-conditioned likelihood, declared-prior mass, adversarial enforceability and robustness are separate evidence dimensions. Without a declared prior or both policies there is no natural scene probability. The current terminal selector's greedy skeleton cover plus baseline/single-dimension variation (`interactionStrength=1`) is coverage scheduling only and cannot prove high-order interactions, cell-wide transition stability, reachability, value or strategy equivalence. Certified generation must compile terminal formulae and the rule-interaction causal closure into mixed discrete/continuous regions, propagate possible and adversarial predecessor bounds, Strict-forward challenge witnesses, and split unstable cells with CEGAR. Probability thresholds apply only to cumulative mass merged in the same goal/time/policy/adversarial context; low-probability individual paths may not be discarded.

@@ -14,6 +14,11 @@ const REVIEWED_FOCUSED_ENGINE_RECEIPT_PATH = path.join(
 );
 const FOCUSED_ENGINE_CLOSURE_MODULE =
   "scripts/warmachine-focused-execution-source-closure-v1.mjs";
+const FOCUSED_ENGINE_GOVERNANCE_ONLY_PATHS = Object.freeze([
+  "data/function3-rules/warmachine-dusk-army-priority-view-v40049.json",
+  "data/function3-rules/warmachine-faction-priority-ledger-v40049.json",
+  "data/function3-rules/warmachine-priority-faction-development-batches-v40049.json",
+]);
 
 const HOST_MODULES = Object.freeze({
   rules: "scripts/warmachine-rules-v1.mjs",
@@ -84,6 +89,28 @@ function stableHash(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function sameStrings(left = [], right = []) {
+  const leftValues = Array.isArray(left) ? left : [];
+  const rightValues = Array.isArray(right) ? right : [];
+  return JSON.stringify([...new Set(leftValues.map(String))].sort()) ===
+    JSON.stringify([...new Set(rightValues.map(String))].sort());
+}
+
+function executionRelevantClosure(sourceClosure = {}, excludedPaths = []) {
+  const exclusions = new Set(excludedPaths.map(String));
+  const records = (sourceClosure.records || [])
+    .filter((record) => !exclusions.has(String(record.relativePath || "")));
+  const core = {
+    schemaVersion: String(sourceClosure.schemaVersion || ""),
+    sourceFileCount: records.length,
+    records,
+  };
+  return {
+    ...core,
+    contentClosureHash: stableHash(JSON.stringify(core)),
+  };
+}
+
 function assertFocusedReceipt(condition, reason) {
   if (!condition) throw new Error(reason);
 }
@@ -117,6 +144,22 @@ async function loadReviewedFocusedEngineReceipt(projectDRoot) {
       "Warmachine reviewed focused Engine receipt has invalid executionContentClosureHash",
     );
   }
+  assertFocusedReceipt(
+    /^[0-9a-f]{64}$/.test(String(reviewed.executionRelevantContentClosureHash || "")),
+    "Warmachine reviewed focused Engine receipt has invalid executionRelevantContentClosureHash",
+  );
+  assertFocusedReceipt(
+    Number.isInteger(reviewed.executionRelevantSourceFileCount) &&
+      reviewed.executionRelevantSourceFileCount > 0,
+    "Warmachine reviewed focused Engine receipt has invalid executionRelevantSourceFileCount",
+  );
+  assertFocusedReceipt(
+    sameStrings(
+      reviewed.executionRelevantExclusionPaths,
+      FOCUSED_ENGINE_GOVERNANCE_ONLY_PATHS,
+    ),
+    "Warmachine reviewed focused Engine receipt has unauthorized execution exclusions",
+  );
 
   const closureModulePath = path.join(projectDRoot, FOCUSED_ENGINE_CLOSURE_MODULE);
   await access(closureModulePath);
@@ -130,27 +173,15 @@ async function loadReviewedFocusedEngineReceipt(projectDRoot) {
   const observedClosure = closureModule.buildWarmachineFocusedExecutionSourceClosureV1(
     projectDRoot,
   );
-  const executionClosureMatches = reviewed.executionContentClosureHash
-    ? observedClosure.contentClosureHash === reviewed.executionContentClosureHash
-    : observedClosure.sourceReceiptHash === reviewed.executionSourceReceiptHash;
-  const failClosedReasons = [
-    ...(executionClosureMatches
-      ? []
-      : [reviewed.executionContentClosureHash
-          ? "focused_engine_execution_content_closure_mismatch"
-          : "focused_engine_execution_source_receipt_mismatch"]),
-    ...(Number(observedClosure.sourceFileCount) === Number(reviewed.sourceFileCount)
-      ? []
-      : ["focused_engine_source_file_count_mismatch"]),
-  ];
 
   const sourceReceiptPath = path.join(
     projectDRoot,
     String(reviewed.sourceReceiptRelativePath || ""),
   );
   let localArtifactVerified = false;
+  let sourceReceipt = null;
   if (existsSync(sourceReceiptPath)) {
-    const sourceReceipt = JSON.parse(await readFile(sourceReceiptPath, "utf8"));
+    sourceReceipt = JSON.parse(await readFile(sourceReceiptPath, "utf8"));
     const { sourceReceiptHash, ...receiptCore } = sourceReceipt;
     assertFocusedReceipt(
       stableHash(JSON.stringify(receiptCore)) === sourceReceiptHash &&
@@ -171,11 +202,45 @@ async function loadReviewedFocusedEngineReceipt(projectDRoot) {
     localArtifactVerified = true;
   }
 
+  const certifiedExecutionRelevantClosure = executionRelevantClosure(
+    sourceReceipt?.executionSourceClosure,
+    FOCUSED_ENGINE_GOVERNANCE_ONLY_PATHS,
+  );
+  assertFocusedReceipt(
+    localArtifactVerified &&
+      certifiedExecutionRelevantClosure.contentClosureHash ===
+        reviewed.executionRelevantContentClosureHash &&
+      certifiedExecutionRelevantClosure.sourceFileCount ===
+        reviewed.executionRelevantSourceFileCount,
+    "Warmachine focused Engine execution-relevant receipt evidence mismatch",
+  );
+  const observedExecutionRelevantClosure = executionRelevantClosure(
+    observedClosure,
+    FOCUSED_ENGINE_GOVERNANCE_ONLY_PATHS,
+  );
+  const executionClosureMatches =
+    observedExecutionRelevantClosure.contentClosureHash ===
+      reviewed.executionRelevantContentClosureHash;
+  const failClosedReasons = [
+    ...(executionClosureMatches
+      ? []
+      : ["focused_engine_execution_relevant_content_closure_mismatch"]),
+    ...(observedExecutionRelevantClosure.sourceFileCount ===
+        reviewed.executionRelevantSourceFileCount
+      ? []
+      : ["focused_engine_execution_relevant_source_file_count_mismatch"]),
+  ];
+
   return {
     schemaVersion: "warmachine_focused_engine_receipt_binding_v1",
     reviewedReceipt: reviewed,
     observedExecutionSourceReceiptHash: observedClosure.sourceReceiptHash,
-    observedExecutionContentClosureHash: observedClosure.contentClosureHash,
+    observedMatrixContentClosureHash: observedClosure.contentClosureHash,
+    observedExecutionContentClosureHash:
+      observedExecutionRelevantClosure.contentClosureHash,
+    observedMatrixSourceFileCount: observedClosure.sourceFileCount,
+    observedExecutionRelevantSourceFileCount:
+      observedExecutionRelevantClosure.sourceFileCount,
     observedSourceFileCount: observedClosure.sourceFileCount,
     current: failClosedReasons.length === 0,
     failClosedReasons,

@@ -2,6 +2,11 @@
 
 恢复开发先读 [docs/AGENT_TASK_GUIDE.md](docs/AGENT_TASK_GUIDE.md)，再按当前ticket内清单执行。规范由Engine维护，修正计划/工作台接入由本仓库维护。
 
+## 2026-09-15 Ticket 23.10 focused receipt scope correction
+
+- [x] Stop treating three faction-progress ledgers as executable Engine source. The previously green `296/296` receipt still preserves its complete `1188`-file matrix closure, while Search now derives and checks an `1185`-file execution-relevant closure after excluding only the Dusk army view, faction priority ledger and development-batch ledger. A direct old/current record comparison proved those were the only three changed files after Nyrro publication; Engine executors, atoms, hooks, source semantics and focused verifiers were unchanged.
+- [x] Keep the exclusion fail-closed and auditable. The exact three-path set is fixed in code and reviewed config, the immutable old source receipt must still verify, and the derived certified hash/count must match both that receipt and the current Engine tree. The existing upstream contract gate passes once at Engine `9979b6e` with execution-relevant hash `775d164b...5b67`; its full matrix content hash intentionally differs after the governance update. This is a bounded 23.10 receipt correction, not completion of 23.10, Ticket 23 or global Strict.
+
 ## 2026-09-14 Fane of Nyrro 真实对局逐回合基准
 
 - [x] 检索公开完整对局；未找到可完整复盘的当前 Fane of Nyrro 对 Cryx 录像，选择 50 分 Hysene 对 Oriax、Closed Quarters/Tales from the Frontlines 对局作为最接近的完整负向基准，并记录另一场 Hysene 对 Grymkin Fault Line 作为场景可支持但势力协议未闭环的备选。

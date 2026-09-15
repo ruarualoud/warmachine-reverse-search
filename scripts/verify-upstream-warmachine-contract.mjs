@@ -18,6 +18,18 @@ assert.match(
   host.focusedSourceReceipt.observedExecutionContentClosureHash,
   /^[0-9a-f]{64}$/,
 );
+assert.equal(
+  host.focusedSourceReceipt.observedExecutionContentClosureHash,
+  host.focusedSourceReceipt.reviewedReceipt.executionRelevantContentClosureHash,
+);
+assert.equal(
+  host.focusedSourceReceipt.observedExecutionRelevantSourceFileCount,
+  host.focusedSourceReceipt.reviewedReceipt.executionRelevantSourceFileCount,
+);
+assert.match(
+  host.focusedSourceReceipt.observedMatrixContentClosureHash,
+  /^[0-9a-f]{64}$/,
+);
 assert.match(host.receipt.gitRevision, /^(?:[0-9a-f]{40}|unavailable)$/);
 assert.match(host.receipt.receiptHash, /^[0-9a-f]{64}$/);
 assert.ok(Object.keys(host.receipt.sourceHashes).length > 5);
