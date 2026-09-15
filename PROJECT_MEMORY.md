@@ -1,5 +1,15 @@
 # Project Memory
 
+- 2026-09-15 durable damage-transfer timing invariant: a primary-attack
+  transfer decision belongs after attack/damage dice determine positive damage
+  and before damage is applied. The Engine now seals those dice in a
+  defender-owned window; decline replays the original action, while transfer
+  selects the current Host recipient variant and replaces only recipient-local
+  damage-location/Tough outcomes. Search can traverse both strict successors.
+  The legacy complete-variant probability lane remains compatible. This proof
+  does not cover interrupt, simultaneous or secondary damage transfers, every
+  Essence interaction, or the complete post-response Chance denominator.
+
 - 2026-09-15 durable sequential Free Strike boundary: explicit
   `legacy_free_strike` mode now resolves multiple interrupts through an
   opponent-owned Host window. Search selects one current decline/use action,

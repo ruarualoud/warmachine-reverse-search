@@ -108,6 +108,109 @@ function twoFreeStrikeRoom() {
   return room;
 }
 
+function damageTransferPiece(overrides = {}) {
+  const boxesRemaining = overrides.boxesRemaining ?? 12;
+  return {
+    pieceKey: overrides.pieceKey || "piece",
+    label: overrides.label || overrides.pieceKey || "Piece",
+    sideKey: overrides.sideKey || "player1",
+    modelRole: overrides.modelRole || "warrior",
+    modelType: overrides.modelType || overrides.modelRole || "warrior",
+    position: overrides.position || { xIn: 6, yIn: 6 },
+    baseSizeIn: overrides.baseSizeIn ?? 1.18,
+    speedIn: 6,
+    meleeRangeIn: 1,
+    defense: overrides.defense ?? 10,
+    armor: overrides.armor ?? 10,
+    mat: overrides.mat ?? 8,
+    resourceKind: overrides.resourceKind || "none",
+    resourcePoints: overrides.resourcePoints ?? 0,
+    resourceMax: overrides.resourceMax ?? 0,
+    controlRangeIn: overrides.controlRangeIn ?? 12,
+    damage: { boxesRemaining, maxBoxes: overrides.maxBoxes ?? boxesRemaining },
+    statusTags: [],
+    attackProfiles: overrides.attackProfiles || [],
+    ...overrides,
+  };
+}
+
+function damageTransferLifeSpiral() {
+  const aspectKeys = ["mind", "body", "spirit"];
+  return {
+    boxesRemaining: 27,
+    maxBoxes: 27,
+    systems: { mind: 9, body: 9, spirit: 9 },
+    lifeSpiralRows: Array.from({ length: 9 }, (_entry, rowIndex) =>
+      Array.from({ length: 3 }, () => ({
+        systemKey: aspectKeys[Math.floor(rowIndex / 3)],
+        marked: false,
+      }))),
+  };
+}
+
+function damageTransferState() {
+  return {
+    stateKey: "opponent-response-domain-v2-damage-transfer",
+    activeSideKey: "player2",
+    phaseKey: "activation",
+    turnNumber: 2,
+    strictMode: true,
+    enforceStrictExecutor: true,
+    board: { widthIn: 48, heightIn: 48 },
+    pieces: [
+      damageTransferPiece({
+        pieceKey: "defender-lock",
+        modelRole: "warlock",
+        modelType: "warlock",
+        isWarlock: true,
+        isWarrior: true,
+        resourceKind: "fury",
+        resourcePoints: 1,
+        resourceMax: 6,
+        battlegroupId: "defender-bg",
+        boxesRemaining: 5,
+        maxBoxes: 5,
+      }),
+      damageTransferPiece({
+        pieceKey: "defender-beast",
+        modelRole: "warbeast",
+        modelType: "warbeast",
+        position: { xIn: 9, yIn: 6 },
+        baseSizeIn: 1.57,
+        resourceKind: "fury",
+        resourcePoints: 0,
+        resourceMax: 4,
+        controllerPieceKey: "defender-lock",
+        battlegroupId: "defender-bg",
+        damage: damageTransferLifeSpiral(),
+      }),
+      damageTransferPiece({
+        pieceKey: "attacker",
+        sideKey: "player2",
+        modelRole: "warjack",
+        modelType: "warjack",
+        position: { xIn: 7, yIn: 6 },
+        attackProfiles: [{
+          profileKey: "execution-blade",
+          name: "Execution Blade",
+          mode: "melee",
+          rangeIn: 1,
+          power: 10,
+          attackStat: 8,
+          attackStatKind: "MAT",
+        }],
+      }),
+    ],
+    terrain: [],
+    scenario: {
+      zones: [],
+      flags: [],
+      score: { player1: 0, player2: 0 },
+      victoryThreshold: 5,
+    },
+  };
+}
+
 const state = buildWarmachineRulesV1StateFromLayer3Room(counterchargeRoom());
 const enumeration = enumerateRulesV1Actions(state);
 const action = enumeration.actions.find((candidate) =>
@@ -374,6 +477,80 @@ assert.ok(!afterLethalFreeStrike.nextStrictContinuationWindowFlags.includes(
   "strictFreeStrikeWindowOnly",
 ));
 
+const transferState = damageTransferState();
+const transferEnumeration = enumerateRulesV1Actions(transferState);
+const transferSourceAction = transferEnumeration.actions.find((candidate) =>
+  candidate.actorPieceKey === "attacker" &&
+  candidate.targetPieceKey === "defender-lock" &&
+  candidate.metadata?.damageTransferDecisionChoice === "decline");
+assert.ok(transferSourceAction);
+assert.equal(
+  transferSourceAction.metadata.sequentialDamageTransferWindowSupported,
+  true,
+);
+const transferWindowOpened = advanceWarmachineCurrentDecisionWindowV1(
+  transferState,
+  transferSourceAction.actionKey,
+  {
+    actionPatch: {
+      metadata: {
+        strictRollOutcome: {
+          attackDice: [6, 6],
+          damageDice: [6, 6],
+        },
+      },
+    },
+  },
+);
+assert.equal(transferWindowOpened.transitionAccepted, true);
+assert.equal(transferWindowOpened.nextDecisionOwnerSideKey, "player1");
+assert.ok(transferWindowOpened.nextStrictContinuationWindowFlags.includes(
+  "strictDamageTransferWindowOnly",
+));
+assert.ok(transferWindowOpened.transitionEvents.some((event) =>
+  event.eventType === "strict_damage_transfer_window_opened" &&
+  event.rawDamage === 12));
+assert.ok(!transferWindowOpened.transitionEvents.some((event) =>
+  event.eventType === "damage_applied"));
+const declineTransfer = transferWindowOpened.nextDecisionWindowDomain.optionRows.find(
+  (row) => row.disposition === "host_accepted" &&
+    row.actionEvidence?.actionType === "resolve_damage_transfer_window" &&
+    /decline/.test(row.actionKey),
+);
+const useTransfer = transferWindowOpened.nextDecisionWindowDomain.optionRows.find(
+  (row) => row.disposition === "host_accepted" &&
+    row.actionEvidence?.actionType === "resolve_damage_transfer_window" &&
+    /transfer/.test(row.actionKey) && !/decline/.test(row.actionKey),
+);
+assert.ok(declineTransfer);
+assert.ok(useTransfer);
+const afterTransferDeclined = advanceWarmachineCurrentDecisionWindowV1(
+  transferWindowOpened.successorState,
+  declineTransfer.actionKey,
+);
+assert.equal(afterTransferDeclined.transitionAccepted, true);
+assert.equal(
+  afterTransferDeclined.successorState.pieces.find((piece) =>
+    piece.pieceKey === "defender-lock")?.destroyed,
+  true,
+);
+const afterTransferUsed = advanceWarmachineCurrentDecisionWindowV1(
+  transferWindowOpened.successorState,
+  useTransfer.actionKey,
+);
+assert.equal(afterTransferUsed.transitionAccepted, true);
+const transferOwnerAfter = afterTransferUsed.successorState.pieces.find((piece) =>
+  piece.pieceKey === "defender-lock");
+const transferRecipientAfter = afterTransferUsed.successorState.pieces.find((piece) =>
+  piece.pieceKey === "defender-beast");
+assert.equal(transferOwnerAfter.destroyed, false);
+assert.equal(transferOwnerAfter.damage.boxesRemaining, 5);
+assert.equal(transferOwnerAfter.resourcePoints, 0);
+assert.equal(transferRecipientAfter.damage.boxesRemaining, 15);
+assert.ok(afterTransferUsed.transitionEvents.some((event) =>
+  event.eventType === "damage_transferred" &&
+  event.recipientPieceKey === "defender-beast"));
+
 console.log(JSON.stringify({
   ok: true,
   marker: "opponent_response_domain_v2",
@@ -398,6 +575,8 @@ console.log(JSON.stringify({
   sequentialFreeStrikeWindowOpened: true,
   sequentialFreeStrikeDeclineReenumeratedRemainingEnemy: true,
   lethalFirstFreeStrikeRemovedSecondWindow: true,
+  damageTransferWindowOpenedAfterDamageDetermined: true,
+  damageTransferDeclineAndUseStrictApplied: true,
   activationDomainReactionDebtVisible: true,
   chanceMassAssigned: receipt.chanceMassAssigned,
 }, null, 2));

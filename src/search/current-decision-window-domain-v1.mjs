@@ -160,7 +160,8 @@ function responseSummary(action = {}, enumeration = {}, windowContext = {}) {
   );
   const sequentialResponsePrefixStateAvailable = domain.requirementCount <= 1 ||
     action.metadata?.sequentialEnemyEnterReactionWindowSupported === true ||
-    action.metadata?.sequentialFreeStrikeWindowSupported === true;
+    action.metadata?.sequentialFreeStrikeWindowSupported === true ||
+    action.metadata?.sequentialDamageTransferWindowSupported === true;
   return stableGraphValue({
     opponentResponseDomainHash: domain.opponentResponseDomainHash,
     requirementCount: domain.requirementCount,
@@ -177,7 +178,8 @@ function responseSummary(action = {}, enumeration = {}, windowContext = {}) {
     reactionChanceOutcomeDomainComplete:
       domain.reactionChanceOutcomeDomainComplete,
     damageTransferResolutionComplete:
-      domain.damageTransferResolutionComplete,
+      domain.damageTransferResolutionComplete ||
+      action.metadata?.sequentialDamageTransferWindowSupported === true,
     requiresSequentialHostReenumeration: domain.requirementCount > 0,
     sequentialResponsePrefixStateAvailable,
     dynamicEligibilityReevaluationComplete:
@@ -192,6 +194,8 @@ function responseSummary(action = {}, enumeration = {}, windowContext = {}) {
     sequentialFreeStrikeWindowScope: String(
       action.metadata?.sequentialFreeStrikeWindowScope || "",
     ),
+    sequentialDamageTransferWindowSupported:
+      action.metadata?.sequentialDamageTransferWindowSupported === true,
     independentCartesianExpansionAuthorized: false,
   });
 }
@@ -551,6 +555,24 @@ function strictCurrentWindowAction(
   state = {},
   enumeration = {},
 ) {
+  if (action.metadata?.damageTransferWindowDecision === true) {
+    if (action.metadata?.damageTransferChoice !== "transfer") return action;
+    return buildWarmachineRulesV1ActionWithStrictRngOutcome(action, {
+      room: {
+        id: `current-window-damage-transfer-${String(state.stateKey || "state")}`,
+        game: {
+          round: state.turnNumber,
+          turnNumber: state.turnNumber,
+          activeSideKey: state.activeSideKey,
+        },
+      },
+      sourceContext: {
+        rulesV1State: state,
+        rulesV1Enumeration: enumeration,
+      },
+      selectedActionKey: String(action.metadata?.sourceActionKey || action.actionKey),
+    });
+  }
   if (action.metadata?.freeStrikeWindowDecision === true) {
     const choiceKey = String(action.metadata?.freeStrikeChoiceKey || action.actorPieceKey || "");
     const use = action.metadata?.freeStrikeChoice === "use";
@@ -637,6 +659,14 @@ function strictCurrentWindowAction(
       },
       strictSequentialFreeStrikeOrderPrefix: [],
     });
+    sequentialProtocolAdded = true;
+  }
+  if (
+    metadata.damageTransferDecisionAvailable === true &&
+    metadata.damageTransferDecisionChoice === "decline" &&
+    metadata.sequentialDamageTransferWindowSupported === true
+  ) {
+    metadata.strictSequentialDamageTransferResolution = true;
     sequentialProtocolAdded = true;
   }
   return sequentialProtocolAdded
