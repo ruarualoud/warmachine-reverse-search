@@ -46,8 +46,15 @@ export function createWarmachineFixedAssassinationPolicyV1(rawConfig = {}) {
     casterPieceKey: String(rawConfig.casterPieceKey || ""),
     channelerPieceKey: String(rawConfig.channelerPieceKey || ""),
     firstActionKey: String(rawConfig.firstActionKey || ""),
+    endCasterActivationWhenFocusExhausted:
+      rawConfig.endCasterActivationWhenFocusExhausted !== false,
   };
-  if (Object.values(config).some((value) => !value)) {
+  if ([
+    config.targetPieceKey,
+    config.casterPieceKey,
+    config.channelerPieceKey,
+    config.firstActionKey,
+  ].some((value) => !value)) {
     throw new Error("fixed_assassination_policy_config_incomplete");
   }
   let firstActionAudit = null;
@@ -56,12 +63,20 @@ export function createWarmachineFixedAssassinationPolicyV1(rawConfig = {}) {
     if (!target || target.destroyed === true || Number(target.damage?.boxesRemaining || 0) <= 0) {
       return { nodeType: "terminal", outcome: "success", reason: "target_leader_destroyed" };
     }
+    const caster = state.pieces.find((piece) => piece.pieceKey === config.casterPieceKey);
+    const exhaustedCasterActivation =
+      config.endCasterActivationWhenFocusExhausted &&
+      state.anyTimeActivationWindow?.active === true &&
+      state.anyTimeActivationWindow.actorPieceKey === config.casterPieceKey &&
+      Number(caster?.focus || 0) <= 0;
     let scoped = null;
     if (warmachineBenchmarkRuntimeWindowActiveV2(state)) {
       scoped = enumerateWarmachineBenchmarkActionsV2(state, {
         targetPieceKeys: [config.targetPieceKey],
         includeUntargetedActions: true,
-        actionFamilyKeys: ["movement", "attack_or_effect", "timing", "resource", "special"],
+        actionFamilyKeys: exhaustedCasterActivation
+          ? ["timing"]
+          : ["movement", "attack_or_effect", "timing", "resource", "special"],
       });
     } else {
       const channelerGroup = buildWarmachineActivationGroups(state).find((group) =>
@@ -87,7 +102,6 @@ export function createWarmachineFixedAssassinationPolicyV1(rawConfig = {}) {
     if (Number(cursor) === 0) {
       selected = canonical.find((action) => action.actionKey === config.firstActionKey) || null;
     } else if (runtimeActorKeys.has(config.casterPieceKey)) {
-      const caster = state.pieces.find((piece) => piece.pieceKey === config.casterPieceKey);
       const channeler = state.pieces.find((piece) => piece.pieceKey === config.channelerPieceKey);
       const targetedSpells = canonical.filter((action) =>
         action.targetPieceKey === config.targetPieceKey && /spell/.test(action.actionType));
