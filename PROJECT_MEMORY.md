@@ -32,6 +32,15 @@
   not blanket coverage. All referenced verifier scripts and binding compilers
   are content-bound into the Engine authority.
 
+- 2026-09-15 durable generated-fixture binding invariant: a nonliteral fixture
+  can close an exact atom relation only when its identifier is the declared
+  canonical atom-key-plus-role formula and a reviewed current verifier both
+  constructs that identifier and forwards the definition's exact interaction
+  keys into the shared proof reducer. Custom fixture names remain unresolved.
+  Canonicalized text used to match a source contract is comparison evidence,
+  not a second source quotation; continuous grants preserve original source
+  text and use contract text only as a missing-source fallback.
+
 - 2026-09-15 durable geometry-interface invariant: when Engine omits a model
   obstacle because a signed start-distance lower bound exceeds the complete
   movement allowance, Search must validate and preserve that exclusion proof
