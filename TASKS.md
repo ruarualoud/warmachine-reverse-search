@@ -7,6 +7,7 @@
 - [x] 检索公开完整对局；未找到可完整复盘的当前 Fane of Nyrro 对 Cryx 录像，选择 50 分 Hysene 对 Oriax、Closed Quarters/Tales from the Frontlines 对局作为最接近的完整负向基准，并记录另一场 Hysene 对 Grymkin Fault Line 作为场景可支持但势力协议未闭环的备选。
 - [x] 逐回合审计实际计划、动作、规则纠错和对手回应，形成 `docs/research/real-match-nyrro-system-audit-20260914.md`。当前 Force Builder 能接受精确 50 分 Nyrro 表并拒绝多出的 Sythyss Prophet；没有合格近战击杀时 Murderous Impulse 不能代替 Fury 购买攻击，符合录像最终纠正。
 - [x] 证明当前完整复盘必须失败关闭：Host 没有 Closed Quarters、Muddy Ground 或 Tales 场景；Orgoth 的 Star-Crossed、Careful Reconnaissance、Bite And Hold 没有可认证执行器；录像不能提供严格几何；Search 当前观察到 `1188` 个执行源文件，仍绑定旧 `679` 文件收据，触发两个 focused receipt mismatch。
+- [x] 发布当前 Ticket 23 focused Engine 收据并修复上游门的假通过。Search 现绑定提交 `763ece0` 下 `1188` 文件内容闭包的 `296/296` 矩阵（来源收据 `c72de759...a947`、聚合 `61ee3614...7035`），当前 Host 收据为 `6c7b7b2b...0039`；`verify:upstream` 必须同时证明 reviewed receipt current、零失效理由和本地矩阵工件匹配。执行内容哈希与 Git 元数据分离后，文档提交不会误伤证据，可执行内容漂移仍严格失败关闭。该收据不关闭 23.8-23.11 或缺失的场景/势力语义。
 - [ ] 按报告第 7 节归属继续 Ticket 23/12/20/21/22/09/10；在场景、对手规则、当前收据、精确状态输入和对手/Chance 闭包完成前，不发布首轮最优、整局胜率或训练真值。
 
 ## 2026-09-14 合理终局场景生成数学重评估

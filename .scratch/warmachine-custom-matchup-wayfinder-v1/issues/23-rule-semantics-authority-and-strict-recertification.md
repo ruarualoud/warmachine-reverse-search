@@ -238,6 +238,8 @@ OfficialRuleSource
 
 当前证据：当前数据版本为 `40049`，动态来源分母 `3159`。截至 23.8x，精确闭环 `572`、未闭环 `2587`；规则注册表为 `547` 个原子定义 / `650` 个钩子声明，全部当前声明 proof role 闭合。23.8x 用一个共享 strict Host 闭合 `18` 条 Field Marshal 来源：复用 `15` 个载荷原子，只新增一个 transport-only Unyielding 载荷，并以 `21` 条显式 allowlist 钩子运输防止文本推断和派生来源自举。Engine/Layer3/Route3-LLM-facing/Search Host-only 通过 `156` 条结构化证明、`15/15` mutation 和 micro `108/108`，聚合报告 `1ae7723b...a085`，Search 侧规则重复实现为零。Field Marshal 当前为 `22/62` 精确闭环，剩余 `40` 条需要载荷语义开发或审计；父纵切、全局 Strict、Skill/training、`Q_rule`、值与线上实验均未晋级。固定 `1274` 条人工审阅分母不因批量执行重新生成；下一批继续按共享 Host/动作族闭合完整来源，不把实现片、钩子或调度义务冒充规则来源完成数。
 
+2026-09-15收据发布：Engine 固定矩阵在提交 `763ece0` 的同一 `1188` 文件执行内容闭包下通过 `296/296`（`243` 个规则原子验证器 + `53` 个严格转移验证器），聚合哈希为 `61ee3614...7035`。Search 已绑定不可变来源收据 `c72de759...a947`，当前 Host 收据为 `6c7b7b2b...0039`；上游契约门现在强制要求 focused receipt `current=true`、无失效理由且本地矩阵工件可核验。内容闭包哈希与执行时 Git 提交号分开，纯文档提交不再作废规则证据，但任意可执行内容漂移仍会失败关闭。这只发布当前 focused 分母，不关闭其余卡牌/势力来源，也不提升 23.8、Ticket 23、Skill、值或线上状态。
+
 2026-09-11分母更正：上述 `3159/572/2587` 只是卡牌来源账本，不是全规则或势力ready分母。主规则Appendix 2的Cephalyx、Convergence、Farrow、Gatorman、Grymkin、Infernals和Rhulic必须另建条款级协议账本。Convergence已确认Interface Node/I、controller MAT/RAT、No Power Up、Force Induction/Repeater和非cortex交互缺口；相关focused verifier已在错误Power Up处稳定失败。CoC开发现暂缓，不重跑该红门；父纵切、全局Strict、Skill/training、`Q_rule`、值与线上实验均未晋级。
 
 ### Slice 23.9: 自动关联闭包、性质测试与变异门

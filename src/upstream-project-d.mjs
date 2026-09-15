@@ -111,6 +111,12 @@ async function loadReviewedFocusedEngineReceipt(projectDRoot) {
       `Warmachine reviewed focused Engine receipt has invalid ${key}`,
     );
   }
+  if (reviewed.executionContentClosureHash != null) {
+    assertFocusedReceipt(
+      /^[0-9a-f]{64}$/.test(String(reviewed.executionContentClosureHash)),
+      "Warmachine reviewed focused Engine receipt has invalid executionContentClosureHash",
+    );
+  }
 
   const closureModulePath = path.join(projectDRoot, FOCUSED_ENGINE_CLOSURE_MODULE);
   await access(closureModulePath);
@@ -124,10 +130,15 @@ async function loadReviewedFocusedEngineReceipt(projectDRoot) {
   const observedClosure = closureModule.buildWarmachineFocusedExecutionSourceClosureV1(
     projectDRoot,
   );
+  const executionClosureMatches = reviewed.executionContentClosureHash
+    ? observedClosure.contentClosureHash === reviewed.executionContentClosureHash
+    : observedClosure.sourceReceiptHash === reviewed.executionSourceReceiptHash;
   const failClosedReasons = [
-    ...(observedClosure.sourceReceiptHash === reviewed.executionSourceReceiptHash
+    ...(executionClosureMatches
       ? []
-      : ["focused_engine_execution_source_receipt_mismatch"]),
+      : [reviewed.executionContentClosureHash
+          ? "focused_engine_execution_content_closure_mismatch"
+          : "focused_engine_execution_source_receipt_mismatch"]),
     ...(Number(observedClosure.sourceFileCount) === Number(reviewed.sourceFileCount)
       ? []
       : ["focused_engine_source_file_count_mismatch"]),
@@ -151,7 +162,10 @@ async function loadReviewedFocusedEngineReceipt(projectDRoot) {
         sourceReceipt.manifestHash === reviewed.manifestHash &&
         sourceReceipt.aggregateHash === reviewed.aggregateHash &&
         sourceReceipt.executionSourceClosure?.sourceReceiptHash ===
-          reviewed.executionSourceReceiptHash,
+          reviewed.executionSourceReceiptHash &&
+        (!reviewed.executionContentClosureHash ||
+          sourceReceipt.executionSourceClosure?.contentClosureHash ===
+            reviewed.executionContentClosureHash),
       "Warmachine focused Engine source receipt evidence mismatch",
     );
     localArtifactVerified = true;
@@ -161,6 +175,7 @@ async function loadReviewedFocusedEngineReceipt(projectDRoot) {
     schemaVersion: "warmachine_focused_engine_receipt_binding_v1",
     reviewedReceipt: reviewed,
     observedExecutionSourceReceiptHash: observedClosure.sourceReceiptHash,
+    observedExecutionContentClosureHash: observedClosure.contentClosureHash,
     observedSourceFileCount: observedClosure.sourceFileCount,
     current: failClosedReasons.length === 0,
     failClosedReasons,

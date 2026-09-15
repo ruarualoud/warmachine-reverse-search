@@ -11,6 +11,13 @@ assert.equal(host.receipt.projectDRoot, resolveProjectDRoot());
 assert.equal(host.schemaVersion, "warmachine_host_contract_v1");
 assert.equal(host.strictForwardExecutionIsAuthority, true);
 assert.equal(host.searchMayAffectRules, false);
+assert.equal(host.focusedSourceReceipt.current, true);
+assert.deepEqual(host.focusedSourceReceipt.failClosedReasons, []);
+assert.equal(host.focusedSourceReceipt.localArtifactVerified, true);
+assert.match(
+  host.focusedSourceReceipt.observedExecutionContentClosureHash,
+  /^[0-9a-f]{64}$/,
+);
 assert.match(host.receipt.gitRevision, /^(?:[0-9a-f]{40}|unavailable)$/);
 assert.match(host.receipt.receiptHash, /^[0-9a-f]{64}$/);
 assert.ok(Object.keys(host.receipt.sourceHashes).length > 5);
