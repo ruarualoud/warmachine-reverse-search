@@ -178,6 +178,7 @@
     "build:ticket22-continuation-strategy-comparison": "node scripts/build-ticket22-continuation-strategy-comparison-worklist-v1.mjs",
     "build:ticket22-local-strategy-refinement": "node scripts/build-ticket22-local-strategy-refinement-v1.mjs",
     "build:fixed-cryx-nymara-task-rule-closure": "node scripts/build-fixed-cryx-nymara-task-rule-closure-v1.mjs",
+    "run:fixed-cryx-nymara-bounded-search": "node scripts/run-fixed-cryx-nymara-bounded-search-v1.mjs",
     "report:custom-matchup-evidence-v2": "node scripts/build-ticket09-route-initial-state-values-v1.mjs && node scripts/generate-custom-matchup-evidence-report-v2.mjs",
     "verify:custom-matchup-evidence-report-v2": "node scripts/verify-custom-matchup-evidence-report-v2.mjs",
     "verify:ticket09-real-route-identities": "node scripts/verify-ticket09-real-route-identities-v1.mjs",

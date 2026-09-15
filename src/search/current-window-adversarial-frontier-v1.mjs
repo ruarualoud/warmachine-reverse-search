@@ -133,6 +133,8 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
   const successorEnumerationScopeKind = String(
     rawOptions.successorEnumerationScopeKind || "full_host_window",
   );
+  const materializeSuccessorWindow =
+    rawOptions.materializeSuccessorWindow !== false;
   if (!["full_host_window", "selected_actor_and_actorless"].includes(
     successorEnumerationScopeKind,
   )) {
@@ -228,41 +230,43 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
         transition.nextState,
         rootStoredState?.stateId || "",
       );
-      const successorEnumerationOptions =
-        successorEnumerationScopeKind === "selected_actor_and_actorless"
-          ? {
-            actorPieceKeys: candidate.actorPieceKey
-              ? [String(candidate.actorPieceKey)]
-              : [],
-            includeActorlessActions: true,
-          }
-          : {};
-      const successorEnumeration = enumerateRulesV1Actions(
-        transition.nextState,
-        successorEnumerationOptions,
-      );
-      const successorDomain =
-        buildWarmachineCurrentDecisionWindowDomainFromHostEnumerationV1(
+      if (materializeSuccessorWindow) {
+        const successorEnumerationOptions =
+          successorEnumerationScopeKind === "selected_actor_and_actorless"
+            ? {
+              actorPieceKeys: candidate.actorPieceKey
+                ? [String(candidate.actorPieceKey)]
+                : [],
+              includeActorlessActions: true,
+            }
+            : {};
+        const successorEnumeration = enumerateRulesV1Actions(
           transition.nextState,
-          successorEnumeration,
-          {
-            enumeratedInputStateReference: transition.nextState,
-            taskLocalRuleClosure: rawOptions.taskLocalRuleClosure || null,
-          },
+          successorEnumerationOptions,
         );
-      successorWindow = stableGraphValue({
-        currentDecisionWindowDomainHash:
-          successorDomain.currentDecisionWindowDomainHash,
-        decisionOwnerSideKey: successorDomain.decisionOwnerSideKey,
-        phaseKey: successorDomain.phaseKey,
-        activeSideKey: successorDomain.activeSideKey,
-        acceptedOptionCount: successorDomain.acceptedOptionCount,
-        rejectedOptionCount: successorDomain.rejectedOptionCount,
-        unresolvedReasons: successorDomain.unresolvedReasons,
-        hostActionSpaceNarrowed:
-          successorDomain.hostEnumerationScope?.hostActionSpaceNarrowed === true,
-        successorEnumerationScopeKind,
-      });
+        const successorDomain =
+          buildWarmachineCurrentDecisionWindowDomainFromHostEnumerationV1(
+            transition.nextState,
+            successorEnumeration,
+            {
+              enumeratedInputStateReference: transition.nextState,
+              taskLocalRuleClosure: rawOptions.taskLocalRuleClosure || null,
+            },
+          );
+        successorWindow = stableGraphValue({
+          currentDecisionWindowDomainHash:
+            successorDomain.currentDecisionWindowDomainHash,
+          decisionOwnerSideKey: successorDomain.decisionOwnerSideKey,
+          phaseKey: successorDomain.phaseKey,
+          activeSideKey: successorDomain.activeSideKey,
+          acceptedOptionCount: successorDomain.acceptedOptionCount,
+          rejectedOptionCount: successorDomain.rejectedOptionCount,
+          unresolvedReasons: successorDomain.unresolvedReasons,
+          hostActionSpaceNarrowed:
+            successorDomain.hostEnumerationScope?.hostActionSpaceNarrowed === true,
+          successorEnumerationScopeKind,
+        });
+      }
     }
     const core = stableGraphValue({
       actionKey: String(candidate.actionKey || ""),
@@ -358,6 +362,7 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
     hostAcceptedActionCount: acceptedActions.length,
     hostRejectedActionCount: array(enumeration.rejectedActions).length,
     successorEnumerationScopeKind,
+    successorWindowMaterializationDeferred: !materializeSuccessorWindow,
     successorEnumerationScopeComplete:
       successorEnumerationScopeKind === "full_host_window",
     page: {

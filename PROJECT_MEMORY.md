@@ -1,5 +1,18 @@
 # Project Memory
 
+- 2026-09-15 durable bounded-runner partition invariant: a current-window
+  search checkpoint advances one Control-global slot or one complete activation
+  group at a time. For an activation group, one scoped Host enumeration is
+  partitioned across all six action families and every accepted row is consumed
+  before the group checkpoint is atomically published; interruption can lose at
+  most the active group. Unseen slots, scoped/full-Host parity, continuous
+  geometry, Chance, opponent responses and task-local rule debt remain explicit
+  `[0,1]` complements. The first 103-model run completed Control plus one
+  successor group in 155.035 seconds with 11 nodes, 22 edges and zero strict
+  transition failures. Twelve of that group's sixteen accepted actions were
+  relation-guarded, demonstrating that task proof closure, not Host transition
+  execution, is now the immediate report-quality bottleneck.
+
 - 2026-09-15 durable task-local interval-search boundary: the exact fixed
   Sepsira six-Swarm versus Nymara opening maps all 80 roster rule source IDs to
   81 candidate atoms and 131 declared atom-interaction obligations. Sixty-six
