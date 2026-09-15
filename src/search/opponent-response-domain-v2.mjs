@@ -285,6 +285,10 @@ export function buildWarmachineOpponentResponseDomainV2(
   const damageTransferResolutionComplete = rows.every((row) =>
     row.kind !== "damage_transfer");
   const reactionOrderDomainComplete = rows.length <= 1;
+  const chanceMassAssigned = rows.some((row) => row.options.some((option) =>
+    option.chanceRequired === true &&
+    option.chanceOutcomeExact === true &&
+    option.chanceModel?.exactComplete === true));
   const finiteDeclaredChoiceProductWellFormed = issues.length === 0;
   const core = stableGraphValue({
     schemaVersion: WARMACHINE_OPPONENT_RESPONSE_DOMAIN_V2_SCHEMA,
@@ -301,7 +305,7 @@ export function buildWarmachineOpponentResponseDomainV2(
       row.kind === "damage_transfer" || row.reactionChanceOutcomeDomainComplete === true),
     damageTransferResolutionComplete,
     opponentQuantifier: "opponent_and",
-    chanceMassAssigned: false,
+    chanceMassAssigned,
     validationIssues: uniqueSorted(issues),
     claimBoundary:
       "This domain preserves every opponent-owned requirement projected by the current Host and every declared finite use/decline, destination-probe or damage-transfer option. It does not treat the current finite destination probes as a complete continuous destination domain, does not invent alternate reaction priority orders, and does not replace reaction attack dice with decision probability. Those remain independent completion debts.",
@@ -634,7 +638,7 @@ export function advanceWarmachineOpponentResponseWorklistV2(
       domain.damageTransferResolutionComplete,
     opponentResponseDomainComplete,
     accountingConserved,
-    chanceMassAssigned: false,
+    chanceMassAssigned: domain.chanceMassAssigned,
     completionDebts,
     resumeCheckpoint: sealedCheckpoint,
     claimBoundary:

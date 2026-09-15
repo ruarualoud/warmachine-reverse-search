@@ -7,7 +7,9 @@
   Defensive Strike against a current-data Mechanithrall now keeps opponent
   use/decline above an exact attack/damage/Tough Chance distribution. Unknown,
   diagnosed, additional source, weapon-special and destination-dependent cases
-  remain fail-closed.
+  remain fail-closed. `chanceMassAssigned` is true only when at least one exact
+  reaction use branch carries that conserved Chance distribution; it is not a
+  synonym for response-domain completeness.
 
 - 2026-09-15 durable legacy Free Strike path invariant: explicit
   `legacy_free_strike` movement now computes base-aware melee-range exits along

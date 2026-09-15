@@ -407,6 +407,8 @@ assert.equal(defensiveStrikeDomain.requirementCount, 1);
 assert.equal(defensiveStrikeDomain.destinationParameterDomainComplete, true);
 assert.equal(defensiveStrikeDomain.reactionChanceOutcomeDomainComplete, true,
   "one plain no-destination Defensive Strike must expose exact attack/damage Chance rather than one sampled roll");
+assert.equal(defensiveStrikeDomain.chanceMassAssigned, true,
+  "an exact reaction Chance distribution must be visible to downstream value accounting");
 const defensiveStrikeUseOptions = defensiveStrikeDomain.requirementRows[0].options.filter((option) =>
   option.choice === "use");
 assert.equal(defensiveStrikeUseOptions.length, 1,
@@ -423,6 +425,7 @@ const defensiveStrikeReceipt = advanceWarmachineOpponentResponseWorklistV2(
 assert.equal(defensiveStrikeReceipt.declaredFiniteChoiceProductComplete, true);
 assert.equal(defensiveStrikeReceipt.reactionChanceOutcomeDomainComplete, true);
 assert.equal(defensiveStrikeReceipt.opponentResponseDomainComplete, true);
+assert.equal(defensiveStrikeReceipt.chanceMassAssigned, true);
 assert.equal(defensiveStrikeReceipt.strictRejectedCount, "0");
 assert.equal(defensiveStrikeReceipt.pendingSpecialResolutionCount, "0");
 assert.equal(defensiveStrikeReceipt.strictAcceptedCount,
