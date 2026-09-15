@@ -1,5 +1,7 @@
 import { stableGraphHash, stableGraphValue } from
   "../graph/typed-facts-v2.mjs";
+import { guardWarmachineActionWithTaskLocalRuleClosureV1 } from
+  "../contracts/task-local-action-rule-guard-v1.mjs";
 import { warmachineRuleBehaviorStateHashV1 } from
   "../state/semantic-hash-v1.mjs";
 import {
@@ -96,13 +98,20 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
     rawOptions.taskKey,
     "current_window_adversarial_frontier_task_required",
   );
+  if (rawOptions.taskLocalRuleClosure &&
+      rawOptions.taskLocalRuleClosure.taskKey !== taskKey) {
+    throw new Error("current_window_adversarial_frontier_task_closure_mismatch");
+  }
   const currentWindow =
     buildWarmachineCurrentDecisionWindowDomainFromHostEnumerationV1(
       inputState,
       enumeration,
       rawOptions.enumeratedInputStateReference === inputState
-        ? { enumeratedInputStateReference: inputState }
-        : {},
+        ? {
+          enumeratedInputStateReference: inputState,
+          taskLocalRuleClosure: rawOptions.taskLocalRuleClosure || null,
+        }
+        : { taskLocalRuleClosure: rawOptions.taskLocalRuleClosure || null },
     );
   const acceptedActions = array(enumeration.actions).slice().sort((left, right) =>
     String(left.actionKey || "").localeCompare(String(right.actionKey || "")));
@@ -131,12 +140,60 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
   }
   const edges = [];
   for (const candidate of pageActions) {
+    const optionRow = array(currentWindow.optionRows).find((row) =>
+      row.disposition === "host_accepted" &&
+      row.actionKey === candidate.actionKey) || null;
+    const dependencyGuardRejected =
+      optionRow?.taskLocalRuleGuard?.disposition === "rules_unknown";
+    if (dependencyGuardRejected) {
+      const core = stableGraphValue({
+        actionKey: String(candidate.actionKey || ""),
+        actionType: String(candidate.actionType || ""),
+        actorPieceKey: String(candidate.actorPieceKey || ""),
+        targetPieceKey: String(candidate.targetPieceKey || ""),
+        selectedOptionReceiptHash: String(optionRow?.optionReceiptHash || ""),
+        hostTransitionAccepted: null,
+        transitionAccepted: false,
+        transitionReason: "task_local_rule_dependency_unresolved",
+        dependencyGuardRejected: true,
+        taskLocalRuleGuard: optionRow.taskLocalRuleGuard,
+        eventTypes: [],
+        terminalEvents: [],
+        queryValueInterval: binaryInterval(0, 1),
+        successorStateHash: "",
+        successorStoredState: null,
+        successorWindow: null,
+        deeperContinuationResolved: false,
+        chanceDomainResolved: false,
+      });
+      edges.push({ ...core, edgeReceiptHash: stableGraphHash(core) });
+      rawOptions.onProgress?.({
+        stage: "current_window_frontier_edge_rule_dependency_unresolved",
+        actionKey: String(candidate.actionKey || ""),
+        edgeIndex: startIndex + edges.length - 1,
+        edgeCount: pageActions.length,
+        transitionAccepted: false,
+        successorDecisionOwnerSideKey: "",
+      });
+      continue;
+    }
     const selected = {
       ...candidate,
       __warmachineTrustedRulesV1Enumeration: enumeration,
     };
     const transition = applyRulesV1Action(rootState, selected);
-    const accepted = transition.ok === true;
+    const hostTransitionAccepted = transition.ok === true;
+    const transitionRuleGuard = hostTransitionAccepted &&
+        rawOptions.taskLocalRuleClosure
+      ? guardWarmachineActionWithTaskLocalRuleClosureV1({
+        action: candidate,
+        transitionEvents: array(transition.events),
+      }, rawOptions.taskLocalRuleClosure)
+      : optionRow?.taskLocalRuleGuard || null;
+    const transitionDependencyGuardRejected =
+      transitionRuleGuard?.disposition === "rules_unknown";
+    const accepted = hostTransitionAccepted &&
+      !transitionDependencyGuardRejected;
     let successorStateHash = "";
     let successorStoredState = null;
     let successorWindow = null;
@@ -166,7 +223,10 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
         buildWarmachineCurrentDecisionWindowDomainFromHostEnumerationV1(
           transition.nextState,
           successorEnumeration,
-          { enumeratedInputStateReference: transition.nextState },
+          {
+            enumeratedInputStateReference: transition.nextState,
+            taskLocalRuleClosure: rawOptions.taskLocalRuleClosure || null,
+          },
         );
       successorWindow = stableGraphValue({
         currentDecisionWindowDomainHash:
@@ -182,24 +242,25 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
         successorEnumerationScopeKind,
       });
     }
-    const optionRow = array(currentWindow.optionRows).find((row) =>
-      row.disposition === "host_accepted" &&
-      row.actionKey === candidate.actionKey) || null;
     const core = stableGraphValue({
       actionKey: String(candidate.actionKey || ""),
       actionType: String(candidate.actionType || ""),
       actorPieceKey: String(candidate.actorPieceKey || ""),
       targetPieceKey: String(candidate.targetPieceKey || ""),
       selectedOptionReceiptHash: String(optionRow?.optionReceiptHash || ""),
+      hostTransitionAccepted,
       transitionAccepted: accepted,
-      transitionReason: String(transition.reason || ""),
+      transitionReason: transitionDependencyGuardRejected
+        ? "task_local_transition_rule_dependency_unresolved"
+        : String(transition.reason || ""),
+      dependencyGuardRejected: transitionDependencyGuardRejected,
+      taskLocalRuleGuard: transitionRuleGuard,
       eventTypes: array(transition.events).map((event) =>
         String(event.eventType || "")),
       terminalEvents: terminalEvents(transition.events),
-      queryValueInterval: frontierInterval(
-        transition.events,
-        querySideKey,
-      ),
+      queryValueInterval: transitionDependencyGuardRejected
+        ? binaryInterval(0, 1)
+        : frontierInterval(transition.events, querySideKey),
       successorStateHash,
       successorStoredState,
       successorWindow,
@@ -208,7 +269,9 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
     });
     edges.push({ ...core, edgeReceiptHash: stableGraphHash(core) });
     rawOptions.onProgress?.({
-      stage: "current_window_frontier_edge_complete",
+      stage: transitionDependencyGuardRejected
+        ? "current_window_frontier_edge_transition_rule_dependency_unresolved"
+        : "current_window_frontier_edge_complete",
       actionKey: String(candidate.actionKey || ""),
       edgeIndex: startIndex + edges.length - 1,
       edgeCount: pageActions.length,
@@ -220,13 +283,18 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
   const nextIndex = startIndex + pageActions.length;
   const pageExhausted = nextIndex >= acceptedActions.length;
   const transitionFailureCount = edges.filter((edge) =>
-    !edge.transitionAccepted).length;
+    !edge.transitionAccepted && !edge.dependencyGuardRejected).length;
+  const ruleDependencyUnresolvedCount = edges.filter((edge) =>
+    edge.dependencyGuardRejected).length;
   const unresolvedReasons = [...new Set([
     ...array(currentWindow.unresolvedReasons),
     ...(successorEnumerationScopeKind !== "full_host_window"
       ? ["successor_host_enumeration_scope_narrowed"]
       : []),
     ...(!pageExhausted ? ["current_window_page_not_exhausted"] : []),
+    ...(ruleDependencyUnresolvedCount > 0
+      ? ["task_local_rule_dependency_unresolved"]
+      : []),
     "successor_continuation_domain_unexpanded",
     "successor_chance_domain_unexpanded",
     "full_opponent_turn_domain_unexpanded",
@@ -238,6 +306,13 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
     currentHostReceiptHash: String(warmachineHost.receipt?.receiptHash || ""),
     currentDecisionWindowDomainHash:
       currentWindow.currentDecisionWindowDomainHash,
+    taskLocalRuleClosureHash: String(
+      currentWindow.taskLocalRuleClosureHash || "",
+    ),
+    taskLocalRuleGuardEnabled:
+      currentWindow.taskLocalRuleGuardEnabled === true,
+    taskLocalRulesUnknownOptionCount:
+      Number(currentWindow.taskLocalRulesUnknownOptionCount || 0),
     rootStateHash,
     rootStoredState,
     decisionOwnerSideKey: currentWindow.decisionOwnerSideKey,
@@ -263,6 +338,7 @@ export function buildWarmachineCurrentWindowAdversarialFrontierV1(
     },
     edges,
     transitionFailureCount,
+    ruleDependencyUnresolvedCount,
     acceptedDenominatorConserved:
       nextIndex + (acceptedActions.length - nextIndex) ===
         acceptedActions.length,

@@ -1,4 +1,6 @@
 import { stableGraphHash, stableGraphValue } from "../graph/typed-facts-v2.mjs";
+import { guardWarmachineActionWithTaskLocalRuleClosureV1 } from
+  "../contracts/task-local-action-rule-guard-v1.mjs";
 import { warmachineRuleBehaviorStateHashV1 } from
   "../state/semantic-hash-v1.mjs";
 import {
@@ -260,6 +262,7 @@ function acceptedOptionRow(
   action = {},
   enumeration = {},
   windowContext = {},
+  taskLocalRuleClosure = null,
 ) {
   const parameterAxes = actionParameterAxes(action);
   const response = responseSummary(
@@ -268,6 +271,10 @@ function acceptedOptionRow(
     windowContext,
   );
   const ruleUnknownKeys = actionRuleUnknownKeys(action);
+  const taskLocalRuleGuard = guardWarmachineActionWithTaskLocalRuleClosureV1(
+    action,
+    taskLocalRuleClosure,
+  );
   const unresolvedReasons = uniqueSorted([
     ...(parameterAxes.some((axis) =>
       axis.domainCompleteness.startsWith("unresolved_"))
@@ -284,6 +291,10 @@ function acceptedOptionRow(
       ? ["multiple_response_host_prefix_state_unavailable"]
       : []),
     ...(ruleUnknownKeys.length ? ["action_rule_source_unresolved"] : []),
+    ...(taskLocalRuleClosure &&
+      taskLocalRuleGuard.disposition === "rules_unknown"
+      ? ["task_local_atom_relation_unresolved"]
+      : []),
   ]);
   const core = stableGraphValue({
     disposition: "host_accepted",
@@ -294,6 +305,7 @@ function acceptedOptionRow(
     parameterAxisCount: parameterAxes.length,
     immediateResponseDomain: response,
     ruleUnknownKeys,
+    taskLocalRuleGuard,
     unresolvedReasons,
     actionEvidence: compactAcceptedActionEvidence(action),
   });
@@ -418,6 +430,11 @@ function buildCurrentDecisionWindowDomainFromEnumeration(
   enumeration = {},
   options = {},
 ) {
+  if (options.taskLocalRuleClosure &&
+      options.taskLocalRuleClosure.hostReceiptHash !==
+        warmachineHost.receipt.receiptHash) {
+    throw new Error("current_decision_window_task_local_host_receipt_mismatch");
+  }
   const normalizedEnumerationState = enumeration.state || state;
   const inputRuleBehaviorStateHash = String(
     options.inputRuleBehaviorStateHash ||
@@ -428,7 +445,12 @@ function buildCurrentDecisionWindowDomainFromEnumeration(
     inputRuleBehaviorStateHash,
   };
   const acceptedRows = array(enumeration.actions).map((action) =>
-    acceptedOptionRow(action, enumeration, windowContext));
+    acceptedOptionRow(
+      action,
+      enumeration,
+      windowContext,
+      options.taskLocalRuleClosure || null,
+    ));
   const rejectedRows = array(enumeration.rejectedActions).map(rejectedOptionRow);
   const optionRows = [...acceptedRows, ...rejectedRows].sort((left, right) =>
     left.optionRowKey.localeCompare(right.optionRowKey));
@@ -437,6 +459,9 @@ function buildCurrentDecisionWindowDomainFromEnumeration(
   const enumerationScope = hostEnumerationScope(enumeration);
   const ruleUnknownKeys = uniqueSorted(acceptedRows.flatMap((row) =>
     row.ruleUnknownKeys));
+  const taskLocalRuleGuardEnabled = Boolean(options.taskLocalRuleClosure);
+  const taskLocalRulesUnknownOptionCount = acceptedRows.filter((row) =>
+    row.taskLocalRuleGuard?.disposition === "rules_unknown").length;
   const unresolvedReasons = uniqueSorted([
     ...acceptedRows.flatMap((row) => row.unresolvedReasons),
     ...(!enumeration.decisionSideKey
@@ -472,6 +497,11 @@ function buildCurrentDecisionWindowDomainFromEnumeration(
     optionCount: optionRows.length,
     optionRows,
     ruleUnknownKeys,
+    taskLocalRuleClosureHash: String(
+      options.taskLocalRuleClosure?.taskLocalRuleClosureHash || "",
+    ),
+    taskLocalRuleGuardEnabled,
+    taskLocalRulesUnknownOptionCount,
     unresolvedReasons,
     hostDiscreteRowsAccounted:
       acceptedRows.length === Number(enumeration.actionCount || 0) &&
@@ -519,7 +549,10 @@ export function buildWarmachineCurrentDecisionWindowDomainFromHostEnumerationV1(
     return buildCurrentDecisionWindowDomainFromEnumeration(
       enumeratedState,
       enumeration,
-      { inputRuleBehaviorStateHash },
+      {
+        inputRuleBehaviorStateHash,
+        taskLocalRuleClosure: options.taskLocalRuleClosure || null,
+      },
     );
   }
   const state = normalizeRulesV1State(inputState);
@@ -531,7 +564,10 @@ export function buildWarmachineCurrentDecisionWindowDomainFromHostEnumerationV1(
   return buildCurrentDecisionWindowDomainFromEnumeration(
     enumeratedState,
     enumeration,
-    { inputRuleBehaviorStateHash },
+    {
+      inputRuleBehaviorStateHash,
+      taskLocalRuleClosure: options.taskLocalRuleClosure || null,
+    },
   );
 }
 

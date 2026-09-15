@@ -2,6 +2,12 @@
 
 恢复开发先读 [docs/AGENT_TASK_GUIDE.md](docs/AGENT_TASK_GUIDE.md)，再按当前ticket内清单执行。规范由Engine维护，修正计划/工作台接入由本仓库维护。
 
+## 2026-09-15 fixed Cryx/Nymara task-local search launch gate
+
+- [x] Compile the exact fixed Sepsira six-Swarm versus Nymara task dependency denominator from the current 103-model opening. All `80/80` roster source IDs map exactly to `81` atoms and `131` atom-interaction obligations; `66` relations remain unresolved, including `48` on terminal-ordering-selected atoms, and `21` relevant global hook groups remain unresolved. Closure receipt is `3b030a77...b608`; terminal relevance remains scheduling only.
+- [x] Add a receipt-bound two-stage runtime action guard. It checks Host action metadata before apply and emitted transition events after apply, preserves unknown atoms, unresolved relations and unresolved same-hook multi-atom ordering as auditable `[0,1]` edges, and excludes those edges from Engine transition-failure counts without treating them as solved. A fixed-opening Host smoke strict-applies `control:end:player1:v1` as core-only and rejects an unresolved Ashen Veil dependency with both exact obligation keys.
+- [ ] Connect this closure and guard to the checkpointed multi-window bounded runner, conserve every omitted/guarded/opponent/Chance/continuous branch, and generate the first replayable fixed-condition interval report. Exact strategy values and global Strict remain forbidden.
+
 ## 2026-09-15 Ticket 23.9 dynamic interaction handoff boundary
 
 - [x] Record Engine report `4b01a293...21669` as the first current automatically derived interaction denominator. Its initial nine semantic-to-primitive catalogue debts are now closed through seven existing shared builders; relation-specific evidence remains unresolved, so the report stays `ready=false`. It is not a Search parity result and does not authorize values, pruning, Skill/training or online execution.

@@ -195,6 +195,46 @@ function rosterAtomCandidates(state = {}, atoms = []) {
   };
 }
 
+export function buildWarmachineRosterRuleDependencyInventoryV1(state = {}) {
+  const { atoms } = registrySnapshot();
+  const scope = rosterAtomCandidates(state, atoms);
+  const candidateAtoms = [...scope.candidates]
+    .sort((left, right) => left.atomKey.localeCompare(right.atomKey));
+  const candidateInteractionObligationKeys = candidateAtoms.flatMap((atom) =>
+    arrayValues(atom.interactions).map((interaction) =>
+      `atom:${atom.atomKey}:${interaction.interactionKey}`)).sort();
+  const core = {
+    schemaVersion: "warmachine_roster_rule_dependency_inventory_v1",
+    scopeMode: scope.fallbackToGlobalRegistry
+      ? "global_registry_fallback_no_roster_sources"
+      : "exact_roster_source_id_candidates",
+    sourceEntryCount: scope.inventory.entries.length,
+    sourceIdCount: scope.inventory.sourceIds.size,
+    explicitAtomKeyCount: scope.inventory.explicitAtomKeys.size,
+    mappedSourceIds: [...scope.mappedSourceIds].map(String).sort(),
+    unmappedRosterRuleSources: scope.inventory.entries
+      .filter((entry) => entry.sourceId && !scope.mappedSourceIds.has(entry.sourceId))
+      .map((entry) => ({
+        ...entry,
+        pieceKeys: [...entry.pieceKeys].map(String).sort(),
+      }))
+      .sort((left, right) =>
+        left.sourceId.localeCompare(right.sourceId) ||
+        left.name.localeCompare(right.name)),
+    candidateAtomKeys: candidateAtoms.map((atom) => atom.atomKey),
+    candidateInteractionObligationKeys,
+    candidateHookKeys: uniqueKeys(candidateAtoms.flatMap((atom) =>
+      arrayValues(atom.hooks).map((hook) => hook.hookKey))),
+  };
+  return {
+    ...core,
+    sourceMappingComplete:
+      !scope.fallbackToGlobalRegistry && core.unmappedRosterRuleSources.length === 0,
+    inventoryHash: stableHash(core, 64),
+    claimBoundary: "This inventory includes every atom matched by an exact source ID or explicit atom key on the current roster state. It is a task dependency denominator, not terminal relevance pruning or proof that every interaction is certified.",
+  };
+}
+
 function atomKeys(atom = {}) {
   return uniqueKeys([
     atom.atomKey,

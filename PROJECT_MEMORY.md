@@ -1,5 +1,17 @@
 # Project Memory
 
+- 2026-09-15 durable task-local interval-search boundary: the exact fixed
+  Sepsira six-Swarm versus Nymara opening maps all 80 roster rule source IDs to
+  81 candidate atoms and 131 declared atom-interaction obligations. Sixty-six
+  relations and 21 globally unresolved hook families remain open. Search may
+  nevertheless launch a bounded interval run only through the receipt-bound
+  task-local action guard: every Host action is checked before apply and again
+  against emitted transition events; unknown atoms, unresolved relations and
+  unresolved same-hook multi-atom ordering become preserved `[0,1]` edges.
+  Such edges are not Engine transition failures and may not be dropped or used
+  to publish an exact strategy value. This task-local gate does not promote
+  global Strict or unrelated factions.
+
 - 2026-09-15 durable interaction-authority invariant: the old hand-authored
   67-node graph is diagnostic history, not rule authority. Engine now derives a
   current denominator from 149 semantic rules, 1140 atom definitions, 1354
