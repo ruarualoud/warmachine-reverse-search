@@ -2,12 +2,17 @@
 
 恢复开发先读 [docs/AGENT_TASK_GUIDE.md](docs/AGENT_TASK_GUIDE.md)，再按当前ticket内清单执行。规范由Engine维护，修正计划/工作台接入由本仓库维护。
 
+## 2026-09-15 Ticket 20 Cryx同时放置复合结算
+
+- [x] Engine `e9aaf8e` 已把 Graveyard Shift / Thrall Crafting 同时触发危险地形与敌方反应的旧失败关闭分支替换为逐项主动方/非主动方窗口。危险地形随机量仅在玩家选它为下一结算项后生成；每项之后动态重查存活、地形接触和反应合法性，密封重放保持整批放置及尸体支付原子性。
+- [x] Search 无需新增专用动作协议：该能力复用已经持久化并作为对手回应节点消费的 `enemyEnterReactionWindow`，危险地形选择继续使用既有 `strictHazardDamageRequirements` Chance 合同。Engine 两个直接 Cryx 调用方的既有验证器已各通过一次；没有扩大到其它势力或重跑全局矩阵。
+
 ## 2026-09-15 Ticket 20 Free Strike强制推动后的停止窗口
 
 - [x] Engine已修正显式`legacy_free_strike`共用语义：命中掷骰独立`+2`、不再叠加Back Strike位置奖励，伤害为boosted三枚基础骰；当前MKIV离战语义不变。
 - [x] 单个非Unit模型执行纯`advance`或`run`时，Free Strike的Drag/Skewer可先在精确中断点结算推动，再把“是否结束剩余移动”交还移动方。当前认证子域只开放`stop`，执行后保留被推动位置，不会被旧声明终点覆盖。
 - [x] 新增只覆盖Engine -> Layer3 -> Search共享接口的聚焦验证，证明自由打击选择属于非主动方、推动后的停止选择属于移动方，并发现及修复调用方显式`strictRollOutcome`被Layer3默认结果覆盖的问题。验证明确不检查其它势力规则；共享Free Strike核心直接影响的既有门各通过一次，未跑全局矩阵或刷新收据。
-- [ ] 下一片实现移动方选择非零剩余路线；冲锋、Unit、同一敌人重复离战、危险地形/反应AP/NAP排序、嵌套次级伤害转移和完整Chance仍失败关闭。
+- [ ] 下一片实现移动方选择非零剩余路线；冲锋、Unit、同一敌人重复离战、嵌套次级伤害转移和完整Chance仍失败关闭。
 
 ## 2026-09-15 Ticket 20自由打击精确路径中断纵切
 
@@ -19,7 +24,7 @@
 
 - [x] Graveyard Shift与Thrall Crafting已复用目标级动态Host窗口：所有新模型先原子进入状态，再由非主动方从当前合法的规则/反应者/目标/事件选择中逐项使用或放弃；旧反应者去重不再吞掉同一Defensive Strike可触及的其它新模型。
 - [x] 回放保持源事务：Graveyard Shift最终仍是一整队五名模型，Thrall Crafting只在完成回放中支付一次尸体并提交一次每回合使用。同一反应者拥有Defensive Strike与Admonition时，历史按规则分别保存，不会因后一项覆盖前一项。
-- [x] 原有Graveyard Shift门通过`211`条断言，Thrall Crafting门通过当前数据、原子支付、Layer3及证明闭包，Search对手回应门通过同反应者多规则回放。危险地形伤害与可选敌方反应同批出现时，当前明确失败关闭并保留主动方/非主动方触发排序债务；不刷新全局收据。
+- [x] 原有Graveyard Shift、Thrall Crafting与Search对手回应门通过目标级回放。危险地形伤害与可选敌方反应的主动方/非主动方排序随后由上方共享复合窗口闭合；不刷新全局收据。
 
 ## 2026-09-15 Ticket 20 Unit同时落位回应纵切
 
@@ -70,7 +75,7 @@
 - [x] 完成20a当前决策窗口及单移动主体顺序回应：保留Host accepted/rejected完整行，暴露决策方、参数轴、即时回应域、未闭合理由与稳定分页游标；选择Host动作后返回哈希绑定的`successorState`并从后继重枚举。Engine新增`enemyEnterReactionWindow`继续协议，Search不再把两个Countercharge的`48`个动作前组合当顺序域。实际双反应中，放弃第一项后仅第二项保留；第一项使用并击杀移动者后第二窗口消失。旧单反应`9/9`、Bot反应桥及Host handoff通过。Engine全局认证仍未随本纵切重跑，Strict完整与策略值发布继续为false。
 - [x] 完成20a.2a单移动模型多Free Strike协议：显式`legacy_free_strike`源移动打开Host对手窗口，每次使用/放弃后重枚举存活攻击者；双敌实测首项放弃只剩第二项、首项致死关闭后续。当前MKIV离战规则不受影响；完整旧载荷仍兼容。
 - [x] 完成20a.2b主攻击伤害转移窗口：伤害确定后由防守方拒绝或选接收者；原攻击/伤害骰保持不变，接收者位置随机量随后补入。12伤害Fury实测覆盖拒绝致死与花1 Fury转给战兽两条严格后继，旧概率/min路径保持兼容。
-- [ ] 完成20a.2c剩余回应协议：Unit正常移动及两类特殊整批放置回应已完成；显式legacy Free Strike已在底盘离开近战范围的精确路径点中断并按路径组排序，且单个非Unit模型纯`advance/run`被Drag/Skewer推动后可由移动方选择停止并保留推动位置。仍须完成移动方选择非零剩余路线、危险地形与敌方反应的主动方/非主动方同触发排序、同一敌人的重复离战、冲锋/Unit强制推动、中断/同时/次级伤害转移和其它复合回应；连续反应目的地、精确Chance及多拥有者时序仍保持债务。只有Host依赖/交换证明允许时才能折叠笛卡尔积。
+- [ ] 完成20a.2c剩余回应协议：Unit正常移动、两类特殊整批放置回应及其危险地形/敌方反应主动方-非主动方同触发排序已完成；显式legacy Free Strike已在底盘离开近战范围的精确路径点中断并按路径组排序，且单个非Unit模型纯`advance/run`被Drag/Skewer推动后可由移动方选择停止并保留推动位置。仍须完成移动方选择非零剩余路线、同一敌人的重复离战、冲锋/Unit强制推动、中断/同时/次级伤害转移和其它复合回应；连续反应目的地、精确Chance及多拥有者时序仍保持债务。只有Host依赖/交换证明允许时才能折叠笛卡尔积。
 - [x] 完成21a第一片真实纵切。当前Host从封存结算边界重放Nymara刺杀路线：合作后缀走到终态；对手在第25步选择合法`pass`后，固定后缀于第50步失配并被证明阻断。旧路线缺失的三段Control时序和四个Machine Wraith Apparition均以原地strict结算桥接，未跳过规则。固定脚本上界从1收紧到0，整局仍为`[0,1]`；运行约773秒，报告`ticket21a-nymara-known-route-counterexample-v1.json`。
 - [x] 完成Ticket22面向21a的局部策略精化收据。它现在绑定反例、当前窗口frontier及后继激活计划三份哈希证据：当前窗口`5`个合法/`2`个拒绝动作守恒，`5/5`均已strict执行并持久化，当前窗未执行数由`3`归零；只有合作与反制两个动作拥有固定后缀值，另外三个动作仍是“单步已执行、深层值未解析”。同Host/同决策窗/同固定脚本因对手反制可用`[0,0]`停止数值扩展，但动作域不因此完整；整局仍为`[0,1]`且禁止发布。报告`ticket22-nymara-local-strategy-refinement-v1.json`，哈希`94b4f5eb...178f`。
 - [x] 完成21a第二片的第一层真实DAG纵切及后继调度清单，整片仍开放。第25步作用域内`5/5`合法动作均由Host strict执行并重枚举后继，决策量词为对手`AND/min`；分页分母耗尽，1个根和5个后继以6个内容寻址gzip状态保存并在写入时重建核验，总占用约4.5MB。五个后继共有`366`个激活槽，已物化首批`30`槽，得到`682`个合法与`3534`个拒绝候选，剩`336`槽及全部合法候选的深层转移待展开；这些计数不是概率。为避免把20b全域偷渡进局部纵切，后继只枚举“所选棋子+无棋子时序”，收据明确标记作用域不完整、Chance/完整对手回合/更深后续未展开。frontier及计划报告分别为`ticket21a-nymara-current-window-frontier-v1.json`和`ticket21a-nymara-successor-activation-plans-v1.json`。
