@@ -41,6 +41,14 @@
   not a second source quotation; continuous grants preserve original source
   text and use contract text only as a missing-source fallback.
 
+- 2026-09-15 durable generated-grant relation invariant: a shared batch fixture
+  may close generated grant relations only under a reviewed family policy that
+  fixes the definition module, atom denominator, sole grant hook, exact scope
+  relation derived from `targetScope`, exact lifecycle relation, consumer
+  contract and verifier assertions for exclusion, drift, withdrawal and
+  transport. Every obligation remains independently bound; this policy grants
+  no evidence to another generated family or multi-relation atom.
+
 - 2026-09-15 durable geometry-interface invariant: when Engine omits a model
   obstacle because a signed start-distance lower bound exceeds the complete
   movement allowance, Search must validate and preserve that exclusion proof
