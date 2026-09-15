@@ -257,10 +257,15 @@ export function persistWarmachineStrictFrontierExternalDagV1(
     }));
   }
 
+  // Runtime states are persisted as content-addressed state objects above. Keeping the
+  // same states inside the report snapshot duplicates the entire frontier and can
+  // exhaust the Node heap while canonicalizing a large but otherwise valid batch.
+  const { runtimeCheckpoint: _embeddedRuntimeCheckpoint, ...reportWithoutRuntimeCheckpoint } =
+    report;
   const reportSnapshotPayload = {
     schemaVersion: "warmachine_strict_frontier_report_snapshot_v2",
     reportHash: report.reportHash,
-    report: stableGraphValue(report),
+    report: stableGraphValue(reportWithoutRuntimeCheckpoint),
     runtimeCheckpointManifest: stableGraphValue({
       ...runtimeCheckpoint,
       stateEntries: (runtimeCheckpoint.stateEntries || []).map(({ state: _state, ...entry }) => ({

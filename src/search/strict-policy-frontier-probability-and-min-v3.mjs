@@ -197,6 +197,11 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
   let strictRejectedResponseEdgeCount = 0;
   let strictRejectedDeterministicEdgeCount = 0;
   let stateMergeCount = 0;
+  const reportProgress = (stage, detail = {}) => rawOptions.onProgress?.({
+    stage,
+    evaluatedStateCount,
+    ...stableGraphValue(detail),
+  });
 
   const classifyRaw = (entry) => {
     if (terminalOutcome(entry.outcome) || !entry.state) return entry;
@@ -236,6 +241,10 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
   })];
 
   while (rawFrontier.length) {
+    reportProgress("frontier_merge_start", {
+      depth: rawFrontier[0]?.depth ?? 0,
+      rawFrontierCount: rawFrontier.length,
+    });
     const rawByEdge = new Map(rawFrontier.map((entry) => [entry.incomingEdgeKey, entry]));
     const ledger = mergeWarmachineAdversarialProbabilityFrontierV1(rawFrontier, {
       lowProbabilityThreshold,
@@ -257,6 +266,10 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
       massSemantics: "route_ledger_mass_not_probability_across_owner_choices",
     });
     stateMergeCount += ledger.mergedEntryCount;
+    reportProgress("frontier_merge_complete", {
+      depth: rawFrontier[0]?.depth ?? 0,
+      mergedFrontierCount: ledger.mergedFrontierCount,
+    });
     const nextRawFrontier = [];
 
     for (const row of ledger.frontier) {
@@ -318,6 +331,10 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
       }
 
       evaluatedStateCount += 1;
+      reportProgress("policy_step_start", {
+        labelKey: label.labelKey,
+        depth: label.depth,
+      });
       const step = expandWarmachineStrictPolicyStepV1(
         representative.state,
         selectPolicyAction,
@@ -328,8 +345,19 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
           cursor: label.cursor,
           classifyState,
           ...(classifyResult ? { classifyResult } : {}),
+          onProgress: (detail) => reportProgress("policy_step_progress", {
+            labelKey: label.labelKey,
+            depth: label.depth,
+            detail,
+          }),
         },
       );
+      reportProgress("policy_step_complete", {
+        labelKey: label.labelKey,
+        depth: label.depth,
+        stepType: step.stepType,
+        reason: step.reason || "",
+      });
       strictRejectedResponseEdgeCount += step.strictRejectedResponseCount || 0;
       strictRejectedDeterministicEdgeCount += step.strictRejectedDeterministicCount || 0;
       stepAudits.push(stableGraphValue({

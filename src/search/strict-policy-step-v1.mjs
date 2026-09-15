@@ -61,6 +61,12 @@ export function expandWarmachineStrictPolicyStepV1(
   const cursor = String(rawOptions.cursor ?? depth);
   const routeKey = String(rawOptions.routeKey || "strict-policy-step");
   const perspectiveSideKey = String(rawOptions.perspectiveSideKey || state.activeSideKey || "");
+  const reportProgress = (stage, detail = {}) => rawOptions.onProgress?.({
+    stage,
+    depth,
+    cursor,
+    ...stableGraphValue(detail),
+  });
   const classifyState = typeof rawOptions.classifyState === "function"
     ? rawOptions.classifyState
     : () => ({ outcome: "continue" });
@@ -93,15 +99,26 @@ export function expandWarmachineStrictPolicyStepV1(
     );
   }
 
+  reportProgress("policy_selection_start");
   const decision = selectPolicyAction({ state, stateHash, cursor, depth }) || {};
+  reportProgress("policy_selection_complete", {
+    actionKey: decision.actionKey || decision.action?.actionKey || "",
+  });
   const policyOutcome = terminalOutcome(decision.outcome);
   if (decision.nodeType === "terminal" || policyOutcome) {
     return terminalStep(base, policyOutcome || "unresolved", decision.reason || "policy_terminal");
   }
+  reportProgress("action_enumeration_start", {
+    reusedPolicyEnumeration: Boolean(decision.scoped),
+  });
   const scoped = decision.scoped || enumerateWarmachineBenchmarkActionsV2(
     state,
     decision.enumerationScope || {},
   );
+  reportProgress("action_enumeration_complete", {
+    legalActionCount: scoped.enumeration.actions.length,
+    rejectedActionCount: (scoped.enumeration.rejectedActions || []).length,
+  });
   const canonicalActions = canonicalWarmachineActingSideActionsV1(scoped.enumeration);
   const action = decision.action || canonicalActions.find((candidate) =>
     candidate.actionKey === decision.actionKey) || null;
@@ -180,7 +197,13 @@ export function expandWarmachineStrictPolicyStepV1(
     };
   }
 
+  reportProgress("chance_classes_start", { actionKey: action.actionKey });
   const chance = buildWarmachineExactActionChanceClasses(action, { state: scoped.state });
+  reportProgress("chance_classes_complete", {
+    actionKey: action.actionKey,
+    exactComplete: chance.exactComplete === true,
+    classCount: chance.classCount || chance.classes?.length || 0,
+  });
   const chanceAudit = {
     actionKey: action.actionKey,
     exactComplete: chance.exactComplete === true,
@@ -201,9 +224,16 @@ export function expandWarmachineStrictPolicyStepV1(
   }
 
   const responseSet = buildWarmachineOpponentResponseSetV1(action, scoped.enumeration);
+  reportProgress("response_set_complete", {
+    responseCount: responseSet.responses.length,
+    responseSetComplete: responseSet.responseSetComplete,
+  });
   const preparedChanceClasses = [];
   let strictRejectedResponseCount = 0;
   for (const chanceClass of chance.classes) {
+    reportProgress("chance_class_start", {
+      chanceClassKey: chanceClass.classKey,
+    });
     const responses = [];
     for (const response of responseSet.responses) {
       if (!response.action) {
@@ -224,6 +254,10 @@ export function expandWarmachineStrictPolicyStepV1(
         });
         continue;
       }
+      reportProgress("response_execution_start", {
+        chanceClassKey: chanceClass.classKey,
+        responseKey: response.responseKey,
+      });
       const postResponseExecution = executeWarmachineExactPostResponseChanceV1(
         scoped,
         action,
@@ -232,8 +266,19 @@ export function expandWarmachineStrictPolicyStepV1(
         {
           routeKey: `${routeKey}:${depth}:${chanceClass.classKey}:${response.responseKey}`,
           actionPatch: decision.actionPatch || {},
+          onProgress: (detail) => reportProgress("response_execution_progress", {
+            chanceClassKey: chanceClass.classKey,
+            responseKey: response.responseKey,
+            detail,
+          }),
         },
       );
+      reportProgress("response_execution_complete", {
+        chanceClassKey: chanceClass.classKey,
+        responseKey: response.responseKey,
+        exactComplete: postResponseExecution.exactComplete,
+        outcomeCount: postResponseExecution.outcomes.length,
+      });
       if (!postResponseExecution.exactComplete) {
         responses.push({
           responseKey: response.responseKey,
@@ -349,6 +394,10 @@ export function expandWarmachineStrictPolicyStepV1(
       });
     }
     preparedChanceClasses.push({ chanceClass, responses });
+    reportProgress("chance_class_complete", {
+      chanceClassKey: chanceClass.classKey,
+      responseCount: responses.length,
+    });
   }
   const equivalence = groupWarmachineAdversarialChanceClassesV1(preparedChanceClasses, {
     ownerSideKey: responseSet.ownerSideKey,

@@ -457,23 +457,49 @@ function materializeStrictAction(state, enumeration, action, rawOptions = {}) {
     actionKey: action.actionKey,
     reactionRequirementCount: reactionRequirements.length,
   });
-  rawOptions.onProgress?.({ stage: "before_rng_materialization", actionKey: action.actionKey });
-  const baseAction = buildWarmachineRulesV1ActionWithStrictRngOutcome(action, {
-    room: {
-      id: String(rawOptions.routeKey || "fixed-steamroller-benchmark-v2"),
-      game: {
-        round: state.turnNumber,
-        turnNumber: state.turnNumber,
-        activeSideKey: state.activeSideKey,
-      },
-    },
-    sourceContext: { rulesV1State: state, rulesV1Enumeration: enumeration },
-    selectedActionKey: action.actionKey,
-    reactionResolutionPolicy: String(rawOptions.reactionResolutionPolicy || ""),
-    humanReactionChoices: rawOptions.humanReactionChoices || null,
-  });
-  rawOptions.onProgress?.({ stage: "after_rng_materialization", actionKey: action.actionKey });
+  const metadata = action.metadata || {};
   const actionPatch = clone(rawOptions.actionPatch || {});
+  const exactOutcomeFastPath =
+    rawOptions.precomputedStrictChanceOutcomeComplete === true &&
+    actionPatch.strictRollOutcome &&
+    typeof actionPatch.strictRollOutcome === "object";
+  const deterministicFastPath = rawOptions.skipStrictRngForProvablyDeterministicAction === true &&
+    reactionRequirements.length === 0 &&
+    !metadata.attackResolution &&
+    !metadata.outcomeRequirements &&
+    !metadata.colossalDamageGridColumnChanceContract &&
+    metadata.freeStrikeRisk !== true &&
+    metadata.damageTransferDecisionAvailable !== true &&
+    !(metadata.reactionResolutionRequirements || []).length &&
+    !(metadata.freeStrikeResolutionRequirements || []).length;
+  rawOptions.onProgress?.({
+    stage: "before_rng_materialization",
+    actionKey: action.actionKey,
+    deterministicFastPath,
+    exactOutcomeFastPath,
+  });
+  const baseAction = deterministicFastPath || exactOutcomeFastPath
+    ? action
+    : buildWarmachineRulesV1ActionWithStrictRngOutcome(action, {
+      room: {
+        id: String(rawOptions.routeKey || "fixed-steamroller-benchmark-v2"),
+        game: {
+          round: state.turnNumber,
+          turnNumber: state.turnNumber,
+          activeSideKey: state.activeSideKey,
+        },
+      },
+      sourceContext: { rulesV1State: state, rulesV1Enumeration: enumeration },
+      selectedActionKey: action.actionKey,
+      reactionResolutionPolicy: String(rawOptions.reactionResolutionPolicy || ""),
+      humanReactionChoices: rawOptions.humanReactionChoices || null,
+    });
+  rawOptions.onProgress?.({
+    stage: "after_rng_materialization",
+    actionKey: action.actionKey,
+    deterministicFastPath,
+    exactOutcomeFastPath,
+  });
   const patchedStrictRollOutcome = actionPatch.strictRollOutcome
     ? {
       ...(baseAction.strictRollOutcome || baseAction.metadata?.strictRollOutcome || {}),
@@ -992,6 +1018,8 @@ export function executeWarmachineBenchmarkTurnV2(stateInput = {}, rawOptions = {
       enumerationScopeForStep: intent.enumerationScopeForStep,
       rejectedAuditLimit: rawOptions.rejectedAuditLimit,
       onProgress: rawOptions.onActivationProgress,
+      skipStrictRngForProvablyDeterministicAction:
+        rawOptions.skipStrictRngForProvablyDeterministicAction === true,
     });
     activationReceipts.push({
       activationGroupKey: group.groupKey,
@@ -1036,6 +1064,8 @@ export function executeWarmachineBenchmarkTurnV2(stateInput = {}, rawOptions = {
         includeActorlessActions: true,
       },
       onProgress: rawOptions.onActivationProgress,
+      skipStrictRngForProvablyDeterministicAction:
+        rawOptions.skipStrictRngForProvablyDeterministicAction === true,
     });
     allStepReceipts.push(endTurnResult.receipt);
     if (endTurnResult.ok) state = endTurnResult.state;
@@ -1130,6 +1160,8 @@ export function executeWarmachineBenchmarkControlPhaseV2(stateInput = {}, rawOpt
         routeKey: `${rawOptions.routeKey || "fixed-benchmark-control"}:${startingSideKey}:${stepIndex}`,
         actionPatch: policyChoice?.actionPatch || rawOptions.actionPatch,
         onProgress: rawOptions.onActionProgress,
+        skipStrictRngForProvablyDeterministicAction:
+          rawOptions.skipStrictRngForProvablyDeterministicAction === true,
       },
     );
     rawOptions.onTransition?.({
@@ -1311,6 +1343,12 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
   const receipts = [];
   const stages = {};
   const positionTimeline = [];
+  const reportProgress = (routeStageKey, detail = {}) => rawOptions.onProgress?.({
+    routeKey,
+    routeStageKey,
+    ...stableGraphValue(detail),
+  });
+  reportProgress("route_start", { pieceCount: openingState.pieces.length });
   const openingRaptor = openingState.pieces.find((piece) => piece.pieceKey === raptorPieceKey);
   const attackerLeader = openingState.pieces.find((piece) => piece.pieceKey === attackerLeaderPieceKey);
   const targetLeader = openingState.pieces.find((piece) => piece.pieceKey === targetLeaderPieceKey);
@@ -1349,8 +1387,11 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
   };
   recordPositions("opening", openingState);
 
+  reportProgress("opening_control", { stage: "start" });
   const openingControl = executeWarmachineBenchmarkControlPhaseV2(openingState, {
     routeKey: `${routeKey}:player1:turn1:control`,
+    skipStrictRngForProvablyDeterministicAction:
+      rawOptions.skipStrictRngForProvablyDeterministicAction === true,
     selectAction: ({ state, scoped }) => {
       const raptor = state.pieces.find((piece) => piece.pieceKey === raptorPieceKey);
       const allocation = scoped.enumeration.actions.find((action) =>
@@ -1361,9 +1402,16 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
       }
       return null;
     },
+    onProgress: (detail) => reportProgress("opening_control", detail),
+    onActionProgress: (detail) => reportProgress("opening_control_action", detail),
   });
   stages.openingControl = openingControl;
   receipts.push(...openingControl.receipts);
+  reportProgress("opening_control", {
+    stage: "complete",
+    ok: openingControl.ok,
+    transitionCount: openingControl.receipts.length,
+  });
   if (!openingControl.ok) failures.push({ stage: "opening_control", failures: openingControl.failures });
 
   let state = openingControl.state;
@@ -1380,8 +1428,11 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
     failures.push({ stage: "opening_activation_groups", reason: "required_activation_group_missing" });
   }
   if (!failures.length) {
+    reportProgress("attacker_first_turn", { stage: "start" });
     const attackerFirstTurn = executeWarmachineBenchmarkTurnV2(state, {
       routeKey: `${routeKey}:player1:turn1`,
+      skipStrictRngForProvablyDeterministicAction:
+        rawOptions.skipStrictRngForProvablyDeterministicAction === true,
       rejectedAuditLimit: 12,
       selectActivationGroup: ({ groups }) => openingActivationOrder.find((groupKey) =>
         groups.some((group) => group.groupKey === groupKey)) || groups[0].groupKey,
@@ -1447,10 +1498,20 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
               avoidFeat: true,
             }
           : { completionOnly: true, avoidFeat: true },
+      onProgress: (detail) => reportProgress("attacker_first_turn", detail),
+      onActivationProgress: (detail) => reportProgress(
+        "attacker_first_turn_activation",
+        detail,
+      ),
     });
     stages.attackerFirstTurn = attackerFirstTurn;
     receipts.push(...attackerFirstTurn.stepReceipts);
     state = attackerFirstTurn.state;
+    reportProgress("attacker_first_turn", {
+      stage: "complete",
+      ok: attackerFirstTurn.ok,
+      activationCount: attackerFirstTurn.activationCount,
+    });
     recordPositions("after_attacker_first_turn", state);
     if (!attackerFirstTurn.ok) {
       failures.push({ stage: "attacker_first_turn", failures: attackerFirstTurn.failures });
@@ -1458,12 +1519,22 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
   }
 
   if (!failures.length) {
+    reportProgress("defender_control", { stage: "start" });
     const defenderControl = executeWarmachineBenchmarkControlPhaseV2(state, {
       routeKey: `${routeKey}:player2:turn1:control`,
+      skipStrictRngForProvablyDeterministicAction:
+        rawOptions.skipStrictRngForProvablyDeterministicAction === true,
+      onProgress: (detail) => reportProgress("defender_control", detail),
+      onActionProgress: (detail) => reportProgress("defender_control_action", detail),
     });
     stages.defenderControl = defenderControl;
     receipts.push(...defenderControl.receipts);
     state = defenderControl.state;
+    reportProgress("defender_control", {
+      stage: "complete",
+      ok: defenderControl.ok,
+      transitionCount: defenderControl.receipts.length,
+    });
     if (!defenderControl.ok) failures.push({ stage: "defender_control", failures: defenderControl.failures });
   }
 
@@ -1475,8 +1546,11 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
     if (!defenderLeaderGroup || !raptor) {
       failures.push({ stage: "defender_activation_groups", reason: "required_activation_group_missing" });
     } else {
+      reportProgress("defender_first_turn", { stage: "start" });
       const defenderTurn = executeWarmachineBenchmarkTurnV2(state, {
         routeKey: `${routeKey}:player2:turn1`,
+        skipStrictRngForProvablyDeterministicAction:
+          rawOptions.skipStrictRngForProvablyDeterministicAction === true,
         selectActivationGroup: ({ groups, activationIndex }) =>
           activationIndex === 0 && groups.some((group) => group.groupKey === defenderLeaderGroup.groupKey)
             ? defenderLeaderGroup.groupKey
@@ -1498,32 +1572,51 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
               : undefined,
           }
           : { completionOnly: true, avoidFeat: true },
+        onProgress: (detail) => reportProgress("defender_first_turn", detail),
+        onActivationProgress: (detail) => reportProgress(
+          "defender_first_turn_activation",
+          detail,
+        ),
       });
       stages.defenderTurn = defenderTurn;
       receipts.push(...defenderTurn.stepReceipts);
       state = defenderTurn.state;
+      reportProgress("defender_first_turn", {
+        stage: "complete",
+        ok: defenderTurn.ok,
+        activationCount: defenderTurn.activationCount,
+      });
       recordPositions("after_defender_first_turn", state);
       if (!defenderTurn.ok) failures.push({ stage: "defender_turn", failures: defenderTurn.failures });
     }
   }
 
   if (!failures.length) {
+    reportProgress("attacker_second_control", { stage: "start" });
     const attackerSecondControl = executeWarmachineBenchmarkControlPhaseV2(state, {
       routeKey: `${routeKey}:player1:turn2:control`,
-      selectAction: ({ state: controlState, scoped }) => {
-        const raptor = controlState.pieces.find((piece) => piece.pieceKey === raptorPieceKey);
+      skipStrictRngForProvablyDeterministicAction:
+        rawOptions.skipStrictRngForProvablyDeterministicAction === true,
+      selectAction: ({ scoped }) => {
         const allocation = scoped.enumeration.actions.find((action) =>
           action.actionType === "allocate_resource" && action.targetPieceKey === raptorPieceKey);
-        if (allocation && Number(raptor?.resourcePoints || 0) < 3) return allocation;
-        if (Number(raptor?.resourcePoints || 0) >= 3) {
-          return scoped.enumeration.actions.find((action) => action.actionType === "end_control_phase") || null;
-        }
+        if (allocation) return allocation;
+        const endAllocation = scoped.enumeration.actions.find((action) =>
+          action.actionType === "end_control_allocation");
+        if (endAllocation) return endAllocation;
         return scoped.enumeration.actions.find((action) => action.actionType === "end_control_phase") || null;
       },
+      onProgress: (detail) => reportProgress("attacker_second_control", detail),
+      onActionProgress: (detail) => reportProgress("attacker_second_control_action", detail),
     });
     stages.attackerSecondControl = attackerSecondControl;
     receipts.push(...attackerSecondControl.receipts);
     state = attackerSecondControl.state;
+    reportProgress("attacker_second_control", {
+      stage: "complete",
+      ok: attackerSecondControl.ok,
+      transitionCount: attackerSecondControl.receipts.length,
+    });
     recordPositions("after_attacker_second_control", state);
     if (!attackerSecondControl.ok) {
       failures.push({ stage: "attacker_second_control", failures: attackerSecondControl.failures });
@@ -1539,8 +1632,11 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
       failures.push({ stage: "attacker_second_activation_groups", reason: "required_activation_group_missing" });
     } else {
       let spellProbe = null;
+      reportProgress("caster_activation", { stage: "start" });
       const casterActivation = executeWarmachineBenchmarkActivationV2(state, casterGroup.groupKey, {
         routeKey: `${routeKey}:player1:turn2:caster`,
+        skipStrictRngForProvablyDeterministicAction:
+          rawOptions.skipStrictRngForProvablyDeterministicAction === true,
         repeatIntent: true,
         enumerationScopeForStep: () => ({
           targetPieceKeys: [targetLeaderPieceKey],
@@ -1620,10 +1716,17 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
           ? ({ action }) => Boolean(action.metadata?.attackResolution)
           : null,
         maxSteps: 8,
+        onProgress: (detail) => reportProgress("caster_activation", detail),
       });
       stages.casterActivation = { ...casterActivation, spellProbe };
       receipts.push(...casterActivation.receipts);
       state = casterActivation.state;
+      reportProgress("caster_activation", {
+        stage: "complete",
+        ok: casterActivation.ok,
+        paused: casterActivation.paused,
+        transitionCount: casterActivation.transitionCount,
+      });
       if (!casterActivation.ok) {
         failures.push({
           stage: "caster_activation",
@@ -1682,11 +1785,14 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
       const casterTerminalReached = terminalEventsFromReceipts(receipts).some((event) =>
         event.winnerSideKey === openingState.activeSideKey);
       if (!failures.length && !casterTerminalReached) {
+        reportProgress("raptor_activation", { stage: "start" });
         const raptorActivation = executeWarmachineBenchmarkActivationV2(
           state,
           finalRaptorGroup.groupKey,
           {
             routeKey: `${routeKey}:player1:turn2:raptor`,
+            skipStrictRngForProvablyDeterministicAction:
+              rawOptions.skipStrictRngForProvablyDeterministicAction === true,
             repeatIntent: true,
             enumerationScopeForStep: ({ stepIndex }) => ({
               targetPieceKeys: [targetLeaderPieceKey],
@@ -1718,11 +1824,17 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
               } : null;
             },
             maxSteps: 8,
+            onProgress: (detail) => reportProgress("raptor_activation", detail),
           },
         );
         stages.raptorActivation = raptorActivation;
         receipts.push(...raptorActivation.receipts);
         state = raptorActivation.state;
+        reportProgress("raptor_activation", {
+          stage: "complete",
+          ok: raptorActivation.ok,
+          transitionCount: raptorActivation.transitionCount,
+        });
         if (!raptorActivation.ok) {
           failures.push({
             stage: "raptor_activation",
@@ -1735,6 +1847,11 @@ export function executeWarmachineBenchmarkAssassinationRouteV2(
   }
 
   const terminalEvents = terminalEventsFromReceipts(receipts);
+  reportProgress("route_complete", {
+    failureCount: failures.length,
+    terminalEventCount: terminalEvents.length,
+    transitionCount: receipts.length,
+  });
   if (!failures.length && !terminalEvents.some((event) =>
     event.winnerSideKey === openingState.activeSideKey)) {
     failures.push({ stage: "terminal", reason: "assassination_terminal_not_reached", terminalEvents });

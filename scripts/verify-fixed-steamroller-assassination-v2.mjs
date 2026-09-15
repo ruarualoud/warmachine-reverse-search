@@ -7,15 +7,12 @@ import path from "node:path";
 
 import {
   bindWarmachineBenchmarkExplicitMovementPathV2,
-  bindWarmachineTwoFrontsOpeningV2,
   executeWarmachineBenchmarkAssassinationRouteV2,
 } from "../src/benchmark/fixed-steamroller-benchmark-v2.mjs";
+import { buildWarmachineFixedSteamrollerFixtureV2 } from
+  "../src/benchmark/fixed-steamroller-fixture-v2.mjs";
 import { createWarmachineFixedAssassinationPolicyV1 } from
   "../src/benchmark/fixed-assassination-policy-v1.mjs";
-import {
-  buildWarmachineRosterPoolSourceEvidenceV2,
-  runWarmachineNestedRosterDeploymentSearchV2,
-} from "../src/construction/nested-roster-deployment-v2.mjs";
 import { buildWarmachineTypedInteractionGraphV2 } from
   "../src/graph/typed-interaction-graph-v2.mjs";
 import { certifyWarmachineExecutedTerminalRouteStrictV2 } from
@@ -30,88 +27,52 @@ import {
   persistWarmachineStrictFrontierExternalDagV1,
   restoreWarmachineStrictFrontierExternalDagV1,
 } from "../src/storage/strict-frontier-external-dag-v1.mjs";
-import { resolveWarmachineHostPath, warmachineHost } from "../src/warmachine-host-runtime.mjs";
+import { warmachineHost } from "../src/warmachine-host-runtime.mjs";
 
-const baseDirectory = resolveWarmachineHostPath(
-  "build/warmachine-ai/sepsira-swarm-vs-fane-v20260805",
-);
-const poolPath = path.join(baseDirectory, "strict-construction-pool-v1", "report.json");
-const roomStorePath = path.join(baseDirectory, "local-layer3", "state.json");
-const poolBytes = fs.readFileSync(poolPath);
-const pool = JSON.parse(poolBytes);
-const sourceMetadata = {
-  sourceContentHash: createHash("sha256").update(poolBytes).digest("hex"),
-  sourceSchemaVersion: pool.schemaVersion,
-  exactListLegality: pool.quality.exactListLegality,
-  forceBuilderContract: pool.algorithm.finalLegality,
-  remoteVersion: pool.source.remoteVersion,
-  exhaustiveAllFactionRosters: pool.algorithm.exhaustiveAllLists,
+const verifierStartedAtMs = Date.now();
+const verboseProgress = process.env.WARMACHINE_ASSASSINATION_VERBOSE_PROGRESS === "1";
+const aggregatePolicyProgressStages = new Set([
+  "chance_classes_complete",
+  "response_set_complete",
+  "chance_class_start",
+  "chance_class_complete",
+]);
+const reportProgress = (stage, detail = {}) => {
+  if (!verboseProgress && stage === "probability_progress" &&
+      detail.stage === "policy_step_progress" &&
+      !aggregatePolicyProgressStages.has(detail.detail?.stage)) return;
+  process.stderr.write(`${JSON.stringify({
+    stage,
+    elapsedMs: Date.now() - verifierStartedAtMs,
+    ...detail,
+  })}\n`);
 };
-const roomStore = JSON.parse(fs.readFileSync(roomStorePath, "utf8"));
-const templateRoom = roomStore.roomsById?.["room_f1823ced-bf71-4392-8669-c6330d237efb"];
-assert.ok(templateRoom);
-const cryxList = pool.cryxLists.find((list) =>
-  /sepsira/i.test(String(list.leader || "")) &&
-  list.entries.filter((entry) =>
-    /mechanithrall swarm\s+#\d+$/i.test(String(entry.name || ""))).length === 6);
-const faneList = pool.faneLists[0];
-assert.ok(cryxList && faneList);
+
 const attackerFormationArchetypeKey = String(
   process.env.WARMACHINE_ASSASSINATION_ATTACKER_FORMATION || "center_break",
 );
-const formationArchetypeKeysBySide = {
-  player1: [attackerFormationArchetypeKey],
-  player2: ["balanced_layered"],
-};
-
+reportProgress("fixture_build_start");
+const fixture = buildWarmachineFixedSteamrollerFixtureV2({
+  cryxFormationArchetypeKey: attackerFormationArchetypeKey,
+  faneFormationArchetypeKey: "balanced_layered",
+  firstPlayerSideKey: "player1",
+  seed: "fixed-steamroller-benchmark-v2",
+});
+reportProgress("fixture_build_complete", {
+  fixtureHash: fixture.fixtureHash,
+  pieceCount: fixture.bound.state.pieces.length,
+});
+const { opening, cryxList, faneList, bound } = fixture;
+assert.match(String(cryxList.leader || ""), /sepsira/i);
+assert.match(String(faneList.leader || ""), /nymara/i);
 const cacheBindingHash = createHash("sha256").update(JSON.stringify({
-  sourceContentHash: sourceMetadata.sourceContentHash,
-  templateRoom,
-  cryxList,
-  faneList,
-  formationArchetypeKeysBySide,
+  fixtureHash: fixture.fixtureHash,
+  hostReceiptHash: warmachineHost.receipt.receiptHash,
   seed: "fixed-steamroller-benchmark-v2",
 })).digest("hex");
-const cachePath = path.resolve(
-  `.scratch/fixed-steamroller-assassination-opening-${attackerFormationArchetypeKey}-v2.json`,
-);
-let opening = null;
-if (process.env.WARMACHINE_FIXED_OPENING_CACHE === "1" && fs.existsSync(cachePath)) {
-  const cached = JSON.parse(fs.readFileSync(cachePath, "utf8"));
-  if (cached.cacheBindingHash === cacheBindingHash) opening = cached.opening;
-}
-if (!opening) {
-  const nested = runWarmachineNestedRosterDeploymentSearchV2({
-    templateRoom,
-    rosterPoolsBySide: { player1: [cryxList], player2: [faneList] },
-    sourceEvidenceBySide: {
-      player1: buildWarmachineRosterPoolSourceEvidenceV2(pool.cryxLists, sourceMetadata),
-      player2: buildWarmachineRosterPoolSourceEvidenceV2(pool.faneLists, sourceMetadata),
-    },
-    maximumSelectedRostersBySide: { player1: 1, player2: 1 },
-    maximumRosterPairs: 1,
-    maximumArchetypesPerSide: 1,
-    maximumFormationPairsPerRosterPair: 1,
-    formationArchetypeKeysBySide,
-    firstPlayerSideKeys: ["player1"],
-    includeStates: true,
-    seed: "fixed-steamroller-benchmark-v2",
-    searchMode: "fixed_roster_to_deployment",
-  });
-  assert.equal(nested.counts.strictLegalOpeningCount, 1);
-  opening = nested.openings[0];
-  fs.mkdirSync(path.dirname(cachePath), { recursive: true });
-  fs.writeFileSync(cachePath, `${JSON.stringify({
-    cacheSchemaVersion: "fixed_steamroller_assassination_opening_cache_v2",
-    cacheBindingHash,
-    opening,
-  })}\n`, "utf8");
-}
 assert.equal(opening.strictDeploymentLegal, true);
 assert.equal(opening.rosterPointLedger.sides.player1.rosterPoints, 100);
 assert.equal(opening.rosterPointLedger.sides.player2.rosterPoints, 100);
-
-const bound = bindWarmachineTwoFrontsOpeningV2(opening.state);
 const raptors = bound.state.pieces.filter((piece) =>
   piece.sideKey === "player1" && /raptor/i.test(`${piece.label || ""} ${piece.name || ""}`));
 const raptor = attackerFormationArchetypeKey === "center_break"
@@ -150,6 +111,8 @@ const assassinationRouteOptions = {
     player1_necrosurgeon_initiates_16: { xIn: 13.12, yIn: 37.47 },
   },
   stopBeforeFirstStochasticAction: probabilityProbe,
+  skipStrictRngForProvablyDeterministicAction: true,
+  onProgress: (detail) => reportProgress("route_progress", detail),
 };
 const probabilityCheckpointCachePath = path.resolve(
   `.scratch/fixed-steamroller-assassination-probability-checkpoint-${attackerFormationArchetypeKey}-v2.json`,
@@ -169,7 +132,13 @@ if (probabilityProbe && process.env.WARMACHINE_FIXED_OPENING_CACHE === "1" &&
   }
 }
 if (!route) {
+  reportProgress("route_execution_start");
   route = executeWarmachineBenchmarkAssassinationRouteV2(routeOpening, assassinationRouteOptions);
+  reportProgress("route_execution_complete", {
+    ok: route.ok,
+    transitionCount: route.transitionCount || route.receipts?.length || 0,
+    failureCount: route.failures?.length || 0,
+  });
   if (probabilityProbe && route.ok) {
     fs.writeFileSync(probabilityCheckpointCachePath, `${JSON.stringify({
       cacheSchemaVersion: "fixed_steamroller_assassination_probability_checkpoint_cache_v2",
@@ -282,13 +251,21 @@ if (probabilityProbe) {
     ? path.join(externalDagRoot, "checkpoints", "CURRENT")
     : "";
   if (currentCheckpointPath && fs.existsSync(currentCheckpointPath)) {
+    reportProgress("probability_restore_start");
     externalDagRestore = restoreWarmachineStrictFrontierExternalDagV1(
       externalDagRoot,
       externalDagRestoreOptions,
     );
     assert.equal(externalDagRestore.ok, true);
     probability = externalDagRestore.report;
+    reportProgress("probability_restore_complete", {
+      evaluatedStateCount: probability.evaluatedStateCount,
+    });
   } else {
+    reportProgress("probability_evaluation_start", {
+      maximumDepth: probabilityMaximumDepth,
+      maximumEvaluatedStates: probabilityMaximumStates,
+    });
     probability = evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
       route.state,
       fixedAssassinationPolicySelector,
@@ -299,8 +276,13 @@ if (probabilityProbe) {
         maximumEvaluatedStates: probabilityMaximumStates,
         lowProbabilityThreshold: probabilityThreshold,
         includeRuntimeCheckpoint: Boolean(externalDagRoot),
+        onProgress: (detail) => reportProgress("probability_progress", detail),
       },
     );
+    reportProgress("probability_evaluation_complete", {
+      evaluatedStateCount: probability.evaluatedStateCount,
+      frontierStateCount: probability.frontierStateCount,
+    });
     if (externalDagRoot) {
       externalDagPersistence = persistWarmachineStrictFrontierExternalDagV1(
         externalDagRoot,
@@ -405,11 +387,14 @@ if (probabilityProbe) {
   const chanceAudits = probability.stepAudits.filter((audit) => audit.stepType === "chance")
     .map((audit) => audit.chanceAudit);
   assert.equal(chanceAudits[0]?.actionKey, route.nextAction.actionKey);
-  assert.deepEqual(chanceAudits[0]?.provablyInactiveSuccessorEffectTypes, [
-    "excarnate_box_living_enemy_warrior_rfp_add_grunt_boxed_rfp_return_grunt",
+  assert.deepEqual(chanceAudits[0]?.preChanceResolvedEffectTypes, [
+    "anatomical_precision_nonliving_or_nonmelee_inactive",
+    "ashen_veil_resistance_fire_living_enemy_attack_roll_penalty_inactive",
   ]);
+  assert.deepEqual(chanceAudits[0]?.provablyInactiveSuccessorEffectTypes, []);
   let externalDagResume = null;
-  if (externalDagRoot && continuationBatchSize === 0) {
+  if (externalDagRoot && continuationBatchSize === 0 &&
+      process.env.WARMACHINE_ASSASSINATION_RESUME_SMOKE === "1") {
     const resumeEntry = externalDagRestore.entries[0] || null;
     if (resumeEntry) {
       externalDagResume = evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(

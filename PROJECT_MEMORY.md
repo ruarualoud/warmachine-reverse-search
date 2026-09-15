@@ -1,5 +1,16 @@
 # Project Memory
 
+- 2026-09-16 durable fixed-match Chance checkpoint: the current 103-model
+  Sepsira six-Swarm versus Nymara route reaches its first stochastic action
+  after 60 strict transitions. Its 17 exact dice classes and seven defender
+  damage-transfer choices execute with zero strict rejection and yield 449
+  distinct resumable labels under report `0aac5d78...b9dc`. Generation 1 uses
+  about 115 MB and restores in about 1.6 seconds. Runtime states must live only
+  in content-addressed state objects; embedding them again in the report
+  snapshot exhausted the default 4 GB Node heap. The remaining `[0,1]` interval
+  is now caused solely by `maximum_policy_depth_reached`, not incomplete Chance,
+  response enumeration or an Engine rejection.
+
 - 2026-09-15 durable bounded-runner partition invariant: a current-window
   search checkpoint advances one Control-global slot or one complete activation
   group at a time. For an activation group, one scoped Host enumeration is
