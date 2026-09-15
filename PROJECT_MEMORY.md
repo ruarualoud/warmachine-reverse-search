@@ -1,5 +1,17 @@
 # Project Memory
 
+- 2026-09-15 durable simultaneous Unit-placement reaction invariant: Unit
+  normal movement advances the selected trooper first and places all remaining
+  troopers simultaneously; every placement must exist before enemy-enter
+  reactions are resolved. Reaction identity for that batch is rule + reactor +
+  target + event, while once/use tracking is rule + reactor. A decline consumes
+  only that target choice, but an actual once-per-turn Defensive Strike removes
+  the reactor's later Defensive Strike choices. A reactor-keyed static Cartesian
+  projection cannot represent this adaptive batch and must report its collision;
+  the opponent-owned Host continuation window is the executable authority. This
+  proof covers Unit normal movement only, not special full-unit placements,
+  exact Free Strike interruption/remaining routes or compound damage transfer.
+
 - 2026-09-15 durable damage-transfer timing invariant: a primary-attack
   transfer decision belongs after attack/damage dice determine positive damage
   and before damage is applied. The Engine now seals those dice in a

@@ -639,8 +639,14 @@ function strictCurrentWindowAction(
     metadata.sequentialEnemyEnterReactionWindowSupported === true
   ) {
     Object.assign(metadata, {
-        strictSequentialEnemyEnterReactionResolution: true,
-        strictSequentialEnemyEnterReactionOrderPrefix: [],
+      strictSequentialEnemyEnterReactionResolution: true,
+      strictSequentialEnemyEnterReactionOrderPrefix: [],
+      ...(metadata.simultaneousPlacementEnemyEnterReactionWindowSupported === true
+        ? {
+            strictSequentialEnemyEnterReactionBatchResolution: true,
+            strictSequentialEnemyEnterReactionBatchOrderPrefix: [],
+          }
+        : {}),
     });
     sequentialProtocolAdded = true;
   }

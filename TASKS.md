@@ -2,6 +2,12 @@
 
 恢复开发先读 [docs/AGENT_TASK_GUIDE.md](docs/AGENT_TASK_GUIDE.md)，再按当前ticket内清单执行。规范由Engine维护，修正计划/工作台接入由本仓库维护。
 
+## 2026-09-15 Ticket 20 Unit同时落位回应纵切
+
+- [x] Unit正常移动已按真实时序进入动态Host窗口：选中模型先移动，其余模型全部落位后，Host按“规则+反应者+目标+事件”公开每个当前选择，不再让同一Defensive Strike反应者把第二个落位目标从候选中覆盖掉。
+- [x] 现有对手回应验证证明两个落位目标同时可见；放弃第一个后第二个仍可选，随后使用Defensive Strike只移除被选目标并关闭该反应者本回合后续同规则机会。旧静态笛卡尔投影仍诚实报告反应者键碰撞，只有动态Host窗口被认证为可执行。
+- [x] Engine现有反应门`24/24`及Search现有对手回应门各通过一次。该纵切只关闭Unit正常移动的同时落位子域；特殊整队放置、精确Free Strike中断点/剩余路线、中断/同时/次级伤害转移和完整Chance仍留在20a.2c，不刷新全局收据。
+
 ## 2026-09-15 Ticket 23.10 focused receipt scope correction
 
 - [x] Stop treating three faction-progress ledgers as executable Engine source. The previously green `296/296` receipt still preserves its complete `1188`-file matrix closure, while Search now derives and checks an `1185`-file execution-relevant closure after excluding only the Dusk army view, faction priority ledger and development-batch ledger. A direct old/current record comparison proved those were the only three changed files after Nyrro publication; Engine executors, atoms, hooks, source semantics and focused verifiers were unchanged.

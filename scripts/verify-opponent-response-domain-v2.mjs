@@ -108,6 +108,84 @@ function twoFreeStrikeRoom() {
   return room;
 }
 
+function simultaneousPlacementDefensiveStrikeState() {
+  const melee = (pieceKey, power = 10) => ({
+    profileKey: `${pieceKey}-blade`,
+    name: `${pieceKey} blade`,
+    mode: "melee",
+    rangeIn: 1,
+    power,
+    attackStatKind: "MAT",
+    attackStat: 100,
+  });
+  const piece = ({
+    pieceKey,
+    sideKey = "player1",
+    xIn,
+    yIn,
+    unitGroupId = "",
+    specialRules = [],
+    power = 10,
+  }) => ({
+    pieceKey,
+    label: pieceKey,
+    sideKey,
+    modelRole: "warrior",
+    modelType: unitGroupId ? "unit" : "solo",
+    unitGroupId,
+    position: { xIn, yIn },
+    baseSizeIn: 1.18,
+    speedIn: 6,
+    meleeRangeIn: 1,
+    mat: 100,
+    defense: 12,
+    armor: 12,
+    damage: { boxesRemaining: 5, maxBoxes: 5 },
+    statusTags: [],
+    specialRules,
+    attackProfiles: [melee(pieceKey, power)],
+  });
+  return {
+    stateKey: "opponent-response-domain-v2-simultaneous-placement",
+    activeSideKey: "player1",
+    phaseKey: "activation",
+    turnNumber: 1,
+    strictMode: true,
+    enforceStrictExecutor: true,
+    board: { widthIn: 24, heightIn: 24 },
+    pieces: [
+      piece({ pieceKey: "unit-mover", xIn: 5, yIn: 5, unitGroupId: "unit" }),
+      piece({ pieceKey: "placed-one", xIn: 5, yIn: 7, unitGroupId: "unit" }),
+      piece({ pieceKey: "placed-two", xIn: 5, yIn: 9, unitGroupId: "unit" }),
+      piece({
+        pieceKey: "placement-reactor",
+        sideKey: "player2",
+        xIn: 12,
+        yIn: 8,
+        specialRules: ["Defensive Strike"],
+        power: 100,
+      }),
+    ],
+    movementPaths: [{
+      actorPieceKey: "unit-mover",
+      actionType: "advance",
+      key: "simultaneous-placement",
+      pathsByModel: {
+        "unit-mover": { waypoints: [{ xIn: 8.8, yIn: 8 }] },
+        "placed-one": { waypoints: [{ xIn: 10.2, yIn: 7.3 }] },
+        "placed-two": { waypoints: [{ xIn: 10.2, yIn: 8.7 }] },
+      },
+    }],
+    terrain: [],
+    scenario: {
+      zones: [],
+      flags: [],
+      score: { player1: 0, player2: 0 },
+      victoryThreshold: 5,
+    },
+  };
+}
+
 function damageTransferPiece(overrides = {}) {
   const boxesRemaining = overrides.boxesRemaining ?? 12;
   return {
@@ -410,6 +488,89 @@ assert.equal(
 );
 assert.equal(staleWindowTransition.nextState, staleWindowTransition.state);
 
+const placementState = simultaneousPlacementDefensiveStrikeState();
+const placementEnumeration = enumerateRulesV1Actions(placementState);
+const placementAction = placementEnumeration.actions.find((candidate) =>
+  candidate.actionKey ===
+    "unit-mover:advance-unit-path:simultaneous-placement:v1");
+assert.ok(placementAction);
+assert.equal(
+  placementAction.metadata.sequentialEnemyEnterReactionWindowSupported,
+  true,
+);
+assert.equal(
+  placementAction.metadata.simultaneousPlacementEnemyEnterReactionWindowSupported,
+  true,
+);
+assert.deepEqual(
+  placementAction.metadata.reactionResolutionRequirements.map((requirement) =>
+    requirement.targetPieceKey).sort(),
+  ["placed-one", "placed-two"],
+);
+const placementResponseDomain = buildWarmachineOpponentResponseDomainV2(
+  placementAction,
+  placementEnumeration,
+);
+assert.equal(placementResponseDomain.finiteDeclaredChoiceProductWellFormed, false);
+assert.ok(placementResponseDomain.validationIssues.some((issue) =>
+  issue.startsWith("opponent_response_choice_projection_collision:")));
+const placementOpened = advanceWarmachineCurrentDecisionWindowV1(
+  placementState,
+  placementAction.actionKey,
+);
+assert.equal(placementOpened.transitionAccepted, true);
+assert.equal(placementOpened.nextDecisionOwnerSideKey, "player2");
+assert.ok(placementOpened.nextStrictContinuationWindowFlags.includes(
+  "strictEnemyEnterReactionWindowOnly",
+));
+assert.deepEqual(
+  [...new Set(placementOpened.nextDecisionWindowDomain.optionRows
+    .filter((row) => row.disposition === "host_accepted")
+    .map((row) => row.actionEvidence?.targetPieceKey))].sort(),
+  ["placed-one", "placed-two"],
+);
+const firstPlacementDecline =
+  placementOpened.nextDecisionWindowDomain.optionRows.find((row) =>
+    row.disposition === "host_accepted" &&
+    row.actionEvidence?.targetPieceKey === "placed-one" &&
+    /decline/.test(row.actionKey));
+assert.ok(firstPlacementDecline);
+const placementAfterDecline = advanceWarmachineCurrentDecisionWindowV1(
+  placementOpened.successorState,
+  firstPlacementDecline.actionKey,
+);
+assert.equal(placementAfterDecline.transitionAccepted, true);
+assert.deepEqual(
+  [...new Set(placementAfterDecline.nextDecisionWindowDomain.optionRows
+    .filter((row) => row.disposition === "host_accepted")
+    .map((row) => row.actionEvidence?.targetPieceKey))],
+  ["placed-two"],
+);
+const secondPlacementUse =
+  placementAfterDecline.nextDecisionWindowDomain.optionRows.find((row) =>
+    row.disposition === "host_accepted" &&
+    row.actionEvidence?.targetPieceKey === "placed-two" &&
+    /:use:/.test(row.actionKey));
+assert.ok(secondPlacementUse);
+const placementAfterUse = advanceWarmachineCurrentDecisionWindowV1(
+  placementAfterDecline.successorState,
+  secondPlacementUse.actionKey,
+);
+assert.equal(placementAfterUse.transitionAccepted, true);
+assert.equal(
+  placementAfterUse.successorState.pieces.find((piece) =>
+    piece.pieceKey === "placed-one")?.damage.boxesRemaining,
+  5,
+);
+assert.equal(
+  placementAfterUse.successorState.pieces.find((piece) =>
+    piece.pieceKey === "placed-two")?.destroyed,
+  true,
+);
+assert.ok(!placementAfterUse.nextStrictContinuationWindowFlags.includes(
+  "strictEnemyEnterReactionWindowOnly",
+));
+
 const sequentialFreeStrikeState = buildWarmachineRulesV1StateFromLayer3Room(
   twoFreeStrikeRoom(),
 );
@@ -572,6 +733,8 @@ console.log(JSON.stringify({
   sequentialDeclineReenumeratedRemainingReactor: true,
   lethalFirstReactionRemovedSecondWindow: true,
   staleReactionWindowFailsClosed: true,
+  simultaneousPlacementTargetsRemainDistinct: true,
+  simultaneousPlacementDeclinePreservesOtherTarget: true,
   sequentialFreeStrikeWindowOpened: true,
   sequentialFreeStrikeDeclineReenumeratedRemainingEnemy: true,
   lethalFirstFreeStrikeRemovedSecondWindow: true,
