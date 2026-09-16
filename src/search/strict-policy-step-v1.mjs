@@ -452,8 +452,17 @@ export function expandWarmachineStrictPolicyStepV1(
     };
   }
 
-  reportProgress("chance_classes_start", { actionKey: action.actionKey });
-  const chance = buildWarmachineExactActionChanceClasses(action, { state: scoped.state });
+  const chanceContextCache = rawOptions.chanceContextCache instanceof Map
+    ? rawOptions.chanceContextCache
+    : null;
+  const chanceContextCacheKey = `${stateHash}|${action.actionKey}`;
+  const cachedChanceContext = chanceContextCache?.get(chanceContextCacheKey) || null;
+  reportProgress("chance_classes_start", {
+    actionKey: action.actionKey,
+    reusedChanceContext: Boolean(cachedChanceContext),
+  });
+  const chance = cachedChanceContext?.chance ||
+    buildWarmachineExactActionChanceClasses(action, { state: scoped.state });
   reportProgress("chance_classes_complete", {
     actionKey: action.actionKey,
     exactComplete: chance.exactComplete === true,
@@ -478,13 +487,22 @@ export function expandWarmachineStrictPolicyStepV1(
     );
   }
 
-  const responseSet = buildWarmachineOpponentResponseSetV1(action, scoped.enumeration);
-  const responseSetByChanceClassKey = new Map(chance.classes.map((chanceClass) => [
-    chanceClass.classKey,
-    conditionWarmachineOpponentResponseSetForChanceClassV1(responseSet, chanceClass),
-  ]));
+  const responseSet = cachedChanceContext?.responseSet ||
+    buildWarmachineOpponentResponseSetV1(action, scoped.enumeration);
+  const responseSetByChanceClassKey = cachedChanceContext?.responseSetByChanceClassKey ||
+    new Map(chance.classes.map((chanceClass) => [
+      chanceClass.classKey,
+      conditionWarmachineOpponentResponseSetForChanceClassV1(responseSet, chanceClass),
+    ]));
   const conditionedResponseSetsComplete = Array.from(responseSetByChanceClassKey.values())
     .every((conditioned) => conditioned.responseSetComplete === true);
+  if (chanceContextCache && !cachedChanceContext) {
+    chanceContextCache.set(chanceContextCacheKey, {
+      chance,
+      responseSet,
+      responseSetByChanceClassKey,
+    });
+  }
   reportProgress("response_set_complete", {
     responseCount: responseSet.responses.length,
     responseSetComplete: conditionedResponseSetsComplete,

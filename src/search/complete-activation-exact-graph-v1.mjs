@@ -279,6 +279,21 @@ function restoreEnumeration(store, contentId = "", node = {}) {
   };
 }
 
+function restoreCachedEnumeration(store, contentId = "", node = {}, runtimeCache = {}) {
+  const cache = runtimeCache.enumerations;
+  if (!(cache instanceof Map)) return restoreEnumeration(store, contentId, node);
+  const cached = cache.get(contentId);
+  if (cached) {
+    cache.delete(contentId);
+    cache.set(contentId, cached);
+    return cached;
+  }
+  const scoped = restoreEnumeration(store, contentId, node);
+  cache.set(contentId, scoped);
+  while (cache.size > 4) cache.delete(cache.keys().next().value);
+  return scoped;
+}
+
 function classifyResult(querySideKey = "") {
   return ({ events }) => {
     const terminal = terminalEvents(events)[0];
@@ -550,7 +565,7 @@ function expandNode(checkpoint, store, closure, node) {
   node.status = "waiting_chance_response_work";
 }
 
-function processActionWork(checkpoint, store, work) {
+function processActionWork(checkpoint, store, work, runtimeCache) {
   const node = checkpoint.nodes.find((candidate) =>
     candidate.nodeKey === work.parentNodeKey);
   const branch = checkpoint.actionBranches.find((candidate) =>
@@ -558,7 +573,12 @@ function processActionWork(checkpoint, store, work) {
   if (!node || !branch) {
     throw new Error("complete_activation_exact_action_work_parent_missing");
   }
-  const scoped = restoreEnumeration(store, work.enumerationContentId, node);
+  const scoped = restoreCachedEnumeration(
+    store,
+    work.enumerationContentId,
+    node,
+    runtimeCache,
+  );
   const action = canonicalWarmachineActingSideActionsV1(scoped.enumeration)
     .find((candidate) => candidate.actionKey === work.actionKey);
   if (!action) throw new Error("complete_activation_exact_action_work_missing");
@@ -633,6 +653,7 @@ function processActionWork(checkpoint, store, work) {
       inputStateAlreadyNormalized: true,
       inputStateHash: node.stateHash,
       deferChanceResponseExecution: declaresChance,
+      chanceContextCache: runtimeCache.chanceContexts,
       classifyResult: classifyResult(checkpoint.querySideKey),
     },
   );
@@ -682,7 +703,7 @@ function completeNodeIfReady(checkpoint, node) {
   }
 }
 
-function processChanceResponseWork(checkpoint, store, work) {
+function processChanceResponseWork(checkpoint, store, work, runtimeCache) {
   const node = checkpoint.nodes.find((candidate) =>
     candidate.nodeKey === work.parentNodeKey);
   const branch = checkpoint.actionBranches.find((candidate) =>
@@ -690,7 +711,12 @@ function processChanceResponseWork(checkpoint, store, work) {
   if (!node || !branch) {
     throw new Error("complete_activation_exact_work_parent_missing");
   }
-  const scoped = restoreEnumeration(store, work.enumerationContentId, node);
+  const scoped = restoreCachedEnumeration(
+    store,
+    work.enumerationContentId,
+    node,
+    runtimeCache,
+  );
   const action = canonicalWarmachineActingSideActionsV1(scoped.enumeration)
     .find((candidate) => candidate.actionKey === work.actionKey);
   if (!action) throw new Error("complete_activation_exact_work_action_missing");
@@ -709,6 +735,7 @@ function processChanceResponseWork(checkpoint, store, work) {
       inputStateHash: node.stateHash,
       chanceResponseWork: work.chanceResponseWork,
       deferChanceResponseExecution: true,
+      chanceContextCache: runtimeCache.chanceContexts,
       classifyResult: classifyResult(checkpoint.querySideKey),
     },
   );
@@ -959,6 +986,10 @@ export function advanceWarmachineCompleteActivationExactGraphV1(
     10000,
     "complete_activation_exact_work_unit_budget_invalid",
   );
+  const runtimeCache = {
+    enumerations: new Map(),
+    chanceContexts: new Map(),
+  };
   const checkpoint = checkpointCore(priorCheckpoint);
   let completed = 0;
   while (completed < workUnitBudget &&
@@ -972,9 +1003,9 @@ export function advanceWarmachineCompleteActivationExactGraphV1(
         throw new Error("complete_activation_exact_work_queue_invalid");
       }
       if (work.workKind === "action") {
-        processActionWork(checkpoint, store, work);
+        processActionWork(checkpoint, store, work, runtimeCache);
       } else if (work.workKind === "chance_response") {
-        processChanceResponseWork(checkpoint, store, work);
+        processChanceResponseWork(checkpoint, store, work, runtimeCache);
       } else {
         throw new Error("complete_activation_exact_work_kind_invalid");
       }
