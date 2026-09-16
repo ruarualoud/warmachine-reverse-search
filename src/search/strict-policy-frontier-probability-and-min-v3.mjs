@@ -196,6 +196,7 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
   let evaluatedStateCount = 0;
   let strictRejectedResponseEdgeCount = 0;
   let strictRejectedDeterministicEdgeCount = 0;
+  let unavailableResponseEdgeCount = 0;
   let stateMergeCount = 0;
   const reportProgress = (stage, detail = {}) => rawOptions.onProgress?.({
     stage,
@@ -368,6 +369,9 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
       });
       strictRejectedResponseEdgeCount += step.strictRejectedResponseCount || 0;
       strictRejectedDeterministicEdgeCount += step.strictRejectedDeterministicCount || 0;
+      for (const receipt of step.runtimeReceipts || []) {
+        if (receipt?.receiptHash) runtimeReceiptByHash.set(receipt.receiptHash, receipt);
+      }
       stepAudits.push(stableGraphValue({
         labelKey: label.labelKey,
         stepType: step.stepType,
@@ -377,8 +381,15 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
         chanceResponseWork: step.chanceResponseWork || label.chanceResponseWork || null,
         strictRejectedResponseCount: step.strictRejectedResponseCount || 0,
         strictRejectedDeterministicCount: step.strictRejectedDeterministicCount || 0,
+        responseUnavailable: step.responseUnavailable || null,
         reason: step.reason || "",
       }));
+      if (step.stepType === "response_unavailable") {
+        label.status = "response_unavailable";
+        label.reason = step.reason;
+        unavailableResponseEdgeCount += 1;
+        continue;
+      }
       if (step.stepType === "terminal" || step.stepType === "unresolved") {
         label.status = terminalOutcome(step.outcome) || "unresolved";
         label.reason = step.reason;
@@ -708,7 +719,12 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
           group.conditionalProbability.numerator,
           group.conditionalProbability.denominator,
         );
-        const responseRows = group.responses.map((response) => {
+        const responseRows = group.responses.filter((response) => {
+          const branchLabels = (response.branches || []).map((branch) =>
+            labels.get(edges.get(branch.edgeKey)?.childLabelKey || "")).filter(Boolean);
+          return !branchLabels.length || !branchLabels.every((candidate) =>
+            candidate.status === "response_unavailable");
+        }).map((response) => {
           let responseLower = rational(0n);
           let responseUpper = rational(0n);
           let responseLowerMass = emptyMassVector();
@@ -835,6 +851,7 @@ export function evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
     stateMergeCount,
     strictRejectedResponseEdgeCount,
     strictRejectedDeterministicEdgeCount,
+    unavailableResponseEdgeCount,
     chanceMassComplete,
     opponentResponseSetComplete,
     probabilityInterval: intervalRecord(root.interval),

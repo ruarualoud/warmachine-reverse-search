@@ -61,33 +61,6 @@ function classifyActionHorizonLeaf(label = {}, rootDepth = 0) {
   return "unresolved";
 }
 
-function responseInterval(response = {}, labelByKey, rootDepth) {
-  let success = rational();
-  let unresolved = rational();
-  let total = rational();
-  const outcomeCounts = { success: 0, failure: 0, unresolved: 0 };
-  for (const branch of response.branches || []) {
-    const mass = probability(branch.conditionalProbability);
-    total = add(total, mass);
-    const edge = branch.edge;
-    const label = labelByKey.get(edge?.childLabelKey || "") || {};
-    const outcome = classifyActionHorizonLeaf(label, rootDepth);
-    outcomeCounts[outcome] += 1;
-    if (outcome === "success") success = add(success, mass);
-    if (outcome === "unresolved") unresolved = add(unresolved, mass);
-  }
-  if (compare(total, rational(1n)) !== 0) {
-    throw new Error(`action_horizon_response_mass_not_conserved:${response.responseKey}`);
-  }
-  return {
-    responseKey: response.responseKey,
-    branchCount: (response.branches || []).length,
-    outcomeCounts,
-    lower: success,
-    upper: add(success, unresolved),
-  };
-}
-
 function chooseResponse(rows, quantifier, boundKey) {
   if (!rows.length) throw new Error("action_horizon_response_set_empty");
   const ownerMax = String(quantifier || "").includes("owner_max");
@@ -97,18 +70,117 @@ function chooseResponse(rows, quantifier, boundKey) {
   })[0];
 }
 
+function buildActionHorizonSolver(labelByKey, edgeByKey, rootDepth) {
+  const solved = new Map();
+  const active = new Set();
+  const solveResponse = (response = {}) => {
+    let lower = rational();
+    let upper = rational();
+    let total = rational();
+    const outcomeCounts = { success: 0, failure: 0, unresolved: 0 };
+    for (const branch of response.branches || []) {
+      const mass = probability(branch.conditionalProbability);
+      total = add(total, mass);
+      const edge = edgeByKey.get(branch.edgeKey);
+      const child = edge?.childLabelKey ? solveLabel(edge.childLabelKey) : {
+        lower: rational(0n),
+        upper: rational(1n),
+      };
+      lower = add(lower, multiply(mass, child.lower));
+      upper = add(upper, multiply(mass, child.upper));
+      const outcome = compare(child.lower, rational(1n)) === 0 &&
+          compare(child.upper, rational(1n)) === 0
+        ? "success"
+        : compare(child.lower, rational(0n)) === 0 &&
+            compare(child.upper, rational(0n)) === 0
+          ? "failure"
+          : "unresolved";
+      outcomeCounts[outcome] += 1;
+    }
+    if (compare(total, rational(1n)) !== 0) {
+      throw new Error(`action_horizon_response_mass_not_conserved:${response.responseKey}`);
+    }
+    return {
+      responseKey: response.responseKey,
+      branchCount: (response.branches || []).length,
+      outcomeCounts,
+      lower,
+      upper,
+    };
+  };
+  const solveLabel = (labelKey) => {
+    if (solved.has(labelKey)) return solved.get(labelKey);
+    if (active.has(labelKey)) throw new Error(`action_horizon_cycle:${labelKey}`);
+    const label = labelByKey.get(labelKey) || {};
+    active.add(labelKey);
+    const directOutcome = classifyActionHorizonLeaf(label, rootDepth);
+    let result;
+    if (directOutcome === "success") {
+      result = { lower: rational(1n), upper: rational(1n) };
+    } else if (directOutcome === "failure") {
+      result = { lower: rational(0n), upper: rational(0n) };
+    } else if (label.status !== "expanded" || !label.expansion) {
+      result = { lower: rational(0n), upper: rational(1n) };
+    } else if (label.expansion.expansionType === "deterministic") {
+      const edge = edgeByKey.get(label.expansion.edgeKey);
+      result = edge?.childLabelKey
+        ? solveLabel(edge.childLabelKey)
+        : { lower: rational(0n), upper: rational(1n) };
+    } else {
+      let lower = rational();
+      let upper = rational();
+      let primaryMass = rational();
+      for (const group of label.expansion.groups || []) {
+        const primary = probability(group.conditionalProbability);
+        primaryMass = add(primaryMass, primary);
+        const responseRows = (group.responses || []).filter((response) => {
+          const branchLabels = (response.branches || []).map((branch) =>
+            labelByKey.get(edgeByKey.get(branch.edgeKey)?.childLabelKey || "")).filter(Boolean);
+          return !branchLabels.length || !branchLabels.every((candidate) =>
+            candidate.status === "response_unavailable");
+        }).map(solveResponse);
+        if (label.expansion.responseSetComplete !== true || !responseRows.length) {
+          upper = add(upper, primary);
+          continue;
+        }
+        const selectedLower = chooseResponse(
+          responseRows,
+          label.expansion.quantifier,
+          "lower",
+        );
+        const selectedUpper = chooseResponse(
+          responseRows,
+          label.expansion.quantifier,
+          "upper",
+        );
+        lower = add(lower, multiply(primary, selectedLower.lower));
+        upper = add(upper, multiply(primary, selectedUpper.upper));
+      }
+      if (compare(primaryMass, rational(1n)) !== 0) {
+        throw new Error(`action_horizon_primary_mass_not_conserved:${labelKey}`);
+      }
+      result = { lower, upper };
+    }
+    active.delete(labelKey);
+    solved.set(labelKey, result);
+    return result;
+  };
+  return { solveLabel, solveResponse };
+}
+
 function markdown(report) {
   const action = report.selectedAction;
   const target = report.opening.target;
   const caster = report.opening.caster;
   const interval = report.actionHorizonValue;
   return `${[
-    "# Sepsira 对 Nymara 单动作严格搜索报告",
+    "# Warmachine 固定单动作严格搜索报告",
     "",
     `- 报告哈希：\`${report.reportHash}\``,
     `- 搜索检查点：\`${report.source.checkpointId}\``,
     `- Host 回执：\`${report.source.hostReceiptHash}\``,
-    `- 固定路线：${report.route.transitionCount} 次严格转换，拒绝 ${report.counts.strictRejectedEdgeCount}`,
+    `- 固定动作源：深度 ${report.route.sourceDepth}，标签 \`${report.route.sourceLabelKey}\``,
+    `- 严格执行拒绝：${report.counts.strictRejectedEdgeCount}`,
     `- 当前动作：${action.actionType}，${action.actorPieceKey} -> ${action.targetPieceKey}`,
     `- 施法者资源：Focus ${caster.focus}`,
     `- 目标状态：${target.boxesRemaining}/${target.maxBoxes} 生命格，Fury ${target.fury}`,
@@ -116,8 +188,12 @@ function markdown(report) {
     "## 本动作结论",
     "",
     `在声明的“只判断这个动作是否立即完成刺杀”有限目标下，成功概率为 **${interval.lowerBound.decimal}**。该值精确：${interval.exact ? "是" : "否"}。`,
-    `动作生成器的伤害期望为 ${action.expectedDamage}；本动作的 ${report.counts.chanceClassCount} 个精确骰类、${report.counts.responseKeyCount} 种防守选择和 ${report.counts.successorLabelCount} 个不同后继均已计入。`,
-    "Nymara 在所有后继中都没有于本动作内被移除，因此该次通道法术不是一个可立即完成的刺杀动作。",
+    `动作生成器的伤害期望为 ${action.expectedDamage ?? "未提供"}；根动作声明 ${report.counts.chanceClassCount} 个精确骰类和 ${report.counts.responseKeyCount} 种防守选择，当前已物化 ${report.counts.successorLabelCount} 个不同后继。`,
+    `动作内部工作标签：总计 ${report.counts.chanceResponseWorkLabelCount}，已执行 ${report.counts.executedChanceResponseWorkLabelCount}，因精确界已闭合而保留未执行 ${report.counts.remainingChanceResponseWorkLabelCount}。`,
+    `Chance 结算后动态不可用的防守响应：${report.counts.unavailableResponseEdgeCount}。`,
+    interval.exact
+      ? `本动作的立即刺杀概率已经闭合为 ${interval.lowerBound.decimal}。`
+      : `本动作仍有未执行分支，当前立即刺杀区间为 [${interval.lowerBound.decimal}, ${interval.upperBound.decimal}]。`,
     "",
     "## 防守响应",
     "",
@@ -126,7 +202,7 @@ function markdown(report) {
     "",
     "## 结论边界",
     "",
-    `整段后续对局仍为 **[${report.postActionContinuationInterval.lowerBound.decimal}, ${report.postActionContinuationInterval.upperBound.decimal}]**。这 449 个后继没有被记成整局失败，而是继续保存在外部 DAG 中。`,
+    `整段后续对局仍为 **[${report.postActionContinuationInterval.lowerBound.decimal}, ${report.postActionContinuationInterval.upperBound.decimal}]**。这些后继没有被记成整局失败，而是继续保存在外部 DAG 中。`,
     "本报告只证明当前固定路线上的这一项动作结论；它不证明当前激活、整局、军表、地图或阵营最优。",
     "",
   ].join("\n")}\n`;
@@ -145,6 +221,7 @@ export function buildWarmachineFixedActionHorizonReportV1(rawInput = {}) {
     throw new Error("action_horizon_chance_root_missing");
   }
   const groups = root.expansion.groups || [];
+  const horizonSolver = buildActionHorizonSolver(labelByKey, edgeByKey, root.depth);
   let lower = rational();
   let upper = rational();
   let primaryMass = rational();
@@ -153,13 +230,12 @@ export function buildWarmachineFixedActionHorizonReportV1(rawInput = {}) {
   for (const group of groups) {
     const primary = probability(group.conditionalProbability);
     primaryMass = add(primaryMass, primary);
-    const responseRows = (group.responses || []).map((response) => responseInterval({
-      ...response,
-      branches: (response.branches || []).map((branch) => ({
-        ...branch,
-        edge: edgeByKey.get(branch.edgeKey),
-      })),
-    }, labelByKey, root.depth));
+    const responseRows = (group.responses || []).filter((response) => {
+      const branchLabels = (response.branches || []).map((branch) =>
+        labelByKey.get(edgeByKey.get(branch.edgeKey)?.childLabelKey || "")).filter(Boolean);
+      return !branchLabels.length || !branchLabels.every((candidate) =>
+        candidate.status === "response_unavailable");
+    }).map(horizonSolver.solveResponse);
     const selectedLower = chooseResponse(responseRows, root.expansion.quantifier, "lower");
     const selectedUpper = chooseResponse(responseRows, root.expansion.quantifier, "upper");
     lower = add(lower, multiply(primary, selectedLower.lower));
@@ -206,6 +282,8 @@ export function buildWarmachineFixedActionHorizonReportV1(rawInput = {}) {
     route: {
       checkpointReceiptHash: String(route.checkpointReceiptHash || ""),
       transitionCount: Number(route.transitionCount || 0),
+      sourceDepth: Number(route.sourceDepth ?? route.transitionCount ?? root.depth),
+      sourceLabelKey: String(route.sourceLabelKey || root.labelKey),
     },
     opening: {
       caster: {
@@ -227,17 +305,32 @@ export function buildWarmachineFixedActionHorizonReportV1(rawInput = {}) {
       upperBound: probabilityRecord(upper),
       objective: "selected_action_immediately_destroys_target_leader",
       cutoffTreatment: "alive_continue_leaf_is_failure_for_action_horizon_only",
+      completionBasis: compare(lower, upper) === 0
+        ? labels.some((label) =>
+          Boolean(label.chanceResponseWork?.workKey) && label.status === "unresolved")
+          ? "adversarial_min_max_bound_closed_with_dominated_work_resumable"
+          : "all_declared_action_work_executed"
+        : "open_action_work_interval",
     },
     postActionContinuationInterval: probabilityReport.probabilityInterval,
     counts: {
-      chanceClassCount: Number(probabilityReport.stepAudits?.[0]?.chanceAudit?.classCount || 0),
+      chanceClassCount: Number(probabilityReport.stepAudits?.find((audit) =>
+        audit.labelKey === root.labelKey)?.chanceAudit?.classCount || groups.length),
       adversarialContextCount: Number(probabilityReport.frontierAudits?.at(-1)
         ?.adversarialContextCount || 0),
       responseKeyCount: responseSummary.length,
       successorLabelCount: labels.filter((label) => label.depth === root.depth + 1).length,
+      chanceResponseWorkLabelCount: labels.filter((label) =>
+        Boolean(label.chanceResponseWork?.workKey)).length,
+      executedChanceResponseWorkLabelCount: labels.filter((label) =>
+        Boolean(label.chanceResponseWork?.workKey) && label.status !== "unresolved").length,
+      remainingChanceResponseWorkLabelCount: labels.filter((label) =>
+        Boolean(label.chanceResponseWork?.workKey) && label.status === "unresolved").length,
       strictRejectedEdgeCount:
         Number(probabilityReport.strictRejectedResponseEdgeCount || 0) +
         Number(probabilityReport.strictRejectedDeterministicEdgeCount || 0),
+      unavailableResponseEdgeCount:
+        Number(probabilityReport.unavailableResponseEdgeCount || 0),
     },
     responseSummary,
     groupAudits,

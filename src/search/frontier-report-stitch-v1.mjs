@@ -266,7 +266,12 @@ function solveStitchedGraph(rootLabelKey, labels, edges) {
           group.conditionalProbability.numerator,
           group.conditionalProbability.denominator,
         );
-        const responseRows = (group.responses || []).map((response) => {
+        const responseRows = (group.responses || []).filter((response) => {
+          const branchLabels = (response.branches || []).map((branch) =>
+            labels.get(edges.get(branch.edgeKey)?.childLabelKey || "")).filter(Boolean);
+          return !branchLabels.length || !branchLabels.every((candidate) =>
+            candidate.status === "response_unavailable");
+        }).map((response) => {
           let responseLower = rational(0n);
           let responseUpper = rational(0n);
           let responseLowerMass = emptyMassVector();
@@ -448,6 +453,10 @@ export function stitchWarmachineStrictFrontierReportsV1(
       Number(ancestorReport.strictRejectedDeterministicEdgeCount || 0) +
       continuations.reduce((sum, report) =>
         sum + Number(report.strictRejectedDeterministicEdgeCount || 0), 0),
+    unavailableResponseEdgeCount:
+      Number(ancestorReport.unavailableResponseEdgeCount || 0) +
+      continuations.reduce((sum, report) =>
+        sum + Number(report.unavailableResponseEdgeCount || 0), 0),
     unresolvedReasons,
     labelCount: publicLabels.length,
     edgeCount: publicEdges.length,

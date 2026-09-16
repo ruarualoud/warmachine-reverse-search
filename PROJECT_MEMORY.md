@@ -1,5 +1,22 @@
 # Project Memory
 
+- 2026-09-16 durable deferred-response invariant: an opponent response declared
+  before primary Chance may become inapplicable after the resolved transition.
+  Damage transfer is absent on misses and zero damage, and a recipient that was
+  in control range before a slam can be outside it afterward. Search must first
+  condition the response domain on the Chance class, then strict-check dynamic
+  eligibility in the resolved state. A dynamically inapplicable response is
+  auditable `response_unavailable`, not a transition rejection, strategy loss
+  or omitted legal choice.
+
+- 2026-09-16 durable adversarial-bound closure invariant: for an opponent-owned
+  minimum choice, one legal response reaching the global lower bound closes the
+  Chance group's value without executing every dominated sibling. Those
+  siblings must remain immutable and resumable, and reports must distinguish
+  executed work from mathematically dominated unexecuted work. The Raptor slam
+  action horizon closes exactly at `[0,0]` after `96/283` valid work labels,
+  with `187` preserved for optional replay and zero strict rejection.
+
 - 2026-09-16 durable action-internal recovery invariant: an exact stochastic
   policy action may be partitioned into immutable primary-Chance-by-owned-
   response work labels before any strict response execution. The parent still

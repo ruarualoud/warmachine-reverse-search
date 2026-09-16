@@ -109,7 +109,7 @@ const state = {
   scenario: { zones: [], flags: [], score: { player1: 0, player2: 0 }, victoryThreshold: 5 },
 };
 
-const attackStep = expandWarmachineStrictPolicyStepV1(state, ({ state: currentState }) => {
+const selectAttackAction = ({ state: currentState }) => {
   const scoped = enumerateWarmachineBenchmarkActionsV2(currentState, {
     actorPieceKeys: ["attacker"],
     targetPieceKeys: ["defender-lock"],
@@ -119,7 +119,13 @@ const attackStep = expandWarmachineStrictPolicyStepV1(state, ({ state: currentSt
   const action = canonicalWarmachineActingSideActionsV1(scoped.enumeration).find((candidate) =>
     candidate.actionKey === "attacker:melee:defender-lock:execution-blade:v1");
   return { scoped, action, nextPolicyCursor: 1 };
-}, { perspectiveSideKey: "player2" });
+};
+
+const attackStep = expandWarmachineStrictPolicyStepV1(
+  state,
+  selectAttackAction,
+  { perspectiveSideKey: "player2" },
+);
 
 assert.equal(attackStep.stepType, "chance");
 assert.equal(attackStep.chanceAudit.exactComplete, true);
@@ -139,6 +145,19 @@ assert.ok(attackStep.groups.every((group) => group.responses.every((response) =>
 assert.ok(attackStep.groups.some((group) => group.responses.some((response) =>
   response.choice === "transfer" &&
   response.postResponseOutcomes.length === 6)));
+
+const deferredAttackStep = expandWarmachineStrictPolicyStepV1(
+  state,
+  selectAttackAction,
+  { perspectiveSideKey: "player2", deferChanceResponseExecution: true },
+);
+assert.equal(deferredAttackStep.stepType, "chance_worklist");
+const missGroups = deferredAttackStep.groups.filter((group) =>
+  group.classEvidence.every((evidence) =>
+    !Array.isArray(evidence.strictRollOutcome?.damageDice)));
+assert.ok(missGroups.length > 0);
+assert.ok(missGroups.every((group) =>
+  group.responses.length === 1 && group.responses[0].choice === "decline"));
 
 const deterministicStep = expandWarmachineStrictPolicyStepV1(state, ({ state: currentState }) => {
   const scoped = enumerateWarmachineBenchmarkActionsV2(currentState, {

@@ -7,6 +7,13 @@ function actions(enumeration = {}) {
   return Array.isArray(enumeration.actions) ? enumeration.actions : [];
 }
 
+function responseSetHash(core = {}) {
+  return stableGraphHash(stableGraphValue({
+    ...core,
+    responses: (core.responses || []).map(({ action: _action, ...response }) => response),
+  }));
+}
+
 export function isWarmachineOpponentOwnedCompoundVariantV1(action = {}) {
   return action.metadata?.damageTransfer === true &&
     Boolean(action.metadata?.damageTransferDecisionGroupKey);
@@ -42,7 +49,7 @@ export function buildWarmachineOpponentResponseSetV1(action = {}, enumeration = 
         choice: "none",
       }],
     };
-    return { ...core, responseSetHash: stableGraphHash(stableGraphValue(core)) };
+    return { ...core, responseSetHash: responseSetHash(core) };
   }
 
   const actionByKey = new Map(actions(enumeration).map((candidate) =>
@@ -72,9 +79,33 @@ export function buildWarmachineOpponentResponseSetV1(action = {}, enumeration = 
   };
   return {
     ...core,
-    responseSetHash: stableGraphHash(stableGraphValue({
-      ...core,
-      responses: responses.map(({ action: _action, ...response }) => response),
-    })),
+    responseSetHash: responseSetHash(core),
   };
+}
+
+export function conditionWarmachineOpponentResponseSetForChanceClassV1(
+  responseSet = {},
+  chanceClass = {},
+) {
+  if (responseSet.decisionKind !== "damage_transfer") return responseSet;
+  const positiveDamage = chanceClass.hit !== false &&
+    Number(chanceClass.resolvedDamage || 0) > 0;
+  if (positiveDamage) return responseSet;
+  const responses = (responseSet.responses || []).filter((response) =>
+    response.choice === "decline");
+  const { responseSetHash: _responseSetHash, ...unhashed } = responseSet;
+  const core = {
+    ...unhashed,
+    decisionKind: "damage_transfer_not_open_without_positive_damage",
+    responseSetComplete: responses.length === 1 &&
+      responses.every((response) => response.available !== false && Boolean(response.action)),
+    responses,
+    chanceCondition: {
+      chanceClassKey: String(chanceClass.classKey || ""),
+      hit: chanceClass.hit !== false,
+      resolvedDamage: Number(chanceClass.resolvedDamage || 0),
+      transferWindowOpen: false,
+    },
+  };
+  return { ...core, responseSetHash: responseSetHash(core) };
 }

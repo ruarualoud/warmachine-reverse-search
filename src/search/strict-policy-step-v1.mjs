@@ -12,6 +12,7 @@ import {
 import {
   buildWarmachineOpponentResponseSetV1,
   canonicalWarmachineActingSideActionsV1,
+  conditionWarmachineOpponentResponseSetForChanceClassV1,
 } from "./opponent-response-v1.mjs";
 import { executeWarmachineExactPostResponseChanceV1 } from
   "./post-response-chance-execution-v1.mjs";
@@ -243,6 +244,10 @@ function executePreparedChanceResponse({
   });
   const transitionAccepted = postResponseOutcomes.every((entry) =>
     entry.transitionAccepted === true);
+  const responseUnavailable = response.choice === "transfer" &&
+    postResponseOutcomes.length > 0 &&
+    postResponseOutcomes.every((entry) =>
+      entry.transitionAccepted !== true && entry.reason === "strict_damage_transfer_rejected");
   const semanticVector = postResponseOutcomes.map((entry) => ({
     classKey: entry.classKey,
     probabilityNumerator: entry.probabilityNumerator,
@@ -255,7 +260,8 @@ function executePreparedChanceResponse({
     terminalEvents: entry.terminalEvents,
   }));
   return {
-    strictRejectedResponseCount,
+    strictRejectedResponseCount: responseUnavailable ? 0 : strictRejectedResponseCount,
+    responseUnavailable,
     preparedResponse: {
       responseKey: response.responseKey,
       actionKey: response.action.actionKey,
@@ -473,9 +479,15 @@ export function expandWarmachineStrictPolicyStepV1(
   }
 
   const responseSet = buildWarmachineOpponentResponseSetV1(action, scoped.enumeration);
+  const responseSetByChanceClassKey = new Map(chance.classes.map((chanceClass) => [
+    chanceClass.classKey,
+    conditionWarmachineOpponentResponseSetForChanceClassV1(responseSet, chanceClass),
+  ]));
+  const conditionedResponseSetsComplete = Array.from(responseSetByChanceClassKey.values())
+    .every((conditioned) => conditioned.responseSetComplete === true);
   reportProgress("response_set_complete", {
     responseCount: responseSet.responses.length,
-    responseSetComplete: responseSet.responseSetComplete,
+    responseSetComplete: conditionedResponseSetsComplete,
   });
 
   if (chanceResponseWork) {
@@ -487,11 +499,15 @@ export function expandWarmachineStrictPolicyStepV1(
         chanceAudit,
       });
     }
+    const workChanceClass = (chance.classes || []).find((candidate) =>
+      candidate.classKey === chanceResponseWork.chanceClassKey) || null;
+    const workResponseSet = responseSetByChanceClassKey.get(workChanceClass?.classKey) ||
+      responseSet;
     const resolvedWork = resolveChanceResponseWork(
       chanceResponseWork,
       action,
       chance,
-      responseSet,
+      workResponseSet,
     );
     if (!resolvedWork.ok) {
       return unresolvedStep(base, resolvedWork.reason, { action: actionAudit, chanceAudit });
@@ -509,6 +525,45 @@ export function expandWarmachineStrictPolicyStepV1(
       reportProgress,
     });
     const preparedResponse = executedWork.preparedResponse;
+    if (executedWork.responseUnavailable) {
+      return {
+        ...base,
+        stepType: "response_unavailable",
+        reason: preparedResponse.reason || "strict_response_unavailable_after_chance",
+        action: actionAudit,
+        chanceResponseWork: stableGraphValue(chanceResponseWork),
+        chanceAudit: {
+          ...chanceAudit,
+          classCount: 1,
+          massNumerator: 1,
+          massDenominator: 1,
+          equivalenceHash: `chance-response-work-${chanceResponseWork.workKey}`,
+          equivalenceGroupCount: 1,
+          mergedClassCount: 0,
+          equivalenceMassConserved: true,
+        },
+        responseSet: {
+          ownerSideKey: "",
+          decisionKind: "resolved_chance_response_work",
+          responseSetComplete: true,
+          responseCount: 0,
+        },
+        responseUnavailable: {
+          responseKey: resolvedWork.response.responseKey,
+          actionKey: preparedResponse.actionKey,
+          choice: preparedResponse.choice,
+          recipientPieceKey: preparedResponse.recipientPieceKey,
+          reason: preparedResponse.reason,
+          postResponseOutcomes: (preparedResponse.postResponseOutcomes || []).map((outcome) => ({
+            classKey: outcome.classKey,
+            reason: outcome.reason,
+            receiptHash: outcome.receiptHash,
+          })),
+        },
+        runtimeReceipts: (preparedResponse.postResponseOutcomes || [])
+          .map((outcome) => outcome.runtimeReceipt).filter(Boolean),
+      };
+    }
     return {
       ...base,
       stepType: "chance",
@@ -600,7 +655,9 @@ export function expandWarmachineStrictPolicyStepV1(
   }
 
   if (rawOptions.deferChanceResponseExecution === true) {
-    const groups = chance.classes.map((chanceClass) => ({
+    const groups = chance.classes.map((chanceClass) => {
+      const classResponseSet = responseSetByChanceClassKey.get(chanceClass.classKey);
+      return {
       groupKey: `deferred-chance-class-${stableGraphHash({
         actionKey: action.actionKey,
         chanceClassKey: chanceClass.classKey,
@@ -616,7 +673,7 @@ export function expandWarmachineStrictPolicyStepV1(
         strictRollOutcome: stableGraphValue(chanceClass.strictRollOutcome),
         responseEvidence: [],
       }],
-      responses: responseSet.responses.map((response) => ({
+      responses: classResponseSet.responses.map((response) => ({
         responseKey: response.responseKey,
         actionKey: response.actionKey,
         choice: response.choice,
@@ -629,12 +686,13 @@ export function expandWarmachineStrictPolicyStepV1(
           action,
           chance,
           chanceClass,
-          responseSet,
+          classResponseSet,
           response,
           decision,
         ),
       })),
-    }));
+    };
+    });
     return {
       ...base,
       stepType: "chance_worklist",
@@ -650,7 +708,7 @@ export function expandWarmachineStrictPolicyStepV1(
       responseSet: {
         ownerSideKey: responseSet.ownerSideKey,
         decisionKind: responseSet.decisionKind,
-        responseSetComplete: responseSet.responseSetComplete,
+        responseSetComplete: conditionedResponseSetsComplete,
         responseCount: responseSet.responses.length,
       },
       groups,
@@ -664,7 +722,8 @@ export function expandWarmachineStrictPolicyStepV1(
       chanceClassKey: chanceClass.classKey,
     });
     const responses = [];
-    for (const response of responseSet.responses) {
+    const classResponseSet = responseSetByChanceClassKey.get(chanceClass.classKey);
+    for (const response of classResponseSet.responses) {
       if (!response.action) {
         responses.push({
           responseKey: response.responseKey,
@@ -831,7 +890,7 @@ export function expandWarmachineStrictPolicyStepV1(
   const equivalence = groupWarmachineAdversarialChanceClassesV1(preparedChanceClasses, {
     ownerSideKey: responseSet.ownerSideKey,
     decisionKind: responseSet.decisionKind,
-    responseSetComplete: responseSet.responseSetComplete,
+    responseSetComplete: conditionedResponseSetsComplete,
   });
   if (!equivalence.ok) return unresolvedStep(base, "adversarial_chance_mass_not_conserved");
   const groups = equivalence.groups.map((group) => ({
@@ -900,7 +959,7 @@ export function expandWarmachineStrictPolicyStepV1(
     responseSet: {
       ownerSideKey: responseSet.ownerSideKey,
       decisionKind: responseSet.decisionKind,
-      responseSetComplete: responseSet.responseSetComplete,
+      responseSetComplete: conditionedResponseSetsComplete,
       responseCount: responseSet.responses.length,
     },
     groups,

@@ -106,6 +106,20 @@ function rootResponseSchedulingContext(ancestorReport = {}) {
 }
 
 function scheduledEntryOrder(mode, schedulingContext) {
+  if (mode === "chance_response_work_opponent_min_witness_v1") {
+    return (left, right) =>
+      Number(left.chanceResponseWork?.responseKey !== "decline") -
+        Number(right.chanceResponseWork?.responseKey !== "decline") ||
+      compareProbabilityDescending(left.cumulativeProbability, right.cumulativeProbability) ||
+      String(left.chanceResponseWork?.chanceClassKey || "")
+        .localeCompare(String(right.chanceResponseWork?.chanceClassKey || "")) ||
+      canonicalEntryOrder(left, right);
+  }
+  if (mode === "chance_response_work_only_v1") {
+    return (left, right) =>
+      compareProbabilityDescending(left.cumulativeProbability, right.cumulativeProbability) ||
+      canonicalEntryOrder(left, right);
+  }
   if (mode !== "root_upper_response_depth_first_v1") return canonicalEntryOrder;
   return (left, right) => {
     const leftContext = schedulingContext.get(String(left.adversarialContextKey || ""));
@@ -216,12 +230,17 @@ export function planWarmachineStrictFrontierContinuationBatchV1(
     uniqueEntries.set(entry.labelKey, entry);
   }
   const schedulingMode = String(rawOptions.schedulingMode || "canonical_v1");
-  if (!["canonical_v1", "root_upper_response_depth_first_v1"]
+  if (!["canonical_v1", "root_upper_response_depth_first_v1", "chance_response_work_only_v1",
+    "chance_response_work_opponent_min_witness_v1"]
     .includes(schedulingMode)) {
     throw new Error(`continuation_batch_scheduling_mode_unknown:${schedulingMode}`);
   }
   const schedulingContext = rootResponseSchedulingContext(ancestorReport);
-  const ordered = Array.from(uniqueEntries.values()).sort(
+  const eligibleEntries = Array.from(uniqueEntries.values()).filter((entry) =>
+    !["chance_response_work_only_v1", "chance_response_work_opponent_min_witness_v1"]
+      .includes(schedulingMode) ||
+      Boolean(entry.chanceResponseWork?.workKey));
+  const ordered = eligibleEntries.sort(
     scheduledEntryOrder(schedulingMode, schedulingContext),
   );
   const maximumContinuationLabels = Math.max(0, Number(
@@ -419,9 +438,10 @@ export function finalizeWarmachineStrictFrontierContinuationBatchV1(
       runtimeCheckpoint.resumableLabelKeys.includes(entry.labelKey))),
     strictRejectedResponseEdgeCount: report.strictRejectedResponseEdgeCount,
     strictRejectedDeterministicEdgeCount: report.strictRejectedDeterministicEdgeCount,
+    unavailableResponseEdgeCount: report.unavailableResponseEdgeCount,
     probabilityInterval: report.probabilityInterval,
     exactComplete: report.exactComplete,
-    claimBoundary: "This scheduler advances only an explicitly bounded subset of restored budget-deferred labels. Canonical mode preserves the historical canonical key order. Root-upper-response mode prioritizes the root's currently selected upper-bound response, then deeper descendants, already-partitioned Chance-response work, root Chance mass and cumulative mass; it changes work order only and never drops a label or proves dominance. The scheduler restores exact depth, cursor, adversarial context, continuation suffix and cumulative Chance mass, then immutable-stitches strict continuations. A nonzero threshold may run independently across multiple roots only when their adversarial contexts are pairwise disjoint; repeated contexts still require a batch-wide same-layer merge. Unselected and newly deferred labels remain resumable; scheduling order is not a strategy score or optimality claim.",
+    claimBoundary: "This scheduler advances only an explicitly bounded subset of restored budget-deferred labels. Canonical mode preserves the historical canonical key order. Root-upper-response mode prioritizes the root's currently selected upper-bound response, then deeper descendants, already-partitioned Chance-response work, root Chance mass and cumulative mass. Chance-response-work-only mode is an action-horizon work filter: it advances only already-declared internal work and leaves every ordinary successor untouched for the wider horizon. Opponent-min-witness mode first executes decline once per Chance class because an exact zero response closes that class's mathematical minimum; unresolved classes remain resumable and continue to other responses. These modes change work order only and never drop a label or prove strategy dominance beyond the exact min/max interval. The scheduler restores exact depth, cursor, adversarial context, continuation suffix and cumulative Chance mass, then immutable-stitches strict continuations. A nonzero threshold may run independently across multiple roots only when their adversarial contexts are pairwise disjoint; repeated contexts still require a batch-wide same-layer merge. Unselected and newly deferred labels remain resumable; scheduling order is not a strategy score or optimality claim.",
   };
   return {
     ...core,
