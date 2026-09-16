@@ -5,14 +5,14 @@
     "relativePath": "data/function3-rules/warmachine-semantic-interaction-closure-v1.json",
     "reportHash": "f4e46e45de296f7aaf3be575ad8bd5c8e6d55121afc4680c0395b248ecdc3553"
   },
-  "fixtureHash": "6ecf19d29a488a0ea56670db7b57f08244c1d2f39bb4eeb12ee1a1880ad6c168",
+  "fixtureHash": "210ddb1ab91368080b91f3a414cf7cfe7aebaf24282af43403c0b97c4eb47fef",
   "globalContextOnly": {
     "unresolvedAtomInteractionCount": 459,
     "unresolvedHookConcurrencyCount": 38,
     "unresolvedSemanticRelationCount": 57,
     "unresolvedSemanticStateInteractionCount": 444
   },
-  "hostReceiptHash": "d73cb30cf4e4804d1156a4f795827438265745ed5efcc400646d584a9a67a04f",
+  "hostReceiptHash": "4a9b52da1ddf4593b73b38606045ea736f52a4a3ac12c950115cc81dc4c9dfc9",
   "openingStateHash": "4e76f2b488af67aba61dc0ce4e9ed301228656283d9235ccdd41b313fea7a46d",
   "readiness": {
     "allCandidateAtomInteractionsBound": false,
@@ -2650,7 +2650,7 @@
       }
     ]
   },
-  "taskHash": "8d8b2ec56b289cf2cd97c8ed270de7132e8afa09258016bafc43cd9dde359a3e",
+  "taskHash": "c851d9e7a971e14f75ae9cc58c7d46cbb02b35cc4f8d5589ee71d829c5c909d6",
   "taskHookConcurrency": {
     "candidateHookKeyCount": 21,
     "exactTaskLocalOrderingProofImplemented": false,
@@ -3730,5 +3730,5 @@
       "templateKey": "scenario_score"
     }
   ],
-  "taskLocalRuleClosureHash": "85386e94e71de38bd94e7622d748d15581b9d85eeb98a0574fb9d4fb31739b99"
+  "taskLocalRuleClosureHash": "6d80558d130548472b0d96d20b4ec9dcda027dc6d5ea43afb1c0f10060a376f3"
 }
