@@ -26,6 +26,7 @@
     "verify:cegar": "node scripts/verify-cegar-parity.mjs",
     "verify:rosters": "node scripts/verify-roster-investment-parity.mjs",
     "verify:chance": "node scripts/verify-chance-outcomes-parity.mjs",
+    "verify:power-attack-conditional-chance": "node scripts/verify-power-attack-conditional-chance-v1.mjs",
     "verify:continuous-rule-aura-host-parity": "node scripts/verify-continuous-rule-aura-host-parity-v1.mjs",
     "verify:semantic-auto-hit-miss-parity": "node scripts/verify-semantic-auto-hit-miss-parity-v1.mjs",
     "verify:timing-lifecycle-host-parity": "node scripts/verify-timing-lifecycle-host-parity-v1.mjs",

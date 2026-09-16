@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 
-import { enumerateWarmachineExactD6EquivalenceClasses } from "../warmachine-host-runtime.mjs";
+import {
+  buildRulesV1StrictPowerAttackChanceContract,
+  enumerateWarmachineExactD6EquivalenceClasses,
+} from "../warmachine-host-runtime.mjs";
 
 export const WARMACHINE_SEARCH_CHANCE_OUTCOMES_SCHEMA = "warmachine_search_chance_outcomes_v1";
 
@@ -369,6 +372,346 @@ function powerAttackDisplacementChance(action = {}) {
   return kind
     ? { kind, values: [1, 2, 3, 4, 5, 6], denominator: 6 }
     : { kind: "", values: [null], denominator: 1 };
+}
+
+function greatestCommonDivisor(left, right) {
+  let a = Math.abs(Math.floor(left));
+  let b = Math.abs(Math.floor(right));
+  while (b) [a, b] = [b, a % b];
+  return a || 1;
+}
+
+function leastCommonMultiple(left, right) {
+  const value = (left / greatestCommonDivisor(left, right)) * right;
+  return Number.isSafeInteger(value) ? value : null;
+}
+
+function safeIntegerProduct(values = []) {
+  let product = 1;
+  for (const value of values) {
+    product *= value;
+    if (!Number.isSafeInteger(product)) return null;
+  }
+  return product;
+}
+
+function normalizeConditionalChanceRows(rows = []) {
+  let commonDenominator = 1;
+  for (const row of rows) {
+    commonDenominator = leastCommonMultiple(commonDenominator, row.denominator);
+    if (commonDenominator == null) {
+      return { ok: false, reason: "power_attack_probability_denominator_not_safe_integer" };
+    }
+  }
+  const normalized = rows.map((row) => {
+    const numerator = row.numerator * (commonDenominator / row.denominator);
+    if (!Number.isSafeInteger(numerator)) return null;
+    return { ...row, numerator, denominator: commonDenominator };
+  });
+  if (normalized.some((row) => row == null)) {
+    return { ok: false, reason: "power_attack_probability_numerator_not_safe_integer" };
+  }
+  return { ok: true, commonDenominator, rows: normalized };
+}
+
+function collateralDamagePacketChanceClasses(requirement = {}) {
+  const layout = requirement.damageLayoutOutcomeRequirements || {};
+  const reasons = [];
+  const diceCount = Math.floor(numeric(requirement.damageDiceCount, 0));
+  if (diceCount < 1 || diceCount > 4) {
+    reasons.push(`collateral_damage_dice_count_outside_exact_scope:${requirement.pieceKey || "unknown"}`);
+  }
+  if (layout.damageLayoutMappingRequired === true || layout.damageLayoutKnown === false) {
+    reasons.push(`collateral_damage_layout_not_exact:${requirement.pieceKey || "unknown"}`);
+  }
+  if (layout.damageGridSideRequiredWhenDamagePositive === true ||
+      layout.damageGridSideRollRequiredWhenDamagePositive === true ||
+      layout.damageGridSideCausalityRequired === true ||
+      layout.overflowDamageColumnMayBeRequired === true) {
+    reasons.push(`collateral_colossal_damage_protocol_not_exact:${requirement.pieceKey || "unknown"}`);
+  }
+  if (reasons.length) return { exactComplete: false, reasons, classes: [] };
+  const damage = groupedDamageClasses({ damageDiceCount: diceCount });
+  const classes = [];
+  for (const damageClass of damage.groups) {
+    const resolvedDamage = Math.max(0,
+      numeric(damageClass.sum, 0) + numeric(requirement.staticDamage, 0));
+    const damageLocationRequired = resolvedDamage > 0 &&
+      layout.damageColumnRequiredWhenDamagePositive === true;
+    const toughRollRequired = requirement.toughDieMayBeRequired === true &&
+      numeric(requirement.boxesRemaining, 0) > 0 &&
+      resolvedDamage >= numeric(requirement.boxesRemaining, 0);
+    const damageColumns = damageLocationRequired ? [1, 2, 3, 4, 5, 6] : [null];
+    const toughDice = toughRollRequired ? [1, 2, 3, 4, 5, 6] : [null];
+    for (const damageColumn of damageColumns) {
+      for (const toughDie of toughDice) {
+        classes.push({
+          numerator: damageClass.multiplicity,
+          denominator: damage.outcomeCount * damageColumns.length * toughDice.length,
+          resolvedDamage,
+          damageSum: damageClass.sum,
+          outcomeBucket: requirement.outcomeBucket,
+          pieceKey: requirement.pieceKey,
+          entry: {
+            damageDice: cloneJson(damageClass.representativeDice),
+            ...(damageLocationRequired ? { damageColumn, damageBranch: damageColumn } : {}),
+            ...(toughRollRequired ? { toughDie } : {}),
+          },
+          damageLocationRequired,
+          toughRollRequired,
+        });
+      }
+    }
+  }
+  return {
+    exactComplete: damage.massConserved,
+    reasons: damage.massConserved ? [] : [
+      `collateral_damage_probability_mass_not_conserved:${requirement.pieceKey || "unknown"}`,
+    ],
+    classes,
+  };
+}
+
+function collateralDamageProductChanceClasses(requirements = [], maximumClassCount = 65536) {
+  let product = [{ numerator: 1, denominator: 1, packets: [] }];
+  for (const requirement of requirements) {
+    const packet = collateralDamagePacketChanceClasses(requirement);
+    if (!packet.exactComplete) return packet;
+    if (product.length * packet.classes.length > maximumClassCount) {
+      return {
+        exactComplete: false,
+        reasons: ["power_attack_collateral_chance_class_budget_exceeded"],
+        classes: [],
+      };
+    }
+    const nextProduct = [];
+    for (const prefix of product) {
+      for (const chanceClass of packet.classes) {
+        const numerator = safeIntegerProduct([prefix.numerator, chanceClass.numerator]);
+        const denominator = safeIntegerProduct([prefix.denominator, chanceClass.denominator]);
+        if (numerator == null || denominator == null) {
+          return {
+            exactComplete: false,
+            reasons: ["power_attack_collateral_probability_not_safe_integer"],
+            classes: [],
+          };
+        }
+        nextProduct.push({
+          numerator,
+          denominator,
+          packets: [...prefix.packets, chanceClass],
+        });
+      }
+    }
+    product = nextProduct;
+  }
+  return { exactComplete: true, reasons: [], classes: product };
+}
+
+function exactPowerAttackChanceModel(action = {}, rawOptions = {}) {
+  if (!["slam_power_attack", "throw_power_attack"].includes(String(action.actionType || ""))) {
+    return null;
+  }
+  if (!rawOptions.state) {
+    return {
+      schemaVersion: WARMACHINE_SEARCH_CHANCE_OUTCOMES_SCHEMA,
+      actionKey: String(action.actionKey || ""),
+      exactComplete: false,
+      classes: [],
+      reasons: ["power_attack_state_not_bound_for_conditional_chance"],
+    };
+  }
+  const contract = buildRulesV1StrictPowerAttackChanceContract(rawOptions.state, action);
+  if (contract.exactComplete !== true) {
+    return {
+      schemaVersion: WARMACHINE_SEARCH_CHANCE_OUTCOMES_SCHEMA,
+      actionKey: String(action.actionKey || ""),
+      exactComplete: false,
+      classes: [],
+      reasons: (contract.reasons || []).map((reason) =>
+        `power_attack_contract:${reason}`),
+      powerAttackChanceContract: cloneJson(contract),
+    };
+  }
+  const resolution = action.metadata?.attackResolution || {};
+  const attack = groupedAttackClasses(resolution);
+  const chanceDimensions = exactChanceDimensions(action, rawOptions);
+  const target = actionTargetFromState(action, rawOptions.state);
+  const targetBoxesRemaining = Number(target?.boxesRemaining ?? target?.damage?.boxesRemaining);
+  const maximumClassCount = Math.max(1, Math.floor(numeric(
+    rawOptions.maxPowerAttackChanceClasses,
+    65536,
+  )));
+  const rawClasses = [];
+  for (const attackClass of attack.groups) {
+    if (!attackClass.hit) {
+      const strictRollOutcome = { attackDice: attackClass.representativeDice };
+      rawClasses.push({
+        classKey: `chance-${stableHash({ strictRollOutcome, hit: false })}`,
+        hit: false,
+        damageSum: null,
+        numerator: attackClass.multiplicity,
+        denominator: attack.outcomeCount,
+        strictRollOutcome,
+      });
+      continue;
+    }
+    for (const branch of contract.branches) {
+      const primaryDamage = groupedDamageClasses({
+        ...resolution,
+        damageDiceCount: branch.primaryDamageDiceCount,
+      });
+      const collateral = collateralDamageProductChanceClasses(
+        branch.collateralTargets || [],
+        maximumClassCount,
+      );
+      if (!collateral.exactComplete) {
+        return {
+          schemaVersion: WARMACHINE_SEARCH_CHANCE_OUTCOMES_SCHEMA,
+          actionKey: String(action.actionKey || ""),
+          exactComplete: false,
+          classes: [],
+          reasons: collateral.reasons,
+          powerAttackChanceContract: cloneJson(contract),
+        };
+      }
+      for (const damageClass of primaryDamage.groups) {
+        const resolvedDamage = Math.max(0,
+          numeric(damageClass.sum, 0) + numeric(branch.primaryStaticDamage, 0));
+        const damageLocationRequired = resolvedDamage > 0 &&
+          chanceDimensions.targetUsesRandomDamageLocation === true;
+        const toughRollRequired = chanceDimensions.targetToughRollRelevant === true &&
+          Number.isFinite(targetBoxesRemaining) && targetBoxesRemaining > 0 &&
+          resolvedDamage >= targetBoxesRemaining;
+        const damageColumns = damageLocationRequired
+          ? chanceDimensions.damageLocationValues
+          : [null];
+        const toughDice = toughRollRequired
+          ? chanceDimensions.toughDieValues
+          : [null];
+        for (const damageColumn of damageColumns) {
+          for (const toughDie of toughDice) {
+            for (const collateralClass of collateral.classes) {
+              if (rawClasses.length >= maximumClassCount) {
+                return {
+                  schemaVersion: WARMACHINE_SEARCH_CHANCE_OUTCOMES_SCHEMA,
+                  actionKey: String(action.actionKey || ""),
+                  exactComplete: false,
+                  classes: [],
+                  reasons: ["power_attack_chance_class_budget_exceeded"],
+                  projectedClassCount: rawClasses.length + 1,
+                  maxPowerAttackChanceClasses: maximumClassCount,
+                  powerAttackChanceContract: cloneJson(contract),
+                };
+              }
+              const collateralBuckets = {};
+              for (const packet of collateralClass.packets) {
+                collateralBuckets[packet.outcomeBucket] ||= {};
+                collateralBuckets[packet.outcomeBucket][packet.pieceKey] = packet.entry;
+              }
+              const strictRollOutcome = {
+                attackDice: attackClass.representativeDice,
+                damageDice: damageClass.representativeDice,
+                ...cloneJson(branch.strictRollOutcomePatch || {}),
+                ...(damageLocationRequired ? {
+                  damageColumn,
+                  damageBranch: damageColumn,
+                } : {}),
+                ...(chanceDimensions.controllerDamageGridSideResolved === true &&
+                  chanceDimensions.controllerDamageGridSideRequired ? {
+                    damageGridSide: chanceDimensions.selectedDamageGridSide,
+                  } : {}),
+                ...(toughRollRequired ? { toughDie } : {}),
+                ...collateralBuckets,
+              };
+              const denominator = safeIntegerProduct([
+                attack.outcomeCount,
+                numeric(branch.denominator, 6),
+                primaryDamage.outcomeCount,
+                damageColumns.length,
+                toughDice.length,
+                collateralClass.denominator,
+              ]);
+              const numerator = safeIntegerProduct([
+                attackClass.multiplicity,
+                numeric(branch.numerator, 1),
+                damageClass.multiplicity,
+                collateralClass.numerator,
+              ]);
+              if (numerator == null || denominator == null) {
+                return {
+                  schemaVersion: WARMACHINE_SEARCH_CHANCE_OUTCOMES_SCHEMA,
+                  actionKey: String(action.actionKey || ""),
+                  exactComplete: false,
+                  classes: [],
+                  reasons: ["power_attack_probability_product_not_safe_integer"],
+                  powerAttackChanceContract: cloneJson(contract),
+                };
+              }
+              rawClasses.push({
+                classKey: `chance-${stableHash({ strictRollOutcome, hit: true })}`,
+                hit: true,
+                damageSum: damageClass.sum,
+                resolvedDamage,
+                damageLocationRequired,
+                toughRollRequired,
+                postDamageAttackerChoiceRequired: resolvedDamage > 0 &&
+                  chanceDimensions.postDamageAttackerChoiceRequired === true,
+                numerator,
+                denominator,
+                strictRollOutcome,
+                powerAttackDistanceIn: branch.distanceIn,
+                primaryDamageDiceCount: branch.primaryDamageDiceCount,
+                collateralOutcomes: collateralClass.packets.map((packet) => ({
+                  pieceKey: packet.pieceKey,
+                  resolvedDamage: packet.resolvedDamage,
+                  damageLocationRequired: packet.damageLocationRequired,
+                  toughRollRequired: packet.toughRollRequired,
+                })),
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+  const normalized = normalizeConditionalChanceRows(rawClasses);
+  if (!normalized.ok) {
+    return {
+      schemaVersion: WARMACHINE_SEARCH_CHANCE_OUTCOMES_SCHEMA,
+      actionKey: String(action.actionKey || ""),
+      exactComplete: false,
+      classes: [],
+      reasons: [normalized.reason],
+      powerAttackChanceContract: cloneJson(contract),
+    };
+  }
+  const classes = normalized.rows;
+  const massNumerator = classes.reduce((sum, row) => sum + row.numerator, 0);
+  const exactComplete = attack.massConserved &&
+    massNumerator === normalized.commonDenominator;
+  return {
+    schemaVersion: WARMACHINE_SEARCH_CHANCE_OUTCOMES_SCHEMA,
+    actionKey: String(action.actionKey || ""),
+    exactComplete,
+    chanceKind: "conditional_power_attack_primary_and_collateral_product",
+    attackOutcomeCount: attack.outcomeCount,
+    classCount: classes.length,
+    massNumerator,
+    massDenominator: normalized.commonDenominator,
+    classes,
+    reasons: exactComplete ? [] : ["power_attack_probability_mass_not_conserved"],
+    chanceDimensions,
+    powerAttackChanceContract: cloneJson(contract),
+    powerAttackDisplacementChance: {
+      kind: contract.powerAttackKind,
+      support: cloneJson(contract.displacementSupport || []),
+      denominator: contract.displacementDenominator,
+      conditionalOnHit: true,
+    },
+    orderingPolicy: contract.orderingPolicy,
+    claimBoundary: "Exact mass follows the Engine-owned post-displacement landing contract, rebases the primary damage pool after contact, and includes every independently rolled collateral damage packet. A miss rolls neither displacement nor damage.",
+  };
 }
 
 function randomRofChanceModel(action = {}) {
@@ -1209,6 +1552,16 @@ export function buildWarmachineExactActionChanceClasses(action = {}, rawOptions 
       provablyInactiveSuccessorEffectTypes,
       chanceDimensions,
       claimBoundary: "The action is outside the complete basic-primary-attack chance cursor and must remain unresolved or sampled.",
+    };
+  }
+  const powerAttack = exactPowerAttackChanceModel(action, rawOptions);
+  if (powerAttack) {
+    return {
+      ...powerAttack,
+      deterministicSuccessorEffectTypes,
+      preChanceResolvedEffectTypes,
+      postChanceDecisionEffectTypes,
+      provablyInactiveSuccessorEffectTypes,
     };
   }
   const resolution = action.metadata.attackResolution;

@@ -14,6 +14,7 @@ export const {
   auditRulesV1StaticPlacement,
   auditRulesV1StaticUnitFormation,
   auditRulesV1SteamrollerScenarioTerrainSetup,
+  buildRulesV1StrictPowerAttackChanceContract,
   buildRulesV1UnitCombatActionAttackSlotPlan,
   buildRulesV1GeneratedMovementTargetPlan,
   buildRulesV1MovementGeometryPredicatePlan,

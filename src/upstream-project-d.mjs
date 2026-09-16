@@ -591,6 +591,7 @@ export async function loadWarmachineHost(rawOptions = {}) {
     "auditRulesV1StaticPlacement",
     "auditRulesV1StaticUnitFormation",
     "auditRulesV1SteamrollerScenarioTerrainSetup",
+    "buildRulesV1StrictPowerAttackChanceContract",
     "buildRulesV1UnitCombatActionAttackSlotPlan",
     "buildRulesV1MovementPathProposalPlan",
     "buildRulesV1MovementGeometryPredicatePlan",
