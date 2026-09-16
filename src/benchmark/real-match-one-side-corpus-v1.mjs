@@ -16,12 +16,15 @@ function rosterEntry(name, count = 1, loadout = "") {
 }
 
 function turnSlice(raw) {
+  const selectedSide = raw.selectedSide || matches.find((match) =>
+    match.matchKey === raw.matchKey)?.selectedSide;
+  if (!selectedSide) throw new Error(`missing_selected_side:${raw.matchKey}`);
   return {
     sliceKey: raw.sliceKey,
     matchKey: raw.matchKey,
-    selectedFaction: "Dusk",
-    selectedArmy: "Fane of Nyrro",
-    selectedLeader: "Hysene, the Executioner",
+    selectedFaction: selectedSide.faction,
+    selectedArmy: selectedSide.army,
+    selectedLeader: selectedSide.leader,
     selectedSideOnly: true,
     round: raw.round,
     phaseBoundary: "selected_side_turn_start_to_selected_side_turn_end",
@@ -40,6 +43,12 @@ function turnSlice(raw) {
     observedActionSequence: raw.observedActionSequence,
     observedOutcome: raw.observedOutcome,
     sourceRuleAnomalies: raw.sourceRuleAnomalies || [],
+    videoGeometryEvidence: raw.videoGeometryEvidence || {
+      status: "requires_frame_binding",
+      frames: [],
+      constraints: [],
+      claimBoundary: "Spatial narration is not position evidence until it is bound to reviewed video frames.",
+    },
     uncertainty: {
       exactGeometryKnown: false,
       unknownFields: [...COMMON_UNKNOWN_GEOMETRY, ...(raw.additionalUnknowns || [])],
@@ -59,38 +68,49 @@ function turnSlice(raw) {
 }
 
 const matches = [{
-  matchKey: "hysene-vs-oriax-50-closed-quarters-2026",
-  title: "Fane of Nyrro (Hysene) vs. Sea Raiders (Oriax), 50pt",
+  matchKey: "sepsira-vs-bohdan-100-wolves-at-our-heels-2026",
+  title: "Cryx Necrofactorium (Sepsira) vs. Khador Old Umbrey (Bohdan), 100pt",
   source: {
     kind: "public_video",
-    videoId: "fCcgFwViCfE",
-    url: "https://www.youtube.com/watch?v=fCcgFwViCfE",
-    channel: "Advanced Maneuvers Gaming",
-    uploadDate: "2026-07-10",
-    durationSeconds: 2292,
+    videoId: "HHUnwtN_m8M",
+    url: "https://www.youtube.com/watch?v=HHUnwtN_m8M",
+    channel: "Dual Attack - A Warmachine Channel",
+    uploadDate: "2026-09-06",
+    durationSeconds: 6864,
   },
-  format: { points: 50, rulesEra: "Warmachine MKIV, April 2026 recording" },
+  usableTurnCount: 3,
+  selectedSide: {
+    faction: "Cryx",
+    army: "Necrofactorium",
+    leader: "Master Necrosurgeon Sepsira",
+  },
+  format: { points: 100, rulesEra: "Steamroller 2026" },
   scenario: {
-    name: "Closed Quarters",
-    packet: "Tales from the Frontlines",
-    randomCondition: "Muddy Ground",
-    currentStrictHostSupport: false,
+    name: "Wolves at Our Heels",
+    packet: "Steamroller 2026",
+    randomCondition: "",
+    currentStrictHostSupport: true,
   },
   recordedOpponent: {
-    faction: "Orgoth",
-    army: "Sea Raiders",
-    leader: "Oriax, the Persuader",
+    faction: "Khador",
+    army: "Old Umbrey",
+    leader: "Bohdan Lesnoi",
     role: "source_provenance_only",
   },
   selectedRoster: {
-    sourceExactness: "exact_list_reconstructed_and_force_builder_checked",
+    sourceExactness: "exact_list_from_video_description",
+    targetMatchupDifference: "source_has_five_Swarm_Warden_pairs_not_the_target_six",
     entries: [
-      rosterEntry("Hysene, the Executioner"),
-      rosterEntry("Strygon", 1, "Muzzled / Claws / Blind Obedience"),
-      rosterEntry("Sybaris"),
-      rosterEntry("Vordak", 1, "Lamprey / Feral / Razor Fan"),
-      rosterEntry("Strygon Rider", 2),
-      rosterEntry("Fane Knights", 1),
+      rosterEntry("Master Necrosurgeon Sepsira"),
+      rosterEntry("Hellraker", 1, "Heavy Venom Blaster / Void Plate Right / Void Plate Left"),
+      rosterEntry("Raptor", 1, "Deathripper / Arc Node"),
+      rosterEntry("Akulon Thaemestra"),
+      rosterEntry("Silexus Xiphus"),
+      rosterEntry("Skarlock Lieutenant", 2),
+      rosterEntry("Mechanithrall Swarm", 5),
+      rosterEntry("Mechanithrall Swarm Warden", 5),
+      rosterEntry("Necrosurgeon Initiates", 2),
+      rosterEntry("The Furies"),
     ],
   },
 }, {
@@ -103,6 +123,12 @@ const matches = [{
     channel: "Simon's Gaming Academy",
     uploadDate: "2026-07-09",
     durationSeconds: 2399,
+  },
+  usableTurnCount: 4,
+  selectedSide: {
+    faction: "Dusk",
+    army: "Fane of Nyrro",
+    leader: "Hysene, the Executioner",
   },
   format: { points: 100, rulesEra: "Steamroller 2026" },
   scenario: {
@@ -134,68 +160,101 @@ const matches = [{
   },
 }];
 
+function cryxVideoFrame(timestampSeconds, sha256, role) {
+  return {
+    sourceVideoId: "HHUnwtN_m8M",
+    timestampSeconds,
+    sha256,
+    role,
+    extraction: "yt-dlp_720p_then_ffmpeg_single_frame_q2",
+  };
+}
+
 const turnSlices = [
   turnSlice({
-    sliceKey: "oriax-match-nyrro-turn-1",
-    matchKey: "hysene-vs-oriax-50-closed-quarters-2026",
+    sliceKey: "bohdan-match-cryx-turn-1",
+    matchKey: "sepsira-vs-bohdan-100-wolves-at-our-heels-2026",
     round: 1,
-    start: 160,
-    end: 312,
+    start: 631,
+    end: 1049,
     scoreObservation: { before: "0:0", after: "0:0", confidence: "high" },
-    lifecycle: ["full_selected_roster_observed_in_play"],
-    resourcesAndEffects: ["Storm Rager placed on a forward Strygon Rider", "Dash cast before later warrior activations"],
-    spatialAndScenarioRelations: ["Muzzled Strygon retained as a Shield Guard and Shadow Shift anchor", "Fane Knights retained as additional Shadow Shift anchors"],
-    observedPlan: "Use early Dash to accelerate warriors while presenting a controlled forward lure and retaining Hysene escape anchors.",
-    observedActionSequence: ["Hysene activates early", "cast Storm Rager", "cast Dash", "warriors and battlegroup advance or run"],
-    observedOutcome: "Orgoth later declines the offered engagement and measures outside the immediate Nyrro threat.",
-    additionalUnknowns: ["which_models_ran_full_distance", "exact_vordak_shooting_alternatives"],
+    lifecycle: ["five_Swarm_Warden_pairs_visible", "Raptor_added_after_recorded_deployment_omission"],
+    resourcesAndEffects: ["Power Up and Empower resolved", "Sepsira reached 7 Focus", "Death's Dominion cast", "Tenacity applied", "Sepsira ended camping 4"],
+    spatialAndScenarioRelations: ["Cryx starts massed along the left deployment edge", "Khador has already advanced from the right", "Cryx advances into left-center as layered Swarm screens", "one narrated Swarm run stops at 9 inches rather than using full distance"],
+    observedPlan: "Advance multiple screening layers while remaining outside narrated 11-inch and 13-inch enemy threat bands.",
+    observedActionSequence: ["resolve control resources", "apply support effects", "run or advance Swarm layers", "cast Death's Dominion and Tenacity", "complete remaining runs"],
+    observedOutcome: "Cryx forms a broad left-center screen without initiating combat.",
+    sourceRuleAnomalies: ["source_player_added_Raptor_after_initial_deployment_omission"],
+    videoGeometryEvidence: {
+      status: "reviewed_constraint_evidence",
+      coordinateConvention: "Cryx deployment edge is table left; Khador deployment edge is table right.",
+      frames: [
+        cryxVideoFrame(295, "eb0fd845b2c3e5ecdb1a330c6332f570fd56cd6aa81d630873e625d6f6370c91", "deployment_reference"),
+        cryxVideoFrame(635, "101eb0615514f9b18f7493a6c82ffb7460f1a3d3acf0a2775ba755c69d18f0bc", "turn_start"),
+        cryxVideoFrame(1045, "d65ca771bcb0ad2076c6d1d4af4a08a52193c59cf818a04ed310b6ce2093a6c4", "turn_end"),
+      ],
+      constraints: ["deployment frame exposes both full deployment fronts and terrain topology", "turn-start frame fixes the post-Khador-T1 board before Cryx movement", "turn-end frame shows Cryx spread from its left deployment band into multiple left-center layers", "exact model identities inside dense Swarm groups remain unresolved"],
+      occlusions: ["hands and measuring sticks briefly obscure individual bases", "dense unit groups prevent reliable per-model coordinates"],
+      claimBoundary: "Frames support regions, ordering and terrain relations only; strict materialization must choose legal exact coordinates and paths.",
+    },
+    additionalUnknowns: ["identity_of_each_model_inside_dense_Swarm_groups", "exact_9_inch_run_path", "individual_base_coordinates"],
   }),
   turnSlice({
-    sliceKey: "oriax-match-nyrro-turn-2",
-    matchKey: "hysene-vs-oriax-50-closed-quarters-2026",
+    sliceKey: "bohdan-match-cryx-turn-2",
+    matchKey: "sepsira-vs-bohdan-100-wolves-at-our-heels-2026",
     round: 2,
-    start: 549,
-    end: 906,
-    scoreObservation: { before: "0:0", after: "not_yet_scored_on_selected_turn", confidence: "high" },
-    lifecycle: ["video_player_removes_illegal_extra_Sythyss_Prophet_attachment"],
-    resourcesAndEffects: ["Storm Rager upkeep maintained", "Hysene reported retaining 2 Fury"],
-    spatialAndScenarioRelations: ["Hysene enters central 40/50mm area", "at_least_one_Shadow_Shift_anchor_retained", "Vordak outside described charge threat but potentially inside shooting threat"],
-    observedPlan: "Accept bounded central risk to induce an Orgoth commitment while preserving transfers, Shield Guard and Shadow Shift exits.",
-    observedActionSequence: ["maintain Storm Rager", "remove illegal attachment", "advance Hysene and support formation"],
-    observedOutcome: "Orgoth forms a defensive anti-assassination position; the later opponent turn ends at a narrated 1:1.",
-    sourceRuleAnomalies: ["illegal_roster_attachment_was_present_then_corrected"],
-    additionalUnknowns: ["exact_shield_guard_three_inch_coverage", "exact_transfer_target_health"],
+    start: 2122,
+    end: 3384,
+    scoreObservation: { before: "0:0", after: "2:0", confidence: "high" },
+    lifecycle: ["knocked_down_models_stand", "three_Vengeance_moves_resolve", "several_enemy_models_destroyed"],
+    resourcesAndEffects: ["Desperate Mission and Tenacity expire", "Power Up and Empower resolve", "Sepsira feat used", "Grave Touch and boosted Breath Stealer channeled through Raptor", "Raptor converts souls into additional attacks"],
+    spatialAndScenarioRelations: ["Cryx and Khador fronts are intermingled around the central terrain line at turn start", "one Swarm runs to contest", "Hellraker occupies a lane intended to deny a 50mm placement", "Raptor and several Swarms attack through central and upper-left lanes"],
+    observedPlan: "Score several elements while removing the forward Khador pieces and physically blocking a large-base placement lane.",
+    observedActionSequence: ["stand and Vengeance", "run a contesting Swarm", "position and spray with Hellraker", "feat and channel spells", "Raptor charge and soul-funded attacks", "Swarm charges and Combo Strikes"],
+    observedOutcome: "Cryx removes multiple forward models, retains central layers and reports a 2:0 score.",
+    sourceRuleAnomalies: ["source_players_correct_attack_counts_and_activation_order_during_resolution"],
+    videoGeometryEvidence: {
+      status: "reviewed_constraint_evidence",
+      coordinateConvention: "Cryx deployment edge is table left; Khador deployment edge is table right.",
+      frames: [
+        cryxVideoFrame(2125, "ae09230fea6f91e27fc8130c8ff644beec4d504ced50e8e2396f3a84e4e92773", "turn_start"),
+        cryxVideoFrame(2820, "67496f69a64326d9465ccdd95b8b00afeb1fdef7802f1fe0c16e08aaa04a1a6a", "midturn_after_forward_commitments"),
+        cryxVideoFrame(3375, "da095f40488271c24789518fb67a2f65da69ba4dbbdd25a27d7a5788ff7f2c2e", "turn_end_before_score_overlay_update"),
+      ],
+      constraints: ["turn-start frame fixes the post-Khador-T2 contact line", "midturn frame shows Cryx pieces occupying the left-center and central scenario band", "turn-end frame shows removals and surviving Cryx layers after the attack sequence", "the large central model and dense melee groups require identity confirmation from action narration"],
+      occlusions: ["models overlap in the center", "hands obscure some intermediate placements"],
+      claimBoundary: "The evidence constrains contact topology and occupied regions, not exact charge paths or base-to-base distances.",
+    },
+    additionalUnknowns: ["exact_Vengeance_start_positions", "exact_charge_paths", "per_attack_target_identity_in_dense_melees"],
   }),
   turnSlice({
-    sliceKey: "oriax-match-nyrro-turn-3",
-    matchKey: "hysene-vs-oriax-50-closed-quarters-2026",
+    sliceKey: "bohdan-match-cryx-turn-3",
+    matchKey: "sepsira-vs-bohdan-100-wolves-at-our-heels-2026",
     round: 3,
-    start: 1215,
-    end: 1759,
-    scoreObservation: { before: "1:1", after: "video_not_exactly_recoverable", confidence: "medium" },
-    lifecycle: ["Sybaris destroys one solo", "warbeast melee kills generate Feast Hunger"],
-    resourcesAndEffects: ["Hysene feat used", "free Gallows generated", "Gallows hit roll boosted", "Brutal Strike declined to preserve resource and safety budget"],
-    spatialAndScenarioRelations: ["Snatch and Drag used to alter an enemy position", "central attack lane opened before Hysene spell attempt"],
-    observedPlan: "Clear lanes, generate Hunger, then use feat-enabled Gallows to expose an assassination path without exhausting the Shadow Shift budget.",
-    observedActionSequence: ["Sybaris kill and Snatch and Drag", "Vordak charge", "warbeast clearing attacks", "Hysene feat", "boosted Gallows attempt"],
-    observedOutcome: "The pull attempt does not create the required assassination result; safety resources are retained.",
-    additionalUnknowns: ["exact_hunger_totals_by_piece", "exact_enemy_post_drag_coordinates"],
-  }),
-  turnSlice({
-    sliceKey: "oriax-match-nyrro-turn-4",
-    matchKey: "hysene-vs-oriax-50-closed-quarters-2026",
-    round: 4,
-    start: 2155,
-    end: 2282,
-    scoreObservation: { before: "video_not_exactly_recoverable", after: "assassination_terminal", confidence: "high_for_terminal_only" },
-    lifecycle: ["Oriax destroyed by Hysene melee attacks"],
-    resourcesAndEffects: ["Storm Rager placed on Hysene", "extra attacks bought with Fury", "invalid unconditional Hunger purchase proposal reversed"],
-    spatialAndScenarioRelations: ["Hysene has a legal charge lane to Oriax after preceding attempts"],
-    observedPlan: "Convert the now-open lane into a direct leader assassination.",
-    observedActionSequence: ["attempt Critical Freeze", "cast Storm Rager on Hysene", "charge Oriax", "buy additional melee attacks with Fury"],
-    observedOutcome: "Leader destruction ends the game immediately.",
-    sourceRuleAnomalies: ["player_initially_proposed_unconditional_Murderous_Impulse_attacks_then_corrected_to_Fury"],
-    additionalUnknowns: ["exact_precharge_fury_and_hunger_ledger", "exact_charge_path"],
+    start: 5275,
+    end: 6420,
+    scoreObservation: { before: "3:1", after: "5:1", confidence: "high" },
+    lifecycle: ["models_stand_and_Vengeance_resolves", "one_recurred_model_cannot_attack", "additional_enemy_models_destroyed"],
+    resourcesAndEffects: ["Sepsira pays upkeep and reaches 6 Focus", "Power Up and Empower resolve", "Grave Touch supports attacks", "Sepsira applies Tenacity and ends camping 6"],
+    spatialAndScenarioRelations: ["surviving fronts begin intermingled in left-center", "Swarm charges branch into separate beast and bear targets", "Sepsira runs to a narrated position outside the 13-inch killbox boundary", "Cryx ends with distinct central and lower scenario clusters"],
+    observedPlan: "Continue the favorable attrition while preserving Sepsira and converting the surviving Cryx layers into scenario control.",
+    observedActionSequence: ["stand and Vengeance", "maintenance and recurrence", "Hellraker attacks", "multiple Swarm charges", "apply Grave Touch and defensive effects", "Sepsira runs", "score scenario"],
+    observedOutcome: "Cryx reaches a video-overlay score of 5:1 while retaining several separated scenario groups.",
+    sourceRuleAnomalies: ["source_players_correct_target_damage_allocation_and_attack_counts_during_resolution"],
+    videoGeometryEvidence: {
+      status: "reviewed_constraint_evidence",
+      coordinateConvention: "Cryx deployment edge is table left; Khador deployment edge is table right.",
+      frames: [
+        cryxVideoFrame(5280, "2cbde7bc261893e721ae6d28036e141a26ae1b25f0e0a4af6c129630a6d51ffa", "turn_start_with_3_to_1_overlay"),
+        cryxVideoFrame(5950, "07e5cfba5997f15fc523de85b576c0c0086ac169d83597cdc37a33a6e514a52c", "midturn_attrition_state"),
+        cryxVideoFrame(6395, "fd74bf30c66d5d42415f739cf8deba8a109477199c3d71d153a4145cddff7079", "turn_end_board_before_score_update"),
+        cryxVideoFrame(6420, "68739f67bdd4d6442c0bbe2d180474c622bd931492cb54727724c1665e0e085f", "postturn_5_to_1_score_receipt"),
+      ],
+      constraints: ["turn-start frame binds the 3:1 score and surviving contact topology", "midturn frame shows the central attrition cluster and rear scenario groups", "turn-end frames show two separated Cryx occupancy clusters and the 5:1 score update", "the camera does not justify exact inches between individual models"],
+      occlusions: ["hands obscure a small number of end-of-turn bases", "dense central bases remain partially overlapping in projection"],
+      claimBoundary: "Frames prove broad state transition and score-linked occupancy; exact legal coordinates remain a strict-search variable.",
+    },
+    additionalUnknowns: ["identity_of_each_recurred_model", "exact_killbox_boundary_measurement", "exact_remaining_damage_by_model"],
   }),
   turnSlice({
     sliceKey: "grymkin-match-nyrro-turn-1",
@@ -286,10 +345,18 @@ function validateCorpus(matchesByKey, slices) {
     }
   }
   for (const matchKey of matchesByKey.keys()) {
+    const match = matchesByKey.get(matchKey);
     const rounds = slices.filter((slice) => slice.matchKey === matchKey)
       .map((slice) => slice.round);
-    if (rounds.length !== 4 || new Set(rounds).size !== 4) {
-      issues.push(`expected_four_distinct_selected_turns:${matchKey}`);
+    if (rounds.length !== match.usableTurnCount ||
+        new Set(rounds).size !== match.usableTurnCount) {
+      issues.push(`unexpected_selected_turn_count:${matchKey}`);
+    }
+  }
+  const selectedFactions = new Set(slices.map((slice) => slice.selectedFaction));
+  for (const requiredFaction of ["Cryx", "Dusk"]) {
+    if (!selectedFactions.has(requiredFaction)) {
+      issues.push(`missing_required_selected_faction:${requiredFaction}`);
     }
   }
   return issues;
@@ -300,16 +367,23 @@ export function buildWarmachineRealMatchOneSideCorpusV1() {
   const issues = validateCorpus(matchesByKey, turnSlices);
   const core = stableGraphValue({
     schemaVersion: WARMACHINE_REAL_MATCH_ONE_SIDE_CORPUS_V1_SCHEMA,
-    corpusKey: "two-public-matches-selected-faction-turn-slices-v1",
-    selectedFaction: "Dusk",
-    selectedArmy: "Fane of Nyrro",
+    corpusKey: "cryx-and-nyrro-public-match-selected-side-turn-slices-v1",
+    selectedFactions: ["Cryx", "Dusk"],
+    selectedArmies: ["Necrofactorium", "Fane of Nyrro"],
     observationContract: {
-      extractionUnit: "one_selected_faction_complete_turn",
+      extractionUnit: "one_selected_side_complete_turn",
       selectedFactionStateIndependentOfRecordedOpponent: true,
       recordedOpponentRetainedAsProvenanceOnly: true,
       unknownGeometryRepresentation: "constraint_sets",
+      positionEvidencePolicy: "video_frames_required_for_spatial_claims",
+      exactCoordinatePolicy: "never_infer_exact_coordinates_from_video_without_measurement_support",
       opponentPairing: "separate_rule_legal_materialization_stage",
       strictReplayPolicy: "reject_or_reconstruct_recorded_illegal_actions",
+    },
+    supplementalNegativeControl: {
+      source: "Hysene vs. Oriax, 50pt",
+      use: "rule-anomaly audit only; excluded from the primary dual-faction corpus",
+      auditDocument: "docs/research/real-match-nyrro-system-audit-20260914.md",
     },
     matches,
     turnSlices,
@@ -322,6 +396,10 @@ export function buildWarmachineRealMatchOneSideCorpusV1() {
       ])),
       sourceRuleAnomalyCount: turnSlices.reduce((total, slice) =>
         total + slice.sourceRuleAnomalies.length, 0),
+      videoReviewedGeometrySliceCount: turnSlices.filter((slice) =>
+        slice.videoGeometryEvidence.status === "reviewed_constraint_evidence").length,
+      frameReceiptCount: turnSlices.reduce((total, slice) =>
+        total + slice.videoGeometryEvidence.frames.length, 0),
       exactGeometrySliceCount: turnSlices.filter((slice) =>
         slice.uncertainty.exactGeometryKnown).length,
     },
@@ -332,12 +410,13 @@ export function buildWarmachineRealMatchOneSideCorpusV1() {
       readyForTrainingTruth: false,
       issues,
       blockers: [
+        "nyrro_source_video_frames_not_yet_bound_to_spatial_constraints",
         "strict_geometry_instances_not_yet_materialized",
         "rule_legal_opponent_states_not_yet_paired",
         "complete_turn_adversarial_search_not_yet_closed",
       ],
     },
-    claimBoundary: "This corpus records eight one-faction turn observations from two public matches. It is a source for strict state-set materialization, not an exact replay, opponent model, win-rate sample or optimal-strategy claim.",
+    claimBoundary: "This corpus records seven selected-side turn observations: four Fane of Nyrro turns and three Cryx Necrofactorium turns. Cryx spatial claims are bound to reviewed video-frame receipts, but exact coordinates remain unknown. The corpus is not an exact replay, opponent model, win-rate sample or optimal-strategy claim.",
   });
   return {
     ...core,
