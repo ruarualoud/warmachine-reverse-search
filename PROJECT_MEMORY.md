@@ -1,5 +1,7 @@
 # Project Memory
 
+- 2026-09-16 durable fixed-action comparison boundary: Search Host `8332291a...d6d8` binds current Engine incremental receipt and fixed Raptor/Nymara source `bd80b34b...61a7`. The source exposes exactly three legal Raptor attacks on the 20-box Nymara target: boosted-hit charge, charge and slam; boosted-damage charge is strictly rejected because charge damage is already boosted. Their exact immediate-destruction values are all `[0,0]` with zero strict reject. Charge variants each execute `32/65` response-work labels; slam executes `96/283`, retains `187` dominated resumable labels and records three dynamically unavailable out-of-control transfer choices. Comparison report `c19d98fd...ca1f` ranks equal zero kill values by expected-damage hint (`0.91`, `0.58`, `0.58`) only. Post-action continuation remains `[0,1]`; this evidence does not rank complete activations or match outcomes.
+
 - 2026-09-16 durable deferred-response invariant: an opponent response declared
   before primary Chance may become inapplicable after the resolved transition.
   Damage transfer is absent on misses and zero damage, and a recipient that was

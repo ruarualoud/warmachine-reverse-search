@@ -154,6 +154,8 @@
     "experiment:strategy-quotient-search": "node scripts/experiment-strategy-quotient-search-v1.mjs",
     "verify:search-run-contract": "node scripts/verify-search-run-contract-v1.mjs",
     "verify:fixed-assassination": "node scripts/verify-fixed-steamroller-assassination-v2.mjs",
+    "materialize:fixed-raptor-action-source": "node scripts/materialize-fixed-raptor-action-source-v1.mjs",
+    "report:fixed-raptor-action-comparison": "node scripts/generate-fixed-raptor-action-comparison-v1.mjs",
     "probe:fixed-assassination-movement": "node scripts/probe-fixed-assassination-opening-movement-v2.mjs",
     "verify:fixed-benchmark": "node scripts/verify-fixed-steamroller-benchmark-v2.mjs",
     "verify:nested-openings": "node scripts/verify-nested-roster-deployment-v2.mjs",

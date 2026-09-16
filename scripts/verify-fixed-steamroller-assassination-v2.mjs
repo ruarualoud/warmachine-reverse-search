@@ -418,7 +418,11 @@ if (probabilityProbe) {
   }
   if (!externalDagContinuationBatch && probabilityMaximumDepth === 1 &&
       probabilityThreshold === "0") {
-    assert.deepEqual(probability.unresolvedReasons, ["maximum_policy_depth_reached"]);
+    assert.deepEqual(probability.unresolvedReasons, [
+      probabilityMaximumStates === 1
+        ? "maximum_evaluated_states_reached"
+        : "maximum_policy_depth_reached",
+    ]);
   }
   const chanceAudits = probability.stepAudits.filter((audit) =>
     ["chance", "chance_worklist"].includes(audit.stepType))

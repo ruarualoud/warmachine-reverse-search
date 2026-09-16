@@ -19,6 +19,12 @@ const FOCUSED_ENGINE_GOVERNANCE_ONLY_PATHS = Object.freeze([
   "data/function3-rules/warmachine-faction-priority-ledger-v40049.json",
   "data/function3-rules/warmachine-priority-faction-development-batches-v40049.json",
 ]);
+const FOCUSED_ENGINE_INCREMENTAL_RECEIPT_SCHEMA =
+  "warmachine_focused_engine_incremental_source_receipt_v1";
+const FOCUSED_ENGINE_RECEIPT_MODES = Object.freeze([
+  "full_matrix",
+  "incremental",
+]);
 
 const HOST_MODULES = Object.freeze({
   rules: "scripts/warmachine-rules-v1.mjs",
@@ -96,6 +102,10 @@ function sameStrings(left = [], right = []) {
     JSON.stringify([...new Set(rightValues.map(String))].sort());
 }
 
+function sortedUniqueStrings(values = []) {
+  return [...new Set((Array.isArray(values) ? values : []).map(String))].sort();
+}
+
 function executionRelevantClosure(sourceClosure = {}, excludedPaths = []) {
   const exclusions = new Set(excludedPaths.map(String));
   const records = (sourceClosure.records || [])
@@ -115,6 +125,169 @@ function assertFocusedReceipt(condition, reason) {
   if (!condition) throw new Error(reason);
 }
 
+async function validateIncrementalFocusedReceipt({
+  sourceReceipt,
+  reviewed,
+  projectDRoot,
+}) {
+  assertFocusedReceipt(
+    sourceReceipt.schemaVersion === FOCUSED_ENGINE_INCREMENTAL_RECEIPT_SCHEMA,
+    "Warmachine focused Engine incremental receipt schema mismatch",
+  );
+  const inventory = Array.isArray(sourceReceipt.verifierInventory)
+    ? sourceReceipt.verifierInventory
+    : [];
+  const results = Array.isArray(sourceReceipt.results) ? sourceReceipt.results : [];
+  const focusedVerifierPaths = sortedUniqueStrings(
+    sourceReceipt.runtimeExclusion?.focusedVerifierPaths,
+  );
+  const expectedFocusedVerifierPaths = sortedUniqueStrings(
+    inventory.map((entry) => `scripts/${String(entry.fileName || "")}`),
+  );
+  assertFocusedReceipt(
+    inventory.length === Number(reviewed.verifierCount) &&
+      stableHash(JSON.stringify(inventory)) === sourceReceipt.verifierInventoryHash,
+    "Warmachine focused Engine incremental verifier inventory mismatch",
+  );
+  assertFocusedReceipt(
+    JSON.stringify(focusedVerifierPaths) === JSON.stringify(expectedFocusedVerifierPaths) &&
+      focusedVerifierPaths.length === Number(reviewed.focusedVerifierExclusionPathCount) &&
+      stableHash(JSON.stringify(focusedVerifierPaths)) ===
+        reviewed.focusedVerifierExclusionPathsHash &&
+      sourceReceipt.runtimeExclusion?.focusedVerifierPathCount ===
+        focusedVerifierPaths.length &&
+      sourceReceipt.runtimeExclusion?.focusedVerifierPathsHash ===
+        reviewed.focusedVerifierExclusionPathsHash,
+    "Warmachine focused Engine incremental verifier exclusions mismatch",
+  );
+  assertFocusedReceipt(
+    sameStrings(
+      sourceReceipt.runtimeExclusion?.governancePaths,
+      FOCUSED_ENGINE_GOVERNANCE_ONLY_PATHS,
+    ),
+    "Warmachine focused Engine incremental governance exclusions mismatch",
+  );
+  const runtimeExclusionPaths = sortedUniqueStrings([
+    ...FOCUSED_ENGINE_GOVERNANCE_ONLY_PATHS,
+    ...focusedVerifierPaths,
+  ]);
+  assertFocusedReceipt(
+    runtimeExclusionPaths.length === Number(reviewed.runtimeExclusionPathCount) &&
+      stableHash(JSON.stringify(runtimeExclusionPaths)) ===
+        reviewed.runtimeExclusionPathsHash &&
+      sourceReceipt.runtimeExclusion?.excludedPathCount ===
+        runtimeExclusionPaths.length &&
+      sourceReceipt.runtimeExclusion?.excludedPathsHash ===
+        reviewed.runtimeExclusionPathsHash,
+    "Warmachine focused Engine incremental runtime exclusions mismatch",
+  );
+
+  const receiptRuntimeClosure = executionRelevantClosure(
+    sourceReceipt.executionSourceClosure,
+    runtimeExclusionPaths,
+  );
+  assertFocusedReceipt(
+    receiptRuntimeClosure.contentClosureHash ===
+      sourceReceipt.executionRuntimeClosure?.contentClosureHash &&
+      receiptRuntimeClosure.sourceFileCount ===
+        sourceReceipt.executionRuntimeClosure?.sourceFileCount,
+    "Warmachine focused Engine incremental runtime closure mismatch",
+  );
+
+  const inventoryByKey = new Map(inventory.map((entry) => [entry.verifierKey, entry]));
+  const resultKeys = new Set();
+  const provenanceCounts = {
+    base_matrix_green_carry_forward: 0,
+    current_source_timeout_recovery: 0,
+    current_source_session_observed_focused_pass_once: 0,
+  };
+  for (const result of results) {
+    const inventoryEntry = inventoryByKey.get(result.verifierKey);
+    assertFocusedReceipt(
+      result.ok === true &&
+        inventoryEntry?.sourceHash === result.sourceHash &&
+        inventoryEntry?.fileName === result.fileName &&
+        !resultKeys.has(result.verifierKey),
+      `Warmachine focused Engine incremental result mismatch: ${result.verifierKey}`,
+    );
+    resultKeys.add(result.verifierKey);
+    assertFocusedReceipt(
+      Object.hasOwn(provenanceCounts, result.provenance),
+      `Warmachine focused Engine incremental provenance mismatch: ${result.verifierKey}`,
+    );
+    provenanceCounts[result.provenance] += 1;
+  }
+  assertFocusedReceipt(
+    results.length === inventory.length &&
+      stableHash(JSON.stringify(results)) === sourceReceipt.resultSetHash &&
+      provenanceCounts.base_matrix_green_carry_forward ===
+        Number(reviewed.carriedVerifierCount) &&
+      provenanceCounts.current_source_timeout_recovery ===
+        Number(reviewed.timeoutRecoveryVerifierCount) &&
+      provenanceCounts.current_source_session_observed_focused_pass_once ===
+        Number(reviewed.observedFocusedPassVerifierCount),
+    "Warmachine focused Engine incremental result denominator mismatch",
+  );
+
+  const timeoutArtifactPath = path.join(
+    projectDRoot,
+    String(sourceReceipt.evidence?.timeoutRecovery?.relativePath || ""),
+  );
+  assertFocusedReceipt(
+    existsSync(timeoutArtifactPath),
+    "Warmachine focused Engine timeout recovery artifact missing",
+  );
+  const timeoutArtifactBytes = await readFile(timeoutArtifactPath);
+  const timeoutArtifact = JSON.parse(timeoutArtifactBytes.toString("utf8"));
+  const timeoutResultKeys = sortedUniqueStrings(
+    timeoutArtifact.results?.filter((entry) => entry.ok === true)
+      .map((entry) => entry.verifierKey),
+  );
+  const recoveredResultKeys = sortedUniqueStrings(
+    results.filter((entry) => entry.provenance === "current_source_timeout_recovery")
+      .map((entry) => entry.verifierKey),
+  );
+  assertFocusedReceipt(
+    timeoutArtifact.gatePassed === true &&
+      stableHash(timeoutArtifactBytes) ===
+        sourceReceipt.evidence?.timeoutRecovery?.artifactHash &&
+      JSON.stringify(timeoutResultKeys) === JSON.stringify(recoveredResultKeys),
+    "Warmachine focused Engine timeout recovery evidence mismatch",
+  );
+
+  const sourceDeltaPaths = sortedUniqueStrings(
+    sourceReceipt.evidence?.sourceDelta?.changedPaths,
+  );
+  assertFocusedReceipt(
+    sourceReceipt.evidence?.sourceDelta?.runtimeContentClosureUnchanged === true &&
+      sourceDeltaPaths.length > 0 &&
+      sourceDeltaPaths.every((relativePath) => focusedVerifierPaths.includes(relativePath)),
+    "Warmachine focused Engine incremental source delta is not verifier-only",
+  );
+  const aggregateCore = {
+    schemaVersion: "warmachine_focused_incremental_aggregate_v1",
+    manifestHash: sourceReceipt.manifestHash,
+    baseManifestHash: sourceReceipt.evidence?.base?.manifestHash,
+    executionRuntimeContentClosureHash:
+      sourceReceipt.executionRuntimeClosure?.contentClosureHash,
+    verifierInventoryHash: sourceReceipt.verifierInventoryHash,
+    resultSetHash: sourceReceipt.resultSetHash,
+    verifierCount: inventory.length,
+    carriedVerifierCount: provenanceCounts.base_matrix_green_carry_forward,
+    currentTimeoutRecoveryCount: provenanceCounts.current_source_timeout_recovery,
+    currentObservedFocusedPassCount:
+      provenanceCounts.current_source_session_observed_focused_pass_once,
+    passedVerifierCount: results.length,
+    failedVerifierCount: 0,
+    gatePassed: true,
+  };
+  assertFocusedReceipt(
+    stableHash(JSON.stringify(aggregateCore)) === sourceReceipt.aggregateHash,
+    "Warmachine focused Engine incremental aggregate mismatch",
+  );
+  return { runtimeExclusionPaths, provenanceCounts };
+}
+
 async function loadReviewedFocusedEngineReceipt(projectDRoot) {
   const reviewed = JSON.parse(await readFile(REVIEWED_FOCUSED_ENGINE_RECEIPT_PATH, "utf8"));
   assertFocusedReceipt(
@@ -126,6 +299,10 @@ async function loadReviewedFocusedEngineReceipt(projectDRoot) {
       Number(reviewed.passedVerifierCount) === Number(reviewed.verifierCount) &&
       Number(reviewed.failedVerifierCount) === 0,
     "Warmachine reviewed focused Engine receipt is not green",
+  );
+  assertFocusedReceipt(
+    FOCUSED_ENGINE_RECEIPT_MODES.includes(String(reviewed.receiptMode || "full_matrix")),
+    "Warmachine reviewed focused Engine receipt mode mismatch",
   );
   for (const key of [
     "sourceReceiptHash",
@@ -180,6 +357,8 @@ async function loadReviewedFocusedEngineReceipt(projectDRoot) {
   );
   let localArtifactVerified = false;
   let sourceReceipt = null;
+  let runtimeExclusionPaths = [...FOCUSED_ENGINE_GOVERNANCE_ONLY_PATHS];
+  let incrementalEvidence = null;
   if (existsSync(sourceReceiptPath)) {
     sourceReceipt = JSON.parse(await readFile(sourceReceiptPath, "utf8"));
     const { sourceReceiptHash, ...receiptCore } = sourceReceipt;
@@ -199,12 +378,25 @@ async function loadReviewedFocusedEngineReceipt(projectDRoot) {
             reviewed.executionContentClosureHash),
       "Warmachine focused Engine source receipt evidence mismatch",
     );
+    if (reviewed.receiptMode === "incremental") {
+      incrementalEvidence = await validateIncrementalFocusedReceipt({
+        sourceReceipt,
+        reviewed,
+        projectDRoot,
+      });
+      runtimeExclusionPaths = incrementalEvidence.runtimeExclusionPaths;
+    } else {
+      assertFocusedReceipt(
+        sourceReceipt.schemaVersion === "warmachine_focused_engine_source_receipt_v1",
+        "Warmachine focused Engine full-matrix receipt schema mismatch",
+      );
+    }
     localArtifactVerified = true;
   }
 
   const certifiedExecutionRelevantClosure = executionRelevantClosure(
     sourceReceipt?.executionSourceClosure,
-    FOCUSED_ENGINE_GOVERNANCE_ONLY_PATHS,
+    runtimeExclusionPaths,
   );
   assertFocusedReceipt(
     localArtifactVerified &&
@@ -216,7 +408,7 @@ async function loadReviewedFocusedEngineReceipt(projectDRoot) {
   );
   const observedExecutionRelevantClosure = executionRelevantClosure(
     observedClosure,
-    FOCUSED_ENGINE_GOVERNANCE_ONLY_PATHS,
+    runtimeExclusionPaths,
   );
   const executionClosureMatches =
     observedExecutionRelevantClosure.contentClosureHash ===
@@ -245,6 +437,7 @@ async function loadReviewedFocusedEngineReceipt(projectDRoot) {
     current: failClosedReasons.length === 0,
     failClosedReasons,
     localArtifactVerified,
+    incrementalEvidence,
   };
 }
 

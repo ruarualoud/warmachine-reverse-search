@@ -18,7 +18,6 @@ import { runWarmachineStrictFrontierContinuationBatchParallelV1 } from
   "../src/search/frontier-continuation-parallel-v1.mjs";
 import { evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3 } from
   "../src/search/strict-policy-frontier-probability-and-min-v3.mjs";
-import { createWarmachineExternalDagStore } from "../src/storage/external-dag-v1.mjs";
 import {
   persistWarmachineStrictFrontierExternalDagV1,
   restoreWarmachineStrictFrontierExternalDagV1,
@@ -26,21 +25,15 @@ import {
 import { warmachineHost } from "../src/warmachine-host-runtime.mjs";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const sourceDagRoot = path.resolve(
-  process.env.WARMACHINE_RAPTOR_ACTION_SOURCE_DAG ||
-    path.join(projectRoot, ".scratch/current-host-sepsira-nymara-assassination-v2"),
-);
-const targetDagRoot = path.resolve(
-  process.env.WARMACHINE_RAPTOR_ACTION_DAG ||
-    path.join(projectRoot, ".scratch/current-host-raptor-nymara-action-horizon-v3"),
+const sourceSnapshotPath = path.resolve(
+  process.env.WARMACHINE_RAPTOR_ACTION_SOURCE_SNAPSHOT ||
+    path.join(projectRoot, ".scratch/current-host-raptor-nymara-action-source-v1.json"),
 );
 const outputDirectory = path.resolve(
   process.env.WARMACHINE_RAPTOR_ACTION_REPORT_OUTPUT ||
     path.join(projectRoot, "build/reports"),
 );
-const selectedSourceLabelKey = String(
-  process.env.WARMACHINE_RAPTOR_ACTION_SOURCE_LABEL || "",
-);
+const requestedActionKey = String(process.env.WARMACHINE_RAPTOR_ACTION_KEY || "");
 const batchSize = Math.max(1, Number(
   process.env.WARMACHINE_RAPTOR_ACTION_BATCH_SIZE || 32,
 ));
@@ -64,15 +57,6 @@ function progress(stage, detail = {}) {
   })}\n`);
 }
 
-function probabilityOrderDescending(left = {}, right = {}) {
-  const leftNumerator = BigInt(left.numerator ?? 0);
-  const leftDenominator = BigInt(left.denominator ?? 1);
-  const rightNumerator = BigInt(right.numerator ?? 0);
-  const rightDenominator = BigInt(right.denominator ?? 1);
-  const difference = leftNumerator * rightDenominator - rightNumerator * leftDenominator;
-  return difference > 0n ? -1 : difference < 0n ? 1 : 0;
-}
-
 function storeBinding(rootPath) {
   return JSON.parse(fs.readFileSync(path.join(rootPath, "STORE.json"), "utf8"));
 }
@@ -88,66 +72,64 @@ function restore(rootPath, options, eagerFrontierLabelKeys = []) {
   return restored;
 }
 
-const sourceStoreBinding = storeBinding(sourceDagRoot);
-assert.equal(sourceStoreBinding.hostReceiptHash, warmachineHost.receipt.receiptHash,
-  "source DAG and current Host receipt differ");
-const sourceRestored = restore(sourceDagRoot, sourceStoreBinding);
-const sourceLabelByKey = new Map(sourceRestored.report.labels.map((label) =>
-  [label.labelKey, label]));
-const sourceCandidates = sourceRestored.report.stepAudits.filter((audit) =>
-  audit.stepType === "chance_worklist" && audit.action?.actionType === "slam_power_attack")
-  .map((audit) => ({ audit, label: sourceLabelByKey.get(audit.labelKey) }))
-  .filter((row) => row.label)
-  .filter((row) => !selectedSourceLabelKey || row.label.labelKey === selectedSourceLabelKey)
-  .sort((left, right) =>
-    probabilityOrderDescending(left.label.cumulativeProbability,
-      right.label.cumulativeProbability) ||
-    left.label.labelKey.localeCompare(right.label.labelKey));
-assert.ok(sourceCandidates.length, "no persisted Raptor slam source state found");
-const source = sourceCandidates[0];
-const sourceStateId = sourceRestored.reusableContentReferences
-  .stateIdByHash[source.label.stateHash];
-assert.ok(sourceStateId, `source state object missing:${source.label.labelKey}`);
-const sourceStore = createWarmachineExternalDagStore(sourceDagRoot, {
-  ...sourceStoreBinding,
-  create: false,
-});
-const sourceState = sourceStore.readState(sourceStateId).value;
-assert.equal(stableGraphHash(sourceState), source.label.stateHash,
-  "source state hash differs from selected route label");
-
+assert.ok(fs.existsSync(sourceSnapshotPath),
+  `fixed Raptor action source snapshot missing:${sourceSnapshotPath}`);
+const sourceSnapshot = JSON.parse(fs.readFileSync(sourceSnapshotPath, "utf8"));
+assert.equal(sourceSnapshot.schemaVersion, "warmachine_fixed_raptor_action_source_v1");
+assert.equal(sourceSnapshot.hostReceiptHash, warmachineHost.receipt.receiptHash,
+  "source snapshot and current Host receipt differ");
+const sourceState = sourceSnapshot.sourceState;
+assert.equal(stableGraphHash(sourceState), sourceSnapshot.sourceStateHash,
+  "source snapshot state hash differs");
+const declaredActions = sourceSnapshot.legalTargetActions || [];
+const requestedAction = requestedActionKey
+  ? declaredActions.find((action) => action.actionKey === requestedActionKey)
+  : declaredActions.find((action) => action.actionType === "slam_power_attack") ||
+    declaredActions[0];
+assert.ok(requestedAction, `requested fixed Raptor action unavailable:${requestedActionKey}`);
+const actionSlug = `${String(requestedAction.actionType || "action")}-${stableGraphHash(
+  requestedAction.actionKey,
+).slice(0, 12)}`.replace(/[^a-zA-Z0-9_-]+/g, "-");
+const targetDagRoot = path.resolve(
+  process.env.WARMACHINE_RAPTOR_ACTION_DAG ||
+    path.join(projectRoot, `.scratch/current-host-raptor-nymara-${actionSlug}-horizon-v4`),
+);
+const reportBaseName = String(
+  process.env.WARMACHINE_RAPTOR_ACTION_REPORT_BASENAME ||
+    `fixed-raptor-nymara-${actionSlug}-action-horizon-v4`,
+);
+const sourceLabelKey = `fixed-raptor-source-${String(sourceSnapshot.sourceHash).slice(0, 24)}`;
 const actor = sourceState.pieces.find((piece) =>
-  piece.pieceKey === source.audit.action.actorPieceKey);
+  piece.pieceKey === sourceSnapshot.channelerPieceKey);
 const target = sourceState.pieces.find((piece) =>
-  piece.pieceKey === source.audit.action.targetPieceKey);
+  piece.pieceKey === sourceSnapshot.targetPieceKey);
 const caster = sourceState.pieces.find((piece) =>
-  piece.sideKey === actor?.sideKey && (piece.isWarcaster || piece.isWarlock));
+  piece.pieceKey === sourceSnapshot.casterPieceKey);
 assert.ok(actor && target && caster, "fixed action source pieces incomplete");
 const policy = createWarmachineFixedAssassinationPolicyV1({
   targetPieceKey: target.pieceKey,
   casterPieceKey: caster.pieceKey,
   channelerPieceKey: actor.pieceKey,
-  firstActionKey: source.audit.action.actionKey,
+  firstActionKey: requestedAction.actionKey,
 });
 const selected = policy.selectPolicyAction({
   state: sourceState,
-  cursor: source.label.cursor,
+  cursor: 0,
   stateAlreadyNormalized: true,
-  stateHash: source.label.stateHash,
+  stateHash: sourceSnapshot.sourceStateHash,
 });
-assert.equal(selected.action?.actionKey, source.audit.action.actionKey,
-  "current policy no longer selects the persisted Raptor slam");
+assert.equal(selected.action?.actionKey, requestedAction.actionKey,
+  "current policy no longer selects the declared Raptor action");
 
 const sourceHash = stableGraphHash(stableGraphValue({
-  schemaVersion: "fixed_raptor_action_horizon_source_v3",
-  sourceCheckpointId: sourceRestored.checkpointId,
-  sourceReportHash: sourceRestored.reportHash,
-  sourceLabelKey: source.label.labelKey,
-  sourceStateHash: source.label.stateHash,
+  schemaVersion: "fixed_raptor_action_horizon_source_v4",
+  sourceSnapshotHash: sourceSnapshot.sourceHash,
+  sourceLabelKey,
+  sourceStateHash: sourceSnapshot.sourceStateHash,
   actionKey: selected.action.actionKey,
 }));
 const configHash = stableGraphHash(stableGraphValue({
-  schemaVersion: "fixed_raptor_action_horizon_config_v3",
+  schemaVersion: "fixed_raptor_action_horizon_config_v4",
   policyConfig: policy.config,
   actionHorizonDepth: 1,
   lowProbabilityThreshold: "0",
@@ -161,7 +143,7 @@ const targetStoreOptions = {
   sortRunRecordLimit: 512,
   maxDeltaDepth: 8,
   maxDeltaRatio: 0.8,
-  workerId: "fixed-raptor-action-horizon-v3",
+  workerId: `fixed-raptor-action-horizon-v4-${actionSlug}`,
 };
 const currentCheckpointPath = path.join(targetDagRoot, "checkpoints", "CURRENT");
 let restored;
@@ -174,19 +156,19 @@ if (fs.existsSync(currentCheckpointPath)) {
   });
 } else {
   progress("action_horizon_initial_evaluation_start", {
-    sourceLabelKey: source.label.labelKey,
-    sourceProbability: source.label.cumulativeProbability,
+    sourceLabelKey,
+    sourceSnapshotHash: sourceSnapshot.sourceHash,
     actionKey: selected.action.actionKey,
   });
   const initialReport = evaluateWarmachineStrictPolicyFrontierProbabilityAndMinV3(
     sourceState,
     policy.selectPolicyAction,
     {
-      routeKey: "fixed-raptor-nymara-action-horizon-v3",
+      routeKey: `fixed-raptor-nymara-action-horizon-v4:${actionSlug}`,
       perspectiveSideKey: actor.sideKey,
       initialDepth: 0,
-      initialPolicyCursor: source.label.cursor,
-      rootAdversarialContextKey: `fixed-action-horizon:${source.label.labelKey}`,
+      initialPolicyCursor: 0,
+      rootAdversarialContextKey: `fixed-action-horizon:${sourceLabelKey}:${actionSlug}`,
       initialContinuationKey: "continue",
       initialCumulativeProbability: { numerator: "1", denominator: "1" },
       maximumDepth: 1,
@@ -232,10 +214,10 @@ const buildCurrentActionReport = () => buildWarmachineFixedActionHorizonReportV1
   route: {
     state: sourceState,
     nextAction: selected.action,
-    checkpointReceiptHash: sourceRestored.runtimeCheckpointHash,
-    transitionCount: Number(source.label.depth || 0),
-    sourceDepth: Number(source.label.depth || 0),
-    sourceLabelKey: source.label.labelKey,
+    checkpointReceiptHash: sourceSnapshot.routeCheckpointReceiptHash,
+    transitionCount: sourceSnapshot.routeTransitionCount,
+    sourceDepth: 0,
+    sourceLabelKey,
   },
   casterPieceKey: caster.pieceKey,
   targetPieceKey: target.pieceKey,
@@ -246,8 +228,8 @@ const buildCurrentActionReport = () => buildWarmachineFixedActionHorizonReportV1
     checkpointId: restored.checkpointId,
     probabilityReportHash: restored.reportHash,
     runtimeCheckpointHash: restored.runtimeCheckpointHash,
-    upstreamCheckpointId: sourceRestored.checkpointId,
-    upstreamReportHash: sourceRestored.reportHash,
+    sourceSnapshotHash: sourceSnapshot.sourceHash,
+    sourceStateHash: sourceSnapshot.sourceStateHash,
   },
 });
 let completedBatchCount = 0;
@@ -355,8 +337,8 @@ while ((maximumBatches === 0 || completedBatchCount < maximumBatches) &&
 }
 
 fs.mkdirSync(outputDirectory, { recursive: true });
-const jsonPath = path.join(outputDirectory, "fixed-raptor-nymara-action-horizon-v3.json");
-const markdownPath = path.join(outputDirectory, "fixed-raptor-nymara-action-horizon-v3.md");
+const jsonPath = path.join(outputDirectory, `${reportBaseName}.json`);
+const markdownPath = path.join(outputDirectory, `${reportBaseName}.md`);
 const { markdown, ...jsonReport } = report;
 fs.writeFileSync(jsonPath, `${JSON.stringify(jsonReport, null, 2)}\n`, "utf8");
 fs.writeFileSync(markdownPath, markdown, "utf8");
@@ -367,7 +349,7 @@ process.stdout.write(`${JSON.stringify({
   completedBatchCount,
   checkpointId: restored.checkpointId,
   generation: restored.generation,
-  sourceLabelKey: source.label.labelKey,
+  sourceLabelKey,
   selectedAction: {
     actionKey: report.selectedAction.actionKey,
     actionType: report.selectedAction.actionType,
