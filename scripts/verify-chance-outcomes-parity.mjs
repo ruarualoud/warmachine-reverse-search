@@ -109,6 +109,22 @@ const preChanceResolved = buildWarmachineExactActionChanceClasses({
 }, { state: normalizedState });
 assert.equal(preChanceResolved.exactComplete, true);
 assert.deepEqual(preChanceResolved.preChanceResolvedEffectTypes, ["exact_targeting_override"]);
+const preChancePathfinderResolved = buildWarmachineExactActionChanceClasses({
+  ...action,
+  metadata: {
+    ...action.metadata,
+    specialRuleAnalysis: {
+      effects: [{
+        effectType: "ignore_movement_blocker",
+        exactWithinScope: true,
+        outcomeRequirements: [],
+      }],
+    },
+  },
+}, { state: normalizedState });
+assert.equal(preChancePathfinderResolved.exactComplete, true);
+assert.deepEqual(preChancePathfinderResolved.preChanceResolvedEffectTypes,
+  ["ignore_movement_blocker"]);
 const preChanceOutcomeRequirement = buildWarmachineExactActionChanceClasses({
   ...action,
   metadata: {

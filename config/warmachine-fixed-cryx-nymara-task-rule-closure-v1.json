@@ -1,18 +1,18 @@
 {
   "claimBoundary": "This task-local closure narrows rule evidence to every source-mapped atom on one exact Cryx/Nyrro roster state and separately records terminal relevance as ordering only. A bounded interval search may launch because every action is checked before execution and again against transition events; unknown atoms, unresolved atom relations and unresolved same-hook multi-atom ordering remain explicit [0,1] branches. Exact strategy values remain forbidden until those branches and the complete response/Chance/continuous domains close. Global unrelated-faction debt is context only.",
   "engineInteractionReport": {
-    "contentHash": "0b350398f7f74e0106bb2d1c9f2e228da65fea135dd381f8b8494afa9643040a",
+    "contentHash": "ec1bf2385825ac14853144b228d71c0fd6c9c533a2978fa67c7a00de0849b719",
     "relativePath": "data/function3-rules/warmachine-semantic-interaction-closure-v1.json",
-    "reportHash": "313b078683a7bfeb2d74216cc9cc0d680561fb996d36df248967a931849bb1ae"
+    "reportHash": "f4e46e45de296f7aaf3be575ad8bd5c8e6d55121afc4680c0395b248ecdc3553"
   },
-  "fixtureHash": "124bb24ec0064727baa9331a548cd2f3e225a9b68b0aaea71c8e8a787cf7a1bf",
+  "fixtureHash": "c0703d7de9e9527e96afd64d3787f5b6ad58ee7e689e34ac92c836e0b184801f",
   "globalContextOnly": {
-    "unresolvedAtomInteractionCount": 465,
+    "unresolvedAtomInteractionCount": 459,
     "unresolvedHookConcurrencyCount": 38,
     "unresolvedSemanticRelationCount": 57,
     "unresolvedSemanticStateInteractionCount": 444
   },
-  "hostReceiptHash": "356c7000ee63fbb887fcde8f0bc3b3506c8c8a8f96fa084fc22056f5d55b3d12",
+  "hostReceiptHash": "cf4b63b673c6a6b55ef3c07870164380f006372b32d66522695ff5e98ff5971b",
   "openingStateHash": "4e76f2b488af67aba61dc0ce4e9ed301228656283d9235ccdd41b313fea7a46d",
   "readiness": {
     "allCandidateAtomInteractionsBound": false,
@@ -863,46 +863,12 @@
     ]
   },
   "taskAtomInteractions": {
-    "boundInteractionCount": 65,
+    "boundInteractionCount": 67,
     "candidateAtomCount": 81,
     "candidateInteractionCount": 131,
     "selectedAtomCount": 70,
-    "selectedUnresolvedInteractionCount": 48,
+    "selectedUnresolvedInteractionCount": 46,
     "selectedUnresolvedInteractions": [
-      {
-        "allReferencesResolved": true,
-        "atomKey": "ashen_veil_resistance_fire_concealment_attack_penalty_aura",
-        "interactionFixtureIds": [
-          "ashen-veil-resistance-fire-concealment-interaction-v20260901",
-          "ashen-veil-resistance-fire-penalty-interaction-v20260901"
-        ],
-        "interactionKey": "ashen_veil_resistance_fire_concealment",
-        "obligationKey": "atom:ashen_veil_resistance_fire_concealment_attack_penalty_aura:ashen_veil_resistance_fire_concealment",
-        "relatedRuleKeysHash": "1911cbd5367cacc5beaeb11f441eeda74758e05eb2c13ae7c1cb7b1af0512d84",
-        "relatedRuleReferenceCount": 4,
-        "relation": "source_has_continuous_concealment_resolved_by_core_attack_kind_spray_base_size_ignore_and_nonstacking_rules",
-        "relationSpecificProofBindingKeys": [],
-        "relationSpecificProofBound": false,
-        "semanticResolutionHintCount": 2,
-        "unresolvedRuleKeys": []
-      },
-      {
-        "allReferencesResolved": true,
-        "atomKey": "ashen_veil_resistance_fire_concealment_attack_penalty_aura",
-        "interactionFixtureIds": [
-          "ashen-veil-resistance-fire-concealment-interaction-v20260901",
-          "ashen-veil-resistance-fire-penalty-interaction-v20260901"
-        ],
-        "interactionKey": "ashen_veil_resistance_fire_living_enemy_aura",
-        "obligationKey": "atom:ashen_veil_resistance_fire_concealment_attack_penalty_aura:ashen_veil_resistance_fire_living_enemy_aura",
-        "relatedRuleKeysHash": "c36caf144391acd4530cb56aa1a522b5be7ef9471c1ea2ad2d37b8c9ee212695",
-        "relatedRuleReferenceCount": 3,
-        "relation": "living_enemy_within_two_without_effective_resistance_fire_suffers_nonstacking_minus_two_to_every_attack_roll",
-        "relationSpecificProofBindingKeys": [],
-        "relationSpecificProofBound": false,
-        "semanticResolutionHintCount": 0,
-        "unresolvedRuleKeys": []
-      },
       {
         "allReferencesResolved": true,
         "atomKey": "bitter_reprisal_final_hunt_damage_unit_vengeance",
@@ -1649,42 +1615,8 @@
         "unresolvedRuleKeys": []
       }
     ],
-    "unresolvedInteractionCount": 66,
+    "unresolvedInteractionCount": 64,
     "unresolvedInteractions": [
-      {
-        "allReferencesResolved": true,
-        "atomKey": "ashen_veil_resistance_fire_concealment_attack_penalty_aura",
-        "interactionFixtureIds": [
-          "ashen-veil-resistance-fire-concealment-interaction-v20260901",
-          "ashen-veil-resistance-fire-penalty-interaction-v20260901"
-        ],
-        "interactionKey": "ashen_veil_resistance_fire_concealment",
-        "obligationKey": "atom:ashen_veil_resistance_fire_concealment_attack_penalty_aura:ashen_veil_resistance_fire_concealment",
-        "relatedRuleKeysHash": "1911cbd5367cacc5beaeb11f441eeda74758e05eb2c13ae7c1cb7b1af0512d84",
-        "relatedRuleReferenceCount": 4,
-        "relation": "source_has_continuous_concealment_resolved_by_core_attack_kind_spray_base_size_ignore_and_nonstacking_rules",
-        "relationSpecificProofBindingKeys": [],
-        "relationSpecificProofBound": false,
-        "semanticResolutionHintCount": 2,
-        "unresolvedRuleKeys": []
-      },
-      {
-        "allReferencesResolved": true,
-        "atomKey": "ashen_veil_resistance_fire_concealment_attack_penalty_aura",
-        "interactionFixtureIds": [
-          "ashen-veil-resistance-fire-concealment-interaction-v20260901",
-          "ashen-veil-resistance-fire-penalty-interaction-v20260901"
-        ],
-        "interactionKey": "ashen_veil_resistance_fire_living_enemy_aura",
-        "obligationKey": "atom:ashen_veil_resistance_fire_concealment_attack_penalty_aura:ashen_veil_resistance_fire_living_enemy_aura",
-        "relatedRuleKeysHash": "c36caf144391acd4530cb56aa1a522b5be7ef9471c1ea2ad2d37b8c9ee212695",
-        "relatedRuleReferenceCount": 3,
-        "relation": "living_enemy_within_two_without_effective_resistance_fire_suffers_nonstacking_minus_two_to_every_attack_roll",
-        "relationSpecificProofBindingKeys": [],
-        "relationSpecificProofBound": false,
-        "semanticResolutionHintCount": 0,
-        "unresolvedRuleKeys": []
-      },
       {
         "allReferencesResolved": true,
         "atomKey": "attached_model_leader_attachment_and_battlegroup_relation",
@@ -2718,7 +2650,7 @@
       }
     ]
   },
-  "taskHash": "b05acc0b55e7ab5aa3aa27aa20e519adfe1bd0ae8937ef20c599694bb2b68aff",
+  "taskHash": "045ab0e55d454dacaa351248f2b1664680dbcd2dd1f0dab4a79ba5bed21d2f35",
   "taskHookConcurrency": {
     "candidateHookKeyCount": 21,
     "exactTaskLocalOrderingProofImplemented": false,
@@ -3798,5 +3730,5 @@
       "templateKey": "scenario_score"
     }
   ],
-  "taskLocalRuleClosureHash": "3b030a773c0a1a81b92f9d5781d6e65822575476db321116d39151dd9d83b608"
+  "taskLocalRuleClosureHash": "cb5dd1a0fcbac1d984419a52df2f26870f02fc926cbc1c78f56ea09ecb498b41"
 }

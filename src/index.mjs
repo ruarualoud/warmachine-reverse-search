@@ -113,6 +113,7 @@ export * from "./search/strict-action-probability-and-min-v2.mjs";
 export * from "./search/strict-policy-probability-and-min-v2.mjs";
 export * from "./search/lazy-action-cursor-v1.mjs";
 export * from "./search/complete-activation-domain-v2.mjs";
+export * from "./search/complete-activation-exact-graph-v1.mjs";
 export * from "./search/current-decision-window-domain-v1.mjs";
 export * from "./search/current-window-adversarial-frontier-v1.mjs";
 export * from "./search/task-local-bounded-adversarial-search-v1.mjs";

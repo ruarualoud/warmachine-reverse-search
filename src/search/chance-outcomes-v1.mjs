@@ -19,6 +19,9 @@ const EXACT_PRE_CHANCE_HOOK_KEYS = new Set([
   "damage_modifier",
   "targeting_validation",
 ]);
+const EXACT_PRE_CHANCE_RESOLVED_EFFECT_TYPES = new Set([
+  "ignore_movement_blocker",
+]);
 const EXACT_ENGINE_HIT_RESOLUTION_EFFECT_TYPES = new Set([
   "automatic_miss_ranged_or_spell_over_5",
   "engaged_ranged_targets_engaging_model",
@@ -71,6 +74,7 @@ function exactDeterministicSuccessorEffect(effect = {}) {
 function exactPreChanceResolvedEffect(effect = {}) {
   if (effect.exactWithinScope !== true || arrayValues(effect.outcomeRequirements).length) return false;
   return EXACT_PRE_CHANCE_HOOK_KEYS.has(String(effect.hookKey || "")) ||
+    EXACT_PRE_CHANCE_RESOLVED_EFFECT_TYPES.has(String(effect.effectType || "")) ||
     EXACT_ENGINE_HIT_RESOLUTION_EFFECT_TYPES.has(String(effect.effectType || ""));
 }
 

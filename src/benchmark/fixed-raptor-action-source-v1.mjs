@@ -16,7 +16,10 @@ import {
 } from "../search/opponent-response-v1.mjs";
 import { executeWarmachineExactPostResponseChanceV1 } from
   "../search/post-response-chance-execution-v1.mjs";
-import { warmachineHost } from "../warmachine-host-runtime.mjs";
+import {
+  normalizeRulesV1State,
+  warmachineHost,
+} from "../warmachine-host-runtime.mjs";
 
 export const WARMACHINE_FIXED_RAPTOR_ACTION_SOURCE_V1_SCHEMA =
   "warmachine_fixed_raptor_action_source_v1";
@@ -59,6 +62,88 @@ function channelerPieceKeyFromActionKey(state = {}, actionKey = "") {
     if (matches.length === 1) return matches[0].pieceKey;
   }
   return "";
+}
+
+function buildCurrentHostRaptorActionSource(sourceStateInput = {}, rawSource = {}) {
+  const normalizedState = rawSource.stateAlreadyNormalized === true
+    ? sourceStateInput
+    : normalizeRulesV1State(sourceStateInput);
+  const caster = required(
+    normalizedState.pieces?.find((piece) =>
+      piece.pieceKey === rawSource.casterPieceKey),
+    "fixed_raptor_source_caster_missing",
+  );
+  const channeler = required(
+    normalizedState.pieces?.find((piece) =>
+      piece.pieceKey === rawSource.channelerPieceKey),
+    "fixed_raptor_source_channeler_missing",
+  );
+  const target = required(
+    normalizedState.pieces?.find((piece) =>
+      piece.pieceKey === rawSource.targetPieceKey),
+    "fixed_raptor_source_target_missing",
+  );
+  const activationGroup = required(
+    buildWarmachineActivationGroups(normalizedState).find((group) =>
+      group.actorPieceKeys.includes(channeler.pieceKey)),
+    "fixed_raptor_source_activation_group_missing",
+  );
+  const scoped = enumerateWarmachineBenchmarkActionsV2(normalizedState, {
+    stateAlreadyNormalized: true,
+    inputStateHash: stableGraphHash(normalizedState),
+    activationGroupKey: activationGroup.groupKey,
+    targetPieceKeys: [target.pieceKey],
+    includeUntargetedActions: false,
+    actionFamilyKeys: ["movement", "attack_or_effect", "timing", "resource"],
+  });
+  const sourceState = scoped.state;
+  const actions = canonicalWarmachineActingSideActionsV1(scoped.enumeration)
+    .filter((candidate) => candidate.targetPieceKey === target.pieceKey)
+    .map((candidate) => stableGraphValue(candidate))
+    .sort((left, right) => left.actionKey.localeCompare(right.actionKey));
+  const rejectedActions = (scoped.enumeration.rejectedActions || [])
+    .filter((candidate) =>
+      candidate.actorPieceKey === channeler.pieceKey &&
+      candidate.targetPieceKey === target.pieceKey)
+    .map(summarizeWarmachineBenchmarkRejectedActionV2)
+    .sort((left, right) => left.actionKey.localeCompare(right.actionKey));
+  const core = stableGraphValue({
+    schemaVersion: WARMACHINE_FIXED_RAPTOR_ACTION_SOURCE_V1_SCHEMA,
+    hostReceiptHash: warmachineHost.receipt.receiptHash,
+    focusedSourceReceiptCurrent:
+      warmachineHost.focusedSourceReceipt?.current === true,
+    focusedSourceReceiptFailClosedReasons:
+      warmachineHost.focusedSourceReceipt?.failClosedReasons || [],
+    routeCheckpointReceiptHash: String(
+      rawSource.routeCheckpointReceiptHash || "",
+    ),
+    routeTransitionCount: Number(rawSource.routeTransitionCount || 0),
+    casterPieceKey: caster.pieceKey,
+    channelerPieceKey: channeler.pieceKey,
+    targetPieceKey: target.pieceKey,
+    primaryChanceClassKey: String(rawSource.primaryChanceClassKey || ""),
+    primaryProbability: stableGraphValue(rawSource.primaryProbability || {}),
+    primaryRoll: stableGraphValue(rawSource.primaryRoll || {}),
+    responseKey: String(rawSource.responseKey || ""),
+    spellActionKey: String(rawSource.spellActionKey || ""),
+    endActionKey: String(rawSource.endActionKey || ""),
+    sourceStateHash: stableGraphHash(sourceState),
+    sourceState,
+    legalTargetActionCount: actions.length,
+    legalTargetActions: actions,
+    rejectedTargetActionCount: rejectedActions.length,
+    rejectedTargetActions: rejectedActions,
+    receipts: stableGraphValue(rawSource.receipts || []),
+    materializationMode: String(
+      rawSource.materializationMode || "full_current_host_prefix_replay_v1",
+    ),
+    ...(rawSource.prefixProvenance
+      ? { prefixProvenance: stableGraphValue(rawSource.prefixProvenance) }
+      : {}),
+    claimBoundary: String(rawSource.claimBoundary ||
+      "This snapshot is one receipt-bound Sepsira Chance/decline branch followed by strict activation end. It is a common fixed Raptor decision state, not a probability-weighted prior policy or match value."),
+  });
+  return { ...core, sourceHash: stableGraphHash(core) };
 }
 
 export function materializeWarmachineFixedRaptorActionSourceV1(route = {}, rawOptions = {}) {
@@ -157,33 +242,8 @@ export function materializeWarmachineFixedRaptorActionSourceV1(route = {}, rawOp
   if (endExecution.ok !== true) {
     throw new Error(`fixed_raptor_source_end_action_rejected:${endExecution.reason}`);
   }
-  const sourceState = endExecution.normalizedState;
-  const activationGroup = required(
-    buildWarmachineActivationGroups(sourceState).find((group) =>
-      group.actorPieceKeys.includes(channeler.pieceKey)),
-    "fixed_raptor_source_activation_group_missing",
-  );
-  const scoped = enumerateWarmachineBenchmarkActionsV2(sourceState, {
+  return buildCurrentHostRaptorActionSource(endExecution.normalizedState, {
     stateAlreadyNormalized: true,
-    inputStateHash: stableGraphHash(sourceState),
-    activationGroupKey: activationGroup.groupKey,
-    targetPieceKeys: [target.pieceKey],
-    includeUntargetedActions: false,
-    actionFamilyKeys: ["movement", "attack_or_effect", "timing", "resource"],
-  });
-  const actions = canonicalWarmachineActingSideActionsV1(scoped.enumeration)
-    .filter((candidate) => candidate.targetPieceKey === target.pieceKey)
-    .map((candidate) => stableGraphValue(candidate))
-    .sort((left, right) => left.actionKey.localeCompare(right.actionKey));
-  const rejectedActions = (scoped.enumeration.rejectedActions || [])
-    .filter((candidate) =>
-      candidate.actorPieceKey === channeler.pieceKey &&
-      candidate.targetPieceKey === target.pieceKey)
-    .map(summarizeWarmachineBenchmarkRejectedActionV2)
-    .sort((left, right) => left.actionKey.localeCompare(right.actionKey));
-  const core = {
-    schemaVersion: WARMACHINE_FIXED_RAPTOR_ACTION_SOURCE_V1_SCHEMA,
-    hostReceiptHash: warmachineHost.receipt.receiptHash,
     routeCheckpointReceiptHash: String(route.checkpointReceiptHash || ""),
     routeTransitionCount: Number(route.transitionCount || route.receipts?.length || 0),
     casterPieceKey: caster.pieceKey,
@@ -198,17 +258,50 @@ export function materializeWarmachineFixedRaptorActionSourceV1(route = {}, rawOp
     responseKey: response.responseKey,
     spellActionKey: action.actionKey,
     endActionKey: endAction.actionKey,
-    sourceStateHash: stableGraphHash(sourceState),
-    sourceState,
-    legalTargetActionCount: actions.length,
-    legalTargetActions: actions,
-    rejectedTargetActionCount: rejectedActions.length,
-    rejectedTargetActions: rejectedActions,
     receipts: [
       stableGraphValue(spellOutcome.executed.receipt),
       stableGraphValue(endExecution.receipt),
     ],
-    claimBoundary: "This snapshot is one receipt-bound Sepsira Chance/decline branch followed by strict activation end. It is a common fixed Raptor decision state, not a probability-weighted prior policy or match value.",
-  };
-  return { ...core, sourceHash: stableGraphHash(stableGraphValue(core)) };
+  });
+}
+
+export function rematerializeWarmachineFixedRaptorActionSourceV1(
+  parentSource = {},
+) {
+  if (parentSource.schemaVersion !== WARMACHINE_FIXED_RAPTOR_ACTION_SOURCE_V1_SCHEMA) {
+    throw new Error("fixed_raptor_parent_source_schema_invalid");
+  }
+  const { sourceHash, ...parentCore } = parentSource;
+  if (!sourceHash || stableGraphHash(stableGraphValue(parentCore)) !== sourceHash) {
+    throw new Error("fixed_raptor_parent_source_hash_invalid");
+  }
+  if (stableGraphHash(parentSource.sourceState) !== parentSource.sourceStateHash) {
+    throw new Error("fixed_raptor_parent_state_hash_invalid");
+  }
+  return buildCurrentHostRaptorActionSource(parentSource.sourceState, {
+    casterPieceKey: parentSource.casterPieceKey,
+    channelerPieceKey: parentSource.channelerPieceKey,
+    targetPieceKey: parentSource.targetPieceKey,
+    routeCheckpointReceiptHash: parentSource.routeCheckpointReceiptHash,
+    routeTransitionCount: parentSource.routeTransitionCount,
+    primaryChanceClassKey: parentSource.primaryChanceClassKey,
+    primaryProbability: parentSource.primaryProbability,
+    primaryRoll: parentSource.primaryRoll,
+    responseKey: parentSource.responseKey,
+    spellActionKey: parentSource.spellActionKey,
+    endActionKey: parentSource.endActionKey,
+    receipts: [],
+    materializationMode: "current_host_state_rematerialization_v1",
+    prefixProvenance: {
+      parentSourceHash: sourceHash,
+      parentHostReceiptHash: String(parentSource.hostReceiptHash || ""),
+      parentSourceStateHash: parentSource.sourceStateHash,
+      parentReceiptHashes: (parentSource.receipts || [])
+        .map((receipt) => String(receipt.receiptHash || ""))
+        .filter(Boolean)
+        .sort(),
+      currentHostPrefixReplayPerformed: false,
+    },
+    claimBoundary: "This source re-normalizes one content-addressed post-prefix state and re-enumerates the selected Raptor activation group under the current Host. Its earlier Sepsira spell/end prefix remains provenance from the parent Host and is not claimed as a fresh current-Host replay. It is a fixed activation input, not a match value.",
+  });
 }
