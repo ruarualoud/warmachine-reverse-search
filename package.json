@@ -184,6 +184,7 @@
     "run:fixed-cryx-nymara-bounded-search": "node scripts/run-fixed-cryx-nymara-bounded-search-v1.mjs",
     "run:fixed-raptor-action-horizon": "node scripts/run-fixed-raptor-action-horizon-v1.mjs",
     "run:fixed-raptor-complete-activation": "node scripts/run-fixed-raptor-complete-activation-v1.mjs",
+    "run:fixed-raptor-complete-activation-bounded-epochs": "node scripts/run-fixed-raptor-complete-activation-bounded-epochs-v1.mjs",
     "report:custom-matchup-evidence-v2": "node scripts/build-ticket09-route-initial-state-values-v1.mjs && node scripts/generate-custom-matchup-evidence-report-v2.mjs",
     "verify:custom-matchup-evidence-report-v2": "node scripts/verify-custom-matchup-evidence-report-v2.mjs",
     "verify:ticket09-real-route-identities": "node scripts/verify-ticket09-real-route-identities-v1.mjs",
