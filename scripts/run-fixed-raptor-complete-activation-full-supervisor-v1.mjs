@@ -201,6 +201,10 @@ async function runChild({ scriptPath, args, env, stage, evidenceRoot,
 async function main() {
   const evidenceRootArgument = argument("evidence-root");
   const sourceSnapshotArgument = argument("source-snapshot");
+  const engineRootArgument = argument(
+    "engine-root",
+    process.env.WARMACHINE_ENGINE_ROOT || "",
+  );
   if (!evidenceRootArgument) {
     throw new Error(
       "complete_activation_full_supervisor_evidence_root_required",
@@ -211,8 +215,14 @@ async function main() {
       "complete_activation_full_supervisor_source_snapshot_required",
     );
   }
+  if (!engineRootArgument) {
+    throw new Error(
+      "complete_activation_full_supervisor_engine_root_required",
+    );
+  }
   const evidenceRoot = path.resolve(evidenceRootArgument);
   const sourceSnapshotPath = path.resolve(sourceSnapshotArgument);
+  const engineRoot = path.resolve(engineRootArgument);
   const checkpointPath = path.join(evidenceRoot, "checkpoint.json");
   const lockPath = path.join(evidenceRoot, "full-supervisor.lock.json");
   const workers = positiveInteger("workers", 6, 12);
@@ -243,8 +253,24 @@ async function main() {
   if (!fs.existsSync(sourceSnapshotPath)) {
     throw new Error("complete_activation_full_supervisor_source_snapshot_missing");
   }
+  if (!fs.existsSync(path.join(engineRoot, "scripts/warmachine-rules-v1.mjs"))) {
+    throw new Error("complete_activation_full_supervisor_engine_root_invalid");
+  }
   if (waitForPid) await waitForPredecessor(waitForPid, heartbeatSeconds);
   acquireLock(lockPath);
+
+  const childEnvironment = { WARMACHINE_ENGINE_ROOT: engineRoot };
+  emit("full_activation_supervisor_started", {
+    evidenceRoot,
+    engineRoot,
+    sourceSnapshotPath,
+    workers,
+    chunkSize,
+    chanceEpochWorkUnitBudget,
+    serialEpochWorkUnitBudget,
+    minimumFreeGiB,
+    ...checkpointMetrics(readCheckpoint(checkpointPath)),
+  });
 
   let cycleIndex = 0;
   try {
@@ -282,7 +308,7 @@ async function main() {
             `--minimum-free-gib=${minimumFreeGiB}`,
             "--max-epochs=1",
           ],
-          env: {},
+          env: childEnvironment,
           stage,
           evidenceRoot,
           checkpointPath,
@@ -293,6 +319,7 @@ async function main() {
           scriptPath: serialRunnerPath,
           args: [`--work-units=${serialEpochWorkUnitBudget}`],
           env: {
+            ...childEnvironment,
             WARMACHINE_RAPTOR_ACTION_SOURCE_SNAPSHOT: sourceSnapshotPath,
             WARMACHINE_RAPTOR_COMPLETE_ACTIVATION_OUTPUT: evidenceRoot,
           },
